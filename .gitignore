@@ -1,0 +1,29 @@
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Gradle
+.gradle/
+build/
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+
+# Spring Boot
+logs/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
+.env
+*.env
+
+# Test
+target/

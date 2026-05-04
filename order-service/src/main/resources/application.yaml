@@ -2,16 +2,5 @@ spring:
   application:
     name: order-service
 
-server:
-  port: 19094
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:19090/eureka/
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
+  config:
+    import: optional:configserver:http://localhost:19095

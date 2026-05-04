@@ -8,12 +8,12 @@ import org.springframework.stereotype.Service;
 public class AuthService {
     private final UserServiceClient userServiceClient;
 
-    public String getUserInfo(String userId){
-        return userServiceClient.getUser(userId);
-    }
-
-
-    public String getAuth(String id) {
-        return id+" "+getUserInfo("2");
-    }
+//    public String getUserInfo(String userId){
+//        return userServiceClient.getUser(userId);
+//    }
+//
+//
+//    public String getAuth(String id) {
+//        return id+" "+getUserInfo("2");
+//    }
 }

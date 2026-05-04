@@ -11,10 +11,10 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @GetMapping("/auth/{id}")
-    public String getAuth(@PathVariable("id")String id){
-        return authService.getAuth(id);
-    }
+//    @GetMapping("/auth/{id}")
+//    public String getAuth(@PathVariable("id")String id){
+//        return authService.getAuth(id);
+//    }
 
     @GetMapping("/auth/ping")
     public String ping() {

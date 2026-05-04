@@ -15,4 +15,9 @@ public class AuthController {
     public String getAuth(@PathVariable("id")String id){
         return authService.getAuth(id);
     }
+
+    @GetMapping("/auth/ping")
+    public String ping() {
+        return "auth-service";
+    }
 }

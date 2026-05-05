@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: user-service
+  profiles:
+    active: local
+  config:
+    import: "configserver:"
+  cloud:
+    config:
+      discovery:
+        enabled: true
+        service-id: config-server
+#    circuitbreaker:
+#      resilience4j:
+#        enabled: true
+
+server:
+  port: 19093
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:19090/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+#  instance:
+#    hostname: localhost
+#    prefer-ip-address: true
+#    lease-renewal-interval-in-seconds: 30
+#    lease-expiration-duration-in-seconds: 90
+#
+#resilience4j:
+#  circuitbreaker:
+#    configs:
+#      default:
+#        registerHealthIndicator: true
+#        slidingWindowType: COUNT_BASED
+#        slidingWindowSize: 5
+#        minimumNumberOfCalls: 5
+#        slowCallRateThreshold: 100
+#        slowCallDurationThreshold: 60000
+#        failureRateThreshold: 50
+#        permittedNumberOfCallsInHalfOpenState: 3
+#        waitDurationInOpenState: 20s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+message: origin

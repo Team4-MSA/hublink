@@ -56,9 +56,5 @@ Team4-MSA
 5. API Gateway를 구성하여 auth, user, order 서비스로 요청이 정상 라우팅되는지 검증
 6. 각 서비스에 Actuator를 적용하고 `/actuator/health` 엔드포인트를 통해 상태 확인
 7. OpenFeign을 적용하여 서비스 간 HTTP 호출 구조 구현
-8. Circuit Breaker를 적용하여 특정 서비스 장애 시 전체 시스템으로 장애가 확산되지 않도록 구성
-    1. order-service에 OpenFeign + Circuit Breaker 적용
-9. Zipkin을 적용하여 API Gateway와 각 서비스 간 요청 흐름을 분산 추적할 수 있도록 설정
-    1. api-gateway, auth-service, user-service, order-service에 적용
 
 1차로 6번까지 구현 후 각 서비스에 openfeign, 서킷브레이커, 분산 추적 등을 추가로 적용할 예정

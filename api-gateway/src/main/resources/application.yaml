@@ -1,40 +1,17 @@
-server:
-  port: 19091
-
 spring:
-  main:
-    web-application-type: reactive
   application:
     name: api-gateway
+  main:
+    web-application-type: reactive
+  config:
+    import: "optional:configserver:"
   cloud:
-    gateway:
-      server:
-        webflux:
-          discovery:
-            locator:
-              enabled: true
-          routes:
-            - id: auth-service
-              uri: lb://auth-service
-              predicates:
-                - Path=/auth/**
-            - id: user-service
-              uri: lb://user-service
-              predicates:
-                - Path=/users/**
-            - id: order-service
-              uri: lb://order-service
-              predicates:
-                - Path=/orders/**
+    config:
+      discovery:
+        enabled: true
+        service-id: config-server
 
 eureka:
   client:
     service-url:
       defaultZone: http://localhost:19090/eureka/
-
-
-
-
-
-
-

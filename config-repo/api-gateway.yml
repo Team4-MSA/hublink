@@ -27,7 +27,7 @@ spring:
               filters:
                 - name: CircuitBreaker
                   args:
-                    name: authCircuitBreaker
+                    name: userCircuitBreaker
                     fallbackUri: forward:/fallback
 
             - id: order-service
@@ -37,7 +37,7 @@ spring:
               filters:
                 - name: CircuitBreaker
                   args:
-                    name: authCircuitBreaker
+                    name: orderCircuitBreaker
                     fallbackUri: forward:/fallback
 
 resilience4j:

@@ -1,0 +1,30 @@
+server:
+  port: 19091
+
+spring:
+  cloud:
+    gateway:
+      server:
+        webflux:
+          discovery:
+            locator:
+              enabled: true
+          routes:
+            - id: auth-service
+              uri: lb://auth-service
+              predicates:
+                - Path=/auth/**
+            - id: user-service
+              uri: lb://user-service
+              predicates:
+                - Path=/users/**
+            - id: order-service
+              uri: lb://order-service
+              predicates:
+                - Path=/orders/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, refresh

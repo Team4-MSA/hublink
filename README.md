@@ -1,117 +1,193 @@
-# msa-project
+# 🚛 HubLink 
 
-### 🍫 구조
+> 🌱 MSA 기반 물류 · 배송 관리 플랫폼
 
-```bash
-Team4-MSA
-└── msa
-    ├── eureka-server   # 19090
-    ├── api-gateway     # 19091
-    ├── auth-service    # 19092
-    ├── user-service    # 19093
-    ├── order-service   # 19094
-    ├── config-server   # 19095
-    └── config-repo
-        ├── api-gateway.yml
-        ├── auth-service.yml
-        ├── user-service.yml
-        └── order-service.yml
+HubLink는 주문, 배송, 허브, 결제, 사용자 관리를 분리된 서비스로 구성한 MSA 기반 물류 플랫폼입니다.  
+대규모 트래픽 환경을 고려하여 서비스 간 결합도를 낮추고, 이벤트 기반 확장 구조를 고려해 설계하였습니다.
+
+주문 생성부터 배송 상태 추적, 허브 이동, 결제 처리, 알림 전송까지의 흐름을 독립적인 서비스 단위로 분리하여 관리합니다.
+
+또한 RabbitMQ 기반 메시징 구조와 향후 Kafka 확장을 고려한 이벤트 기반 아키텍처를 통해 확장성과 유지보수성을 높였습니다.
+
+---
+
+# 🐥 주요 기능
+
+## 📍 주문 관리
+- 주문 생성
+- 주문 조회
+- 주문 상태 관리
+- 주문 취소
+
+## 📍 배송 관리
+- 배송 생성
+- 배송 상태 변경
+- 배송 이력 관리
+- 허브 이동 추적
+
+## 📍 허브 관리
+- 허브 등록 및 조회
+- 허브 간 이동 경로 관리
+
+## 📍 결제 관리
+- 결제 요청
+- 결제 상태 관리
+- 결제 내역 조회
+
+## 📍 인증 / 사용자 관리
+- JWT 기반 인증
+- 사용자 권한 관리
+- Gateway 기반 인증 처리
+
+## 📍 알림 기능
+- Slack 알림 전송
+- 이벤트 기반 알림 처리
+
+---
+
+# 🍟 시스템 아키텍처
+
+<img width="4791" height="3183" alt="인프라설계도" src="https://github.com/user-attachments/assets/e5108c42-c0de-49ec-ae5f-492913c0bc1b" />
+
+
+---
+
+# 🍒 ERD
+<img width="2817" height="1902" alt="HubLink" src="https://github.com/user-attachments/assets/97070363-6f9e-441d-986a-bb536f6473fc" />
+
+---
+
+# ⚙️ 기술 스택
+
+## 📍 Backend
+- Java 17
+- Spring Boot 3.x
+- Spring Security
+- Spring Data JPA
+- Hibernate
+- JWT
+- Spring Cloud OpenFeign
+- Resilience4j
+
+## 📍 Database / Cache
+- PostgreSQL
+- Redis
+
+## 📍 MSA
+- Spring Cloud Gateway
+- Eureka Service Discovery
+- Config Server
+- RabbitMQ
+- Kafka(예정)
+
+## 📍 AWS / Infrastructure
+- AWS Cloud
+- VPC
+- Public Subnet / Private Subnet
+- Route 53
+- Internet Gateway
+- Application Load Balancer
+- EC2
+- RDS
+- Amazon ECR
+
+## 📍 DevOps
+- Docker
+- Docker Compose
+- GitHub Actions
+
+## 📍 Monitoring / Tracing
+- Prometheus
+- Grafana
+- Zipkin
+- Spring Boot Actuator
+
+## 📍 External API
+- Slack API
+- Gemini API
+
+---
+
+# 🍿 프로젝트 구조
+
+```text
+hub-link
+├── common
+│       ├── response
+│       ├── exception
+│       ├── security
+│       ├── dto
+│       └── util
+│
+├── eureka-server
+│
+├── config-server
+│
+├── api-gateway
+│       ├── config
+│       ├── filter
+│       ├── security
+│       └── global
+│
+├── user-service
+├── hub-service
+├── company-service
+├── product-service
+├── stock-service
+├── order-service
+├── delivery-service
+├── slack-service
+└── ai-service
 ```
 
-### 🌱 목표
 
-- MSA 기반 프로젝트의 기본 구조를 구성한다.
-- Eureka Server를 통해 각 서비스가 정상적으로 등록되는지 확인한다.
-- Config Server를 통해 서비스별 설정 파일을 외부에서 관리한다.
-- API Gateway를 통해 요청이 각 서비스로 정상 라우팅되는지 검증한다.
-- Actuator의 `/actuator/health`를 활용하여 서비스 상태를 확인한다.
-- 우선 여기까지
-- 인증 책임과 사용자 관리 책임을 분리하기 위해 `auth-service`와 `user-service`를 별도 서비스로 구성한다.
-- Feign Client를 이용해 서비스 간 통신을 구현한다.
-- Circuit Breaker를 적용하여 장애 상황에 대비한다.
-- Zipkin을 통해 서비스 간 요청 흐름을 추적한다.
-
-### ⚙️ 세팅
-
-- Spring Boot 3.5.14
-- Java 17
-- Gradle
-- YAML 설정 파일 사용
-- Eureka Server
-- Config Server
-- API Gateway
-- Eureka Discovery Client
-- Spring Cloud Config Client
-- Spring Boot Actuator
-    - `/actuator/health`를 통한 서비스 상태 확인
-- OpenFeign
-- Circuit Breaker
-- Zipkin
+---
 
 
-### 🐥 구현
 
-1. Eureka Server를 생성하여 서비스 디스커버리 환경 구성
-2. Config Server를 생성하여 각 서비스의 설정 파일을 중앙에서 관리할 수 있도록 구성
-3. auth-service, user-service, order-service에 Config Client를 적용하여 외부 설정을 읽도록 설정
-4. 각 서비스를 Eureka Discovery Client로 등록하여 Eureka Server 대시보드에서 정상 등록 여부를 확인
-5. API Gateway를 구성하여 auth, user, order 서비스로 요청이 정상 라우팅되는지 검증
-6. 각 서비스에 Actuator를 적용하고 `/actuator/health` 엔드포인트를 통해 상태 확인
-7. ~~OpenFeign을 적용하여 서비스 간 HTTP 호출 구조 구현~~
-8. ~~Circuit Breaker를 적용하여 특정 서비스 장애 시 전체 시스템으로 장애가 확산되지 않도록 구성~~
-    1. ~~order-service에 OpenFeign + Circuit Breaker 적용~~
-9. ~~Zipkin을 적용하여 API Gateway와 각 서비스 간 요청 흐름을 분산 추적할 수 있도록 설정~~
-    1. ~~api-gateway, auth-service, user-service, order-service에 적용~~
+# 🧀 브랜치 전략
 
-1차로 6번까지 구현 후 각 서비스에 openfeign, 서킷브레이커, 분산 추적 등을 추가로 적용할 예정
-<img width="2550" height="1392" alt="image" src="https://github.com/user-attachments/assets/f82e1316-4f99-45a8-a001-f6d1495bcbcd" />
+```text
+main
+develop
+feature/*
+hotfix/*
+```
+
+---
 
 
-### 🥨 인증 서버 분리 기준
+# 🫡 협업 규칙
 
-인증 기능은 `auth-service`로 분리하여 관리한다.
+- PR 기반 코드 리뷰 진행
+- Gemini Code Assist 기반 AI 코드 리뷰 적용
+- 코드 및 Git 컨벤션 문서 기반 협업 진행
 
-- `auth-service`
-    - 로그인
-    - JWT 발급
-    - 토큰 검증
-    - 인증 관련 API 관리
-- `user-service`
-    - 회원가입
-    - 회원 정보 조회
-    - 회원 정보 수정
-    - 회원 탈퇴
+---
 
-인증 책임과 사용자 도메인 책임을 분리하여 서비스 간 역할을 명확히 하고, 이후 Gateway에서 JWT 검증 구조와 연계할 수 있도록 확장 가능하게 구성한다.
+# 🔥 실행 방법
 
-### 🧊 common 모듈 관리 기준
+## 📍 Clone
 
-`common` 모듈은 서비스 간 결합도를 높이지 않도록 최소 범위로 관리한다.
+```bash
+git clone https://github.com/organization/hublink.git
+```
 
-포함 대상:
+## 📍 Build
 
-- 공통 응답 포맷
-- 공통 에러 응답 구조
-- 비즈니스와 무관한 공통 유틸
-- 로그 추적용 공통 코드
+```bash
+./gradlew build
+```
 
-제외 대상:
+## 📍 Run
 
-- Entity
-- Repository
-- Service
-- 도메인 DTO
-- 도메인별 ErrorCode
-- 특정 서비스의 비즈니스 로직
+```bash
+docker-compose up -d
+```
 
-도메인과 직접 관련된 코드는 각 서비스 내부에서 관리하고, `common` 모듈은 여러 서비스에서 반복되는 비즈니스 비의존 코드만 포함한다.
+---
 
-### 📍 추후 적용 예정
-
-아래 기능은 도메인 API가 구체화된 이후 적용할 예정이다.
-
-- OpenFeign을 이용한 서비스 간 HTTP 통신
-- Circuit Breaker를 통한 장애 전파 방지
-- Zipkin을 통한 분산 추적
-
-현재 단계에서는 각 서비스의 도메인 기능이 충분히 구현되지 않았기 때문에, Feign Client, Circuit Breaker, Zipkin은 우선 제외하고 기본 MSA 구조 검증에 집중한다.
+# 💡 확장
+- Kafka 기반 이벤트 스트리밍 도입
+- Saga 패턴 기반 분산 트랜잭션 처리
+- Redis 분산락 기반 동시성 제어

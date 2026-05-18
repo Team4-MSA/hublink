@@ -6,15 +6,7 @@ spring:
     gateway:
       server:
         webflux:
-#          discovery:
-#            locator:
-#              enabled: true
           routes:
-            - id: auth-service
-              uri: lb://auth-service
-              predicates:
-                - Path=/auth/**
-
             - id: user-service
               uri: lb://user-service
               predicates:
@@ -24,6 +16,41 @@ spring:
               uri: lb://order-service
               predicates:
                 - Path=/orders/**
+
+            - id: hub-service
+              uri: lb://hub-service
+              predicates:
+                - Path=/hubs/**
+
+            - id: company-service
+              uri: lb://company-service
+              predicates:
+                - Path=/companies/**
+
+            - id: product-service
+              uri: lb://product-service
+              predicates:
+                - Path=/products/**
+
+            - id: stock-service
+              uri: lb://stock-service
+              predicates:
+                - Path=/stocks/**
+
+            - id: delivery-service
+              uri: lb://delivery-service
+              predicates:
+                - Path=/deliveries/**
+
+            - id: slack-service
+              uri: lb://slack-service
+              predicates:
+                - Path=/slacks/**
+
+            - id: ai-service
+              uri: lb://ai-service
+              predicates:
+                - Path=/ai/**
 
 management:
   endpoints:

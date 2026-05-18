@@ -92,3 +92,14 @@ Error response:
 Please also follow the conventions described in:
 - docs/code-convention.md
 - docs/git-convention.md
+
+## Review Placement Rules
+
+- 가능한 모든 리뷰는 GitHub PR의 Files changed 탭에서 변경된 라인에 inline review comment로 남기세요.
+- 하나의 이슈는 하나의 review comment로 분리하세요.
+- 여러 이슈를 하나의 Conversation comment에 묶지 마세요.
+- inline comment를 달 수 없는 경우에만 마지막에 "General Notes"로 짧게 정리하세요.
+- 각 comment는 5줄 이내로 작성하세요.
+- 각 comment는 [Severity] / 문제 이유 / 수정 방향 순서로 작성하세요.
+- 정확한 변경 라인에 매핑할 수 없는 추측성 리뷰는 High 또는 Critical로 표시하지 마세요.
+- 문서에 존재하지 않는 Rule 번호를 임의로 만들거나 인용하지 마세요.

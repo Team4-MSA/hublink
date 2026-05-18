@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: company-service
+
+  config:
+    import: "configserver:${CONFIG_SERVER_URL:http://localhost:19092}"
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka/}

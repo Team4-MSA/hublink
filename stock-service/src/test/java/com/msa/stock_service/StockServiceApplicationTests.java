@@ -1,4 +1,4 @@
-package com.hublink.stock_service;
+package com.msa.stock_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

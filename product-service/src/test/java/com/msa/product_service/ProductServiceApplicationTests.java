@@ -1,4 +1,4 @@
-package com.hublink.product_service;
+package com.msa.product_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

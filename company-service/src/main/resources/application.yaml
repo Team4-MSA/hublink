@@ -3,9 +3,9 @@ spring:
     name: company-service
 
   config:
-    import: "configserver:http://localhost:19092"
+    import: "configserver:${CONFIG_SERVER_URL:http://localhost:19092}"
 
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:19090/eureka/
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:19090/eureka/}

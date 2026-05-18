@@ -1,10 +1,10 @@
-package com.hublink.hub_service;
+package com.msa.company_service;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class HubServiceApplicationTests {
+class CompanyServiceApplicationTests {
 
 	@Test
 	void contextLoads() {

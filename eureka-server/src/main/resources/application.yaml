@@ -18,7 +18,7 @@ spring:
   cloud:
     config:
       discovery:
-        enabled: true
+        enabled: false
         service-id: config-server
 
 management:

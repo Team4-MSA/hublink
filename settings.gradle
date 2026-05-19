@@ -1,6 +1,5 @@
 rootProject.name = 'hublink'
 
-//include 'common'
 include 'eureka-server'
 include 'config-server'
 include 'api-gateway'

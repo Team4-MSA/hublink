@@ -18,7 +18,7 @@ public class AwareUserAudit implements AuditorAware<String> {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes != null) {
             HttpServletRequest request = attributes.getRequest();
-            String userId = request.getHeader("X-User-Id");;
+            String userId = request.getHeader("X-User-Id");
             if (userId != null) {
                 return Optional.of(userId);
             }

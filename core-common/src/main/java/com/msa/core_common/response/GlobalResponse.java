@@ -1,11 +1,11 @@
-package org.example.corecommon.response;
+package com.msa.core_common.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
-import org.example.corecommon.error.ErrorResponse;
+import com.msa.core_common.error.ErrorResponse;
 
 @Getter
 @Setter

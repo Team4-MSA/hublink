@@ -1,0 +1,67 @@
+package com.msa.delivery_service.domain;
+
+import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
+import com.msa.delivery_service.domain.enums.DeliveryStatus;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Getter
+@Entity
+@Table(name = "p_deliveries", schema = "delivery_service")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Delivery extends BaseEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "delivery_id", nullable = false)
+    private UUID deliveryId;
+
+    @Column(name = "order_id", nullable = false)
+    private UUID orderId;
+
+    @Column(name = "departure_hub_id", nullable = false)
+    private UUID departureHubId;
+
+    @Column(name = "destination_hub_id", nullable = false)
+    private UUID destinationHubId;
+
+    @Column(name = "receiver_company_id", nullable = false)
+    private UUID receiverCompanyId;
+
+    @Column(name = "company_delivery_manager_id")
+    private UUID companyDeliveryManagerId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 50)
+    private DeliveryStatus status;
+
+    @Column(name = "delivery_address", nullable = false)
+    private String deliveryAddress;
+
+    @Column(name = "receiver_name", length = 100)
+    private String receiverName;
+
+    @Column(name = "delivery_manager_slack_id", length = 100)
+    private String deliveryManagerSlackId;
+
+    @Column(name = "estimated_arrival_at")
+    private LocalDateTime estimatedArrivalAt;
+
+    @Column(name = "delivered_at")
+    private LocalDateTime deliveredAt;
+
+    @Column(name = "final_departure_deadline")
+    private LocalDateTime finalDepartureDeadline;
+}

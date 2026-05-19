@@ -7,7 +7,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Builder;
-import org.springframework.data.annotation.Id;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

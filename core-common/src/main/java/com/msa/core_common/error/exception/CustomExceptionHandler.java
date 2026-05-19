@@ -1,8 +1,8 @@
-package org.example.corecommon.error.exception;
+package com.msa.core_common.error.exception;
 
 import lombok.RequiredArgsConstructor;
-import org.example.corecommon.error.ErrorResponse;
-import org.example.corecommon.response.GlobalResponse;
+import com.msa.core_common.error.ErrorResponse;
+import com.msa.core_common.response.GlobalResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;

@@ -1,8 +1,8 @@
 package com.msa.user_service.refresh;
 
 import com.msa.user_service.dto.ExamDto;
-import org.example.corecommon.error.exception.CustomException;
-import org.example.corecommon.error.exception.ErrorCode;
+import com.msa.core_common.error.exception.CustomException;
+import com.msa.core_common.error.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.validation.annotation.Validated;
@@ -14,6 +14,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/users")
 public class RefreshController {
+
 
     @Value("${message}")
     private String message;
@@ -37,4 +38,6 @@ public class RefreshController {
     public void validTest (@RequestBody @Validated ExamDto examDto){
 
     }
+
+
 }

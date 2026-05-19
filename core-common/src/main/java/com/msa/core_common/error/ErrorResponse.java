@@ -1,8 +1,7 @@
-package org.example.corecommon.error;
+package com.msa.core_common.error;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 
 @Getter
 @RequiredArgsConstructor

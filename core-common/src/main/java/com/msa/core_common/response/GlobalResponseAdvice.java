@@ -1,4 +1,4 @@
-package org.example.corecommon.response;
+package com.msa.core_common.response;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.core.MethodParameter;

@@ -1,4 +1,4 @@
-package org.example.corecommon.error.exception;
+package com.msa.core_common.error.exception;
 
 import lombok.Getter;
 

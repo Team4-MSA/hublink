@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.msa.core_common.error.exception.CustomException;
 
 import java.util.UUID;
@@ -50,6 +49,7 @@ public class SlackService {
             slackMessageService.markSent(slackMessage.getSlackMessageId());
         } catch (Exception e) {
             slackMessageService.markFailed(slackMessage.getSlackMessageId(), e.getMessage());
+            throw e;
         }
     }
 
@@ -78,7 +78,6 @@ public class SlackService {
     }
 
     // 재전송
-    @Transactional
     public void resendSlackMessage(String role, UUID slackMessageId) {
         validateMaster(role);
         SlackMessage slackMessage = slackMessageService.findById(slackMessageId)

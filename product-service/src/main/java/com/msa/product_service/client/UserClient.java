@@ -5,7 +5,7 @@ import java.util.UUID;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-@FeignClient
+@FeignClient(name = "user-service")
 public interface UserClient {
     // 허브 담당자 본인 확인 여부
     @GetMapping("~~")

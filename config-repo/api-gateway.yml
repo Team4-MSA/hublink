@@ -10,47 +10,47 @@ spring:
             - id: user-service
               uri: lb://user-service
               predicates:
-                - Path=/users/**
+                - Path=/api/v1/users/**
 
             - id: order-service
               uri: lb://order-service
               predicates:
-                - Path=/orders/**
+                - Path=/api/v1/orders/**
 
             - id: hub-service
               uri: lb://hub-service
               predicates:
-                - Path=/hubs/**
+                - Path=/api/v1/hubs/**
 
             - id: company-service
               uri: lb://company-service
               predicates:
-                - Path=/companies/**
+                - Path=/api/v1/companies/**
 
             - id: product-service
               uri: lb://product-service
               predicates:
-                - Path=/products/**
+                - Path=/api/v1/products/**
 
             - id: stock-service
               uri: lb://stock-service
               predicates:
-                - Path=/stocks/**
+                - Path=/api/v1/stocks/**
 
             - id: delivery-service
               uri: lb://delivery-service
               predicates:
-                - Path=/deliveries/**
+                - Path=/api/v1/deliveries/**
 
             - id: slack-service
               uri: lb://slack-service
               predicates:
-                - Path=/slacks/**
+                - Path=/api/v1/slack-messages/**
 
             - id: ai-service
               uri: lb://ai-service
               predicates:
-                - Path=/ai/**
+                - Path=/api/v1/ai/**
 
 management:
   endpoints:

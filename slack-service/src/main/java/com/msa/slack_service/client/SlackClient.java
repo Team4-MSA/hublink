@@ -12,14 +12,14 @@ import org.springframework.web.client.RestClient;
 @Component
 @RequiredArgsConstructor
 public class SlackClient {
-    private final RestClient restClient = RestClient.create();
+    private final RestClient restClient;
 
     @Value("${slack.bot-token}")
     private String botToken;
 
     public void sendMessage(String receiverSlackId, String message) {
         SlackApiResponse response = restClient.post()
-                .uri("https://slack.com/api/chat.postMessage")
+                .uri("/api/chat.postMessage")
                 .header("Authorization", "Bearer " + botToken)
                 .header("Content-Type", "application/json; charset=utf-8")
                 .body(new SlackApiRequest(receiverSlackId, message))

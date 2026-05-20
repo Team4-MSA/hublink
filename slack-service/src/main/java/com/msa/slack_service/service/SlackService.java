@@ -1,105 +1,89 @@
 package com.msa.slack_service.service;
 
+import com.msa.core_common.response.paging.PageRes;
 import com.msa.slack_service.client.SlackClient;
 import com.msa.slack_service.dto.DeadlineGeneratedEvent;
 import com.msa.slack_service.dto.SlackMessageResponse;
+import com.msa.slack_service.entity.MessageType;
 import com.msa.slack_service.entity.SlackMessage;
 import com.msa.slack_service.entity.SlackMessageStatus;
 import com.msa.slack_service.exception.SlackErrorCode;
 import com.msa.slack_service.repository.SlackMessageRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import com.msa.core_common.error.exception.CustomException;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class SlackService {
     private final SlackMessageRepository slackMessageRepository;
+    private final SlackMessageService slackMessageService;
     private final SlackClient slackClient;
 
     // 발송 시한 전송
-    @Transactional
     public void processDeadlineGenerated(DeadlineGeneratedEvent event) {
         // 멱등성 키로 중복 확인
         String idempotencyKey = event.getEventId().toString();
-        slackMessageRepository.findByIdempotencyKey(idempotencyKey)
-                .ifPresentOrElse(
-                        this::processExistingMessage,
-                        () -> createAndSendMessage(event, idempotencyKey)
-                );
-    }
+        SlackMessage slackMessage = slackMessageService.findOrCreateMessage(event, idempotencyKey);
 
-    // 메세지 생성 & 저장
-    private void createAndSendMessage(DeadlineGeneratedEvent event, String idempotencyKey) {
-        SlackMessage slackMessage = SlackMessage.builder()
-                .receiverUserId(event.getReceiverUserId())
-                .aiMessageId(event.getAiMessageId())
-                .receiverSlackId(event.getReceiverSlackId())
-                .idempotencyKey(idempotencyKey)
-                .messageType(event.getMessageType())
-                .message(event.getMessage())
-                .build();
-
-        slackMessageRepository.save(slackMessage);
-
-        sendAndMark(slackMessage);
-    }
-
-    // 큐 중복/실패 이벤트 재전송
-    private void processExistingMessage(SlackMessage slackMessage) {
+        // 이미 보냈으면 전송 x
         if (slackMessage.getStatus() == SlackMessageStatus.SENT) {
             return;
         }
 
-        sendAndMark(slackMessage);
+        sendAndUpdateStatus(slackMessage);
     }
 
+
     // 메세지 전송
-    private void sendAndMark(SlackMessage slackMessage) {
+    private void sendAndUpdateStatus(SlackMessage slackMessage) {
         try {
             slackClient.sendMessage(
                     slackMessage.getReceiverSlackId(),
                     slackMessage.getMessage()
             );
-            slackMessage.markSent();
+            slackMessageService.markSent(slackMessage.getSlackMessageId());
         } catch (Exception e) {
-            slackMessage.markFailed(e.getMessage());
+            slackMessageService.markFailed(slackMessage.getSlackMessageId(), e.getMessage());
             throw e;
         }
     }
 
-
     // 목록 조회
-    public List<SlackMessageResponse> getSlackMessages(String role) {
+    public PageRes<SlackMessageResponse> getSlackMessages(
+            String role,
+            SlackMessageStatus status,
+            MessageType messageType,
+            Pageable pageable
+    ) {
         validateMaster(role);
-        return slackMessageRepository.findAll()
-                .stream()
-                .map(SlackMessageResponse::from)
-                .toList();
+        Page<SlackMessageResponse> page = slackMessageService
+                .findAll(status, messageType, pageable)
+                .map(SlackMessageResponse::from);
+
+        return new PageRes<>(page);
     }
 
     // 상세 조회
     public SlackMessageResponse getSlackMessage(String role, UUID slackMessageId) {
         validateMaster(role);
-        SlackMessage slackMessage = slackMessageRepository.findById(slackMessageId)
+        SlackMessage slackMessage = slackMessageService.findById(slackMessageId)
                 .orElseThrow(() -> new CustomException(SlackErrorCode.SLACK_MESSAGE_NOT_FOUND));
 
         return SlackMessageResponse.from(slackMessage);
     }
 
     // 재전송
-    @Transactional
     public void resendSlackMessage(String role, UUID slackMessageId) {
         validateMaster(role);
-        SlackMessage slackMessage = slackMessageRepository.findById(slackMessageId)
+        SlackMessage slackMessage = slackMessageService.findById(slackMessageId)
                 .orElseThrow(() -> new CustomException(SlackErrorCode.SLACK_MESSAGE_NOT_FOUND));
 
-        sendAndMark(slackMessage);
+        sendAndUpdateStatus(slackMessage);
     }
 
     // 권한 검증

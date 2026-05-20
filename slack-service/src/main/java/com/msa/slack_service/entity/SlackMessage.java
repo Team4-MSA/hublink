@@ -42,9 +42,10 @@ public class SlackMessage extends BaseEntity {
     @Column(name = "message", nullable = false, columnDefinition = "TEXT")
     private String message;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private SlackMessageStatus status;
+    private SlackMessageStatus status = SlackMessageStatus.PENDING;
 
     @Column(name = "sent_at")
     private LocalDateTime sentAt;
@@ -52,12 +53,6 @@ public class SlackMessage extends BaseEntity {
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
-    @PrePersist
-    void initStatus() {
-        if (this.status == null) {
-            this.status = SlackMessageStatus.PENDING;
-        }
-    }
 
     public void markSent() {
         this.status = SlackMessageStatus.SENT;

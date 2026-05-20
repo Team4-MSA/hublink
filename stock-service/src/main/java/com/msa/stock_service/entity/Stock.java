@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,13 +31,16 @@ public class Stock extends BaseEntity {
 
     @Column(name = "hub_id", nullable = false)
     private UUID hubId;
+
     @Column(nullable = false)
     private Integer quantity;
 
     @Column(name = "reserved_quantity", nullable = false)
     private Integer reservedQuantity;
 
-    @Column(nullable = false)
+    @Version
     private Integer version;
+
+
 
 }

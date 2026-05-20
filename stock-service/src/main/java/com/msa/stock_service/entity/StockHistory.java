@@ -35,14 +35,19 @@ public class StockHistory extends BaseEntity {
     private UUID hubId;
 
     @Column(name = "change_quantity", nullable = false)
-    private Integer changeQuantity;
+    private Integer changeQuantity; //변경할 수량
+
+    @Column(name = "before_quantity", nullable = false)
+    private Integer beforeQuantity; //변경 전 수량
 
     @Column(name = "after_quantity", nullable = false)
-    private Integer afterQuantity;
+    private Integer afterQuantity; //변경 후 수량
 
     @Column(nullable = false)
     private String reason;
 
-    @Column(name = "reference_id", nullable = false)
+    @Column(name = "reference_id")
     private UUID referenceId;
+
+
 }

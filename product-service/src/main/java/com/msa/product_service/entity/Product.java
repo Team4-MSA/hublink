@@ -1,6 +1,7 @@
 package com.msa.product_service.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
+import com.msa.product_service.dto.ProductRequestDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -42,4 +43,13 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private Integer price;
 
+    public static Product create (ProductRequestDto dto) {
+        return Product.builder()
+            .companyId(dto.getCompanyId())
+            .hubId(dto.getHubId())
+            .name(dto.getName())
+            .description(dto.getDescription())
+            .price(dto.getPrice())
+            .build();
+    }
 }

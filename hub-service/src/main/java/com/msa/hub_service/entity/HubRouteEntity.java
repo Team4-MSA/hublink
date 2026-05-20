@@ -1,5 +1,6 @@
 package com.msa.hub_service.entity;
 
+import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
 import com.msa.hub_service.global.Util;
 import jakarta.persistence.*;
 import lombok.*;
@@ -15,7 +16,7 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder(access = AccessLevel.PRIVATE)
 @Table(name = "p_hub_routes")
-public class HubRouteEntity {
+public class HubRouteEntity extends BaseEntity {
 
     // 물류 화물차량의 평균 주행 속도 (60 km/h)
     private static final double AVERAGE_TRUCK_SPEED_KMH = 60.0;

@@ -1,5 +1,6 @@
 package com.msa.hub_service.entity;
 
+import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.util.Assert;
@@ -13,7 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder(access = AccessLevel.PRIVATE)
 @Table(name = "p_hubs")
-public class HubEntity {
+public class HubEntity extends BaseEntity {
 
     private static final BigDecimal MIN_LATITUDE = new BigDecimal("-90.0");
     private static final BigDecimal MAX_LATITUDE = new BigDecimal("90.0");

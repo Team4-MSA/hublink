@@ -1,0 +1,64 @@
+package com.msa.slack_service.service;
+
+import com.msa.core_common.error.exception.CustomException;
+import com.msa.slack_service.dto.DeadlineGeneratedEvent;
+import com.msa.slack_service.entity.SlackMessage;
+import com.msa.slack_service.exception.SlackErrorCode;
+import com.msa.slack_service.repository.SlackMessageRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class SlackMessageService {
+    private final SlackMessageRepository slackMessageRepository;
+
+    // 메세지 생성(있으면 찾아서 반환)
+    @Transactional
+    public SlackMessage findOrCreateMessage(DeadlineGeneratedEvent event, String idempotencyKey) {
+        return slackMessageRepository.findByIdempotencyKey(idempotencyKey)
+                .orElseGet(() -> slackMessageRepository.save(
+                        SlackMessage.builder()
+                                .receiverUserId(event.getReceiverUserId())
+                                .aiMessageId(event.getAiMessageId())
+                                .receiverSlackId(event.getReceiverSlackId())
+                                .idempotencyKey(idempotencyKey)
+                                .messageType(event.getMessageType())
+                                .message(event.getMessage())
+                                .build()
+                ));
+    }
+
+    // 발송 성공
+    @Transactional
+    public void markSent(UUID slackMessageId) {
+        SlackMessage slackMessage = slackMessageRepository.findById(slackMessageId)
+                .orElseThrow(() -> new CustomException(SlackErrorCode.SLACK_MESSAGE_NOT_FOUND));
+
+        slackMessage.markSent();
+    }
+
+    // 발송 실패
+    @Transactional
+    public void markFailed(UUID slackMessageId, String reason) {
+        SlackMessage slackMessage = slackMessageRepository.findById(slackMessageId)
+                .orElseThrow(() -> new CustomException(SlackErrorCode.SLACK_MESSAGE_NOT_FOUND));
+
+        slackMessage.markFailed(reason);
+    }
+
+    public List<SlackMessage> findAll() {
+        return slackMessageRepository.findAll();
+    }
+
+    public Optional<SlackMessage> findById(UUID slackMessageId) {
+        return slackMessageRepository.findById(slackMessageId);
+    }
+
+}

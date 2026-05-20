@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/slack-messages")
+@RequestMapping("api/v1/slack-messages")
 public class SlackController {
     private final SlackService slackService;
 

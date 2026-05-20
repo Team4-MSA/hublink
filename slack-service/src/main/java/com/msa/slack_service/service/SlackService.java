@@ -1,8 +1,8 @@
 package com.msa.slack_service.service;
 
+import com.msa.slack_service.client.SlackClient;
 import com.msa.slack_service.dto.DeadlineGeneratedEvent;
 import com.msa.slack_service.dto.SlackMessageResponse;
-import com.msa.slack_service.dto.SlackSendRequest;
 import com.msa.slack_service.entity.SlackMessage;
 import com.msa.slack_service.exception.SlackErrorCode;
 import com.msa.slack_service.repository.SlackMessageRepository;
@@ -19,6 +19,7 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class SlackService {
     private final SlackMessageRepository slackMessageRepository;
+    private final SlackClient slackClient;
 
     // 발송 시한 전송
     @Transactional
@@ -34,8 +35,13 @@ public class SlackService {
 
         slackMessageRepository.save(slackMessage);
 
-        // TODO: 실제 Slack API 연동
-        slackMessage.markSent();
+        try {
+            slackClient.sendMessage(event.getReceiverSlackId(), event.getMessage());
+            slackMessage.markSent();
+        } catch (Exception e) {
+            slackMessage.markFailed(e.getMessage());
+            throw e;
+        }
     }
 
     // 목록 조회

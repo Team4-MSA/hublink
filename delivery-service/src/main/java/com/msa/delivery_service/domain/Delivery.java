@@ -94,7 +94,7 @@ public class Delivery extends BaseEntity {
                 .build();
     }
 
-    public void updateDeliveryStatus(DeliveryStatus status) {
+    public void updateStatus(DeliveryStatus status) {
         if (!this.status.canChangeTo(status)) {
             throw new IllegalArgumentException();
         }
@@ -107,7 +107,7 @@ public class Delivery extends BaseEntity {
     }
 
     public void complete() {
-        updateDeliveryStatus(DeliveryStatus.DELIVERED);
+        updateStatus(DeliveryStatus.DELIVERED);
         this.deliveredAt = LocalDateTime.now();
     }
 }

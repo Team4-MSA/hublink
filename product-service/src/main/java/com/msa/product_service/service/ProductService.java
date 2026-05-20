@@ -7,18 +7,15 @@ import com.msa.product_service.dto.ProductResponseDto;
 import com.msa.product_service.entity.Product;
 import com.msa.product_service.repository.ProductRepository;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class ProductService {
-
-    @Autowired
     private ProductRepository productRepository;
-
-    @Autowired
-    private CompanyClient companyClient;
 
     /**
      * 상품 생성

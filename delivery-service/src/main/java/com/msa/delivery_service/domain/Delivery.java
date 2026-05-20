@@ -11,15 +11,19 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
+@Builder
 @Entity
 @Table(name = "p_deliveries", schema = "delivery_service")
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Delivery extends BaseEntity {
 
@@ -40,7 +44,7 @@ public class Delivery extends BaseEntity {
     @Column(name = "receiver_company_id", nullable = false)
     private UUID receiverCompanyId;
 
-    @Column(name = "company_delivery_manager_id")
+    @Column(name = "company_delivery_manager_id", nullable = false)
     private UUID companyDeliveryManagerId;
 
     @Enumerated(EnumType.STRING)
@@ -50,10 +54,10 @@ public class Delivery extends BaseEntity {
     @Column(name = "delivery_address", nullable = false)
     private String deliveryAddress;
 
-    @Column(name = "receiver_name", length = 100)
+    @Column(name = "receiver_name", length = 100, nullable = false)
     private String receiverName;
 
-    @Column(name = "delivery_manager_slack_id", length = 100)
+    @Column(name = "delivery_manager_slack_id", length = 100,  nullable = false)
     private String deliveryManagerSlackId;
 
     @Column(name = "estimated_arrival_at")
@@ -64,4 +68,46 @@ public class Delivery extends BaseEntity {
 
     @Column(name = "final_departure_deadline")
     private LocalDateTime finalDepartureDeadline;
+
+    public static Delivery create(
+            UUID orderId,
+            UUID departureHubId,
+            UUID destinationHubId,
+            UUID receiverCompanyId,
+            UUID companyDeliveryManagerId,
+            String deliveryAddress,
+            String receiverName,
+            String deliveryManagerSlackId,
+            LocalDateTime estimatedArrivalAt
+    ) {
+        return Delivery.builder()
+                .orderId(orderId)
+                .departureHubId(departureHubId)
+                .destinationHubId(destinationHubId)
+                .receiverCompanyId(receiverCompanyId)
+                .companyDeliveryManagerId(companyDeliveryManagerId)
+                .status(DeliveryStatus.PENDING)
+                .deliveryAddress(deliveryAddress)
+                .receiverName(receiverName)
+                .deliveryManagerSlackId(deliveryManagerSlackId)
+                .estimatedArrivalAt(estimatedArrivalAt)
+                .build();
+    }
+
+    public void updateDeliveryStatus(DeliveryStatus status) {
+        if (!this.status.canChangeTo(status)) {
+            throw new IllegalArgumentException();
+        }
+        this.status = status;
+    }
+
+    public void updateDeliverySchedule(LocalDateTime estimatedArrivalAt, LocalDateTime finalDepartureDeadline) {
+        this.estimatedArrivalAt = estimatedArrivalAt;
+        this.finalDepartureDeadline = finalDepartureDeadline;
+    }
+
+    public void complete() {
+        updateDeliveryStatus(DeliveryStatus.DELIVERED);
+        this.deliveredAt = LocalDateTime.now();
+    }
 }

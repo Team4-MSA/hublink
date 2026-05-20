@@ -4,6 +4,20 @@ server:
 spring:
   application:
     name: slack-service
+  datasource:
+    url: ${DB_URL}?currentSchema=slack_service
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: slack_service
+        format_sql: true
+    show-sql: true
 
 eureka:
   client:
@@ -20,3 +34,5 @@ management:
   endpoint:
     health:
       show-details: always
+slack:
+  bot-token: ${SLACK_BOT_TOKEN}

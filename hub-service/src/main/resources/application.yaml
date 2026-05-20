@@ -1,9 +1,5 @@
 spring:
-  application:
-    name: hub-service
 
-  config:
-    import: "configserver:${CONFIG_SERVER_URL:http://localhost:19092}"
   datasource:
     url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver

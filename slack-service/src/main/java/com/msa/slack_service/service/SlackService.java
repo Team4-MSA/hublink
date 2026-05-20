@@ -1,18 +1,21 @@
 package com.msa.slack_service.service;
 
+import com.msa.core_common.response.paging.PageRes;
 import com.msa.slack_service.client.SlackClient;
 import com.msa.slack_service.dto.DeadlineGeneratedEvent;
 import com.msa.slack_service.dto.SlackMessageResponse;
+import com.msa.slack_service.entity.MessageType;
 import com.msa.slack_service.entity.SlackMessage;
 import com.msa.slack_service.entity.SlackMessageStatus;
 import com.msa.slack_service.exception.SlackErrorCode;
 import com.msa.slack_service.repository.SlackMessageRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.msa.core_common.error.exception.CustomException;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -51,12 +54,18 @@ public class SlackService {
     }
 
     // 목록 조회
-    public List<SlackMessageResponse> getSlackMessages(String role) {
+    public PageRes<SlackMessageResponse> getSlackMessages(
+            String role,
+            SlackMessageStatus status,
+            MessageType messageType,
+            Pageable pageable
+    ) {
         validateMaster(role);
-        return slackMessageService.findAll()
-                .stream()
-                .map(SlackMessageResponse::from)
-                .toList();
+        Page<SlackMessageResponse> page = slackMessageService
+                .findAll(status, messageType, pageable)
+                .map(SlackMessageResponse::from);
+
+        return new PageRes<>(page);
     }
 
     // 상세 조회

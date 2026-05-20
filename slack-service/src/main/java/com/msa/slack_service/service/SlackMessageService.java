@@ -2,14 +2,17 @@ package com.msa.slack_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.slack_service.dto.DeadlineGeneratedEvent;
+import com.msa.slack_service.entity.MessageType;
 import com.msa.slack_service.entity.SlackMessage;
+import com.msa.slack_service.entity.SlackMessageStatus;
 import com.msa.slack_service.exception.SlackErrorCode;
 import com.msa.slack_service.repository.SlackMessageRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -53,8 +56,12 @@ public class SlackMessageService {
         slackMessage.markFailed(reason);
     }
 
-    public List<SlackMessage> findAll() {
-        return slackMessageRepository.findAll();
+    public Page<SlackMessage> findAll(
+            SlackMessageStatus status,
+            MessageType messageType,
+            Pageable pageable
+    ) {
+        return slackMessageRepository.findAllByCondition(status, messageType, pageable);
     }
 
     public Optional<SlackMessage> findById(UUID slackMessageId) {

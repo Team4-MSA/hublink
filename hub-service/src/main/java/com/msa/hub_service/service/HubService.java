@@ -95,7 +95,7 @@ public class HubService {
         hub.updateHub(name, address, coordinate.latitude(), coordinate.longitude());
         hubRepository.save(hub);
 
-        if (isAddressChanged && coordinate.latitude() != null && coordinate.longitude() != null) {
+        if (isAddressChanged) {
             eventPublisher.publishEvent(new HubUpdatedEvent(hub.getHubId()));
         }
 

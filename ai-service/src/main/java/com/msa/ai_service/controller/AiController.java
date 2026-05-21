@@ -6,6 +6,7 @@ import com.msa.ai_service.entity.AiRequestType;
 import com.msa.ai_service.service.AiMessageService;
 import com.msa.core_common.response.paging.PageRes;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -15,7 +16,7 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/ai-messages")
+@RequestMapping("api/v1/ai-messages")
 public class AiController {
     private final AiMessageService aiMessageService;
 
@@ -25,6 +26,7 @@ public class AiController {
             @RequestHeader("X-User-Role") String role,
             @RequestParam(name = "request_type", required = false) AiRequestType requestType,
             @RequestParam(required = false) AiMessageStatus status,
+            @ParameterObject
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return aiMessageService.getAiMessages(role, requestType, status, pageable);

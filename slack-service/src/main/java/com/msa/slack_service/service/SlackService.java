@@ -1,5 +1,6 @@
 package com.msa.slack_service.service;
 
+import com.msa.core_common.auth.UserRole;
 import com.msa.slack_service.client.SlackClient;
 import com.msa.slack_service.entity.SlackMessage;
 import com.msa.slack_service.entity.SlackMessageStatus;
@@ -48,7 +49,7 @@ public class SlackService {
 
     // 재전송
     public void resendSlackMessage(String role, UUID slackMessageId) {
-        if (!"MASTER".equals(role)) {
+        if (!UserRole.MASTER.name().equals(role)) {
             throw new CustomException(SlackErrorCode.SLACK_MESSAGE_ACCESS_DENIED);
         }
 

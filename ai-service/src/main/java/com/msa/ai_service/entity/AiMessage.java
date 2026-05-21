@@ -42,7 +42,7 @@ public class AiMessage extends BaseEntity {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
-    private AiMessageStatus status = AiMessageStatus.SUCCESS;
+    private AiMessageStatus status = AiMessageStatus.PENDING;
 
     @Builder.Default
     @Column(name = "error_message", columnDefinition = "TEXT")

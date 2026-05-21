@@ -1,5 +1,6 @@
 package com.msa.slack_service.service;
 
+import com.msa.core_common.auth.UserRole;
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.slack_service.dto.SlackMessageResponse;
@@ -89,7 +90,7 @@ public class SlackMessageService {
 
     // 권한 검증
     private void validateMaster(String role) {
-        if (!"MASTER".equals(role)) {
+        if (!UserRole.MASTER.name().equals(role)) {
             throw new CustomException(SlackErrorCode.SLACK_MESSAGE_ACCESS_DENIED);
         }
     }

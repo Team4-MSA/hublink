@@ -1,17 +1,11 @@
 package com.msa.slack_service.service;
 
-import com.msa.core_common.response.paging.PageRes;
 import com.msa.slack_service.client.SlackClient;
-import com.msa.slack_service.dto.SlackMessageResponse;
-import com.msa.slack_service.entity.MessageType;
 import com.msa.slack_service.entity.SlackMessage;
 import com.msa.slack_service.entity.SlackMessageStatus;
 import com.msa.slack_service.exception.SlackErrorCode;
-import com.msa.slack_service.repository.SlackMessageRepository;
 import com.msa.slack_service.stream.event.DeadlineGeneratedEvent;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import com.msa.core_common.error.exception.CustomException;
 
@@ -20,7 +14,6 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class SlackService {
-    private final SlackMessageRepository slackMessageRepository;
     private final SlackMessageService slackMessageService;
     private final SlackClient slackClient;
 
@@ -53,44 +46,13 @@ public class SlackService {
         }
     }
 
-    // 목록 조회
-    public PageRes<SlackMessageResponse> getSlackMessages(
-            String role,
-            SlackMessageStatus status,
-            MessageType messageType,
-            Pageable pageable
-    ) {
-        validateMaster(role);
-        Page<SlackMessageResponse> page = slackMessageService
-                .findAll(status, messageType, pageable)
-                .map(SlackMessageResponse::from);
-
-        return new PageRes<>(page);
-    }
-
-    // 상세 조회
-    public SlackMessageResponse getSlackMessage(String role, UUID slackMessageId) {
-        validateMaster(role);
-        SlackMessage slackMessage = slackMessageService.findById(slackMessageId)
-                .orElseThrow(() -> new CustomException(SlackErrorCode.SLACK_MESSAGE_NOT_FOUND));
-
-        return SlackMessageResponse.from(slackMessage);
-    }
-
     // 재전송
     public void resendSlackMessage(String role, UUID slackMessageId) {
-        validateMaster(role);
-        SlackMessage slackMessage = slackMessageService.findById(slackMessageId)
-                .orElseThrow(() -> new CustomException(SlackErrorCode.SLACK_MESSAGE_NOT_FOUND));
-
-        sendAndUpdateStatus(slackMessage);
-    }
-
-    // 권한 검증
-    private void validateMaster(String role) {
         if (!"MASTER".equals(role)) {
             throw new CustomException(SlackErrorCode.SLACK_MESSAGE_ACCESS_DENIED);
         }
-    }
 
+        SlackMessage slackMessage = slackMessageService.getEntity(slackMessageId);
+        sendAndUpdateStatus(slackMessage);
+    }
 }

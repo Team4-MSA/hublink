@@ -5,6 +5,7 @@ import com.msa.core_common.response.paging.PageRes;
 import com.msa.slack_service.dto.SlackMessageResponse;
 import com.msa.slack_service.entity.MessageType;
 import com.msa.slack_service.entity.SlackMessageStatus;
+import com.msa.slack_service.service.SlackMessageService;
 import com.msa.slack_service.service.SlackService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +20,7 @@ import java.util.UUID;
 @RequestMapping("api/v1/slack-messages")
 public class SlackController {
     private final SlackService slackService;
+    private final SlackMessageService slackMessageService;
 
     @GetMapping
     public PageRes<SlackMessageResponse> getSlackMessages(
@@ -27,7 +29,7 @@ public class SlackController {
             @RequestParam(required = false) MessageType messageType,
             @PageableDefault(size = 10, sort = "sentAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return slackService.getSlackMessages(role, status, messageType, pageable);
+        return slackMessageService.getSlackMessages(role, status, messageType, pageable);
     }
 
     @GetMapping("/{slackMessageId}")
@@ -35,7 +37,7 @@ public class SlackController {
             @RequestHeader("X-User-Role") String role,
             @PathVariable UUID slackMessageId
     ) {
-        return slackService.getSlackMessage(role, slackMessageId);
+        return slackMessageService.getSlackMessage(role, slackMessageId);
     }
 
     @PostMapping("/{slackMessageId}/resend")

@@ -17,4 +17,6 @@ public interface HubRepository extends JpaRepository<HubEntity, UUID> {
     boolean existsByName(String name);
 
     boolean existsByAddress(String address);
+
+    List<HubEntity> findByHubIdNot(UUID hubId);
 }

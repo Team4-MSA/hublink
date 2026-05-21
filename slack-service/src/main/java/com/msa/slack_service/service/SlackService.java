@@ -2,14 +2,15 @@ package com.msa.slack_service.service;
 
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.slack_service.client.SlackClient;
-import com.msa.slack_service.dto.DeadlineGeneratedEvent;
 import com.msa.slack_service.dto.SlackMessageResponse;
 import com.msa.slack_service.entity.MessageType;
 import com.msa.slack_service.entity.SlackMessage;
 import com.msa.slack_service.entity.SlackMessageStatus;
 import com.msa.slack_service.exception.SlackErrorCode;
 import com.msa.slack_service.repository.SlackMessageRepository;
+import com.msa.slack_service.stream.event.DeadlineGeneratedEvent;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import com.msa.core_common.error.exception.CustomException;
 
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SlackService {
@@ -26,16 +28,28 @@ public class SlackService {
 
     // 발송 시한 전송
     public void processDeadlineGenerated(DeadlineGeneratedEvent event) {
-        // 멱등성 키로 중복 확인
+        log.info("[1] SlackService 진입: eventId={}, slackId={}, type={}, message={}",
+                event.getEventId(), event.getReceiverSlackId(), event.getMessageType(), event.getMessage());
+
         String idempotencyKey = event.getEventId().toString();
+
+        log.info("[2] findOrCreateMessage 호출 전: idempotencyKey={}", idempotencyKey);
+
         SlackMessage slackMessage = slackMessageService.findOrCreateMessage(event, idempotencyKey);
 
-        // 이미 보냈으면 전송 x
+        log.info("[3] findOrCreateMessage 호출 후: slackMessageId={}, status={}",
+                slackMessage.getSlackMessageId(), slackMessage.getStatus());
+
         if (slackMessage.getStatus() == SlackMessageStatus.SENT) {
+            log.info("[4] 이미 SENT라 전송 생략");
             return;
         }
 
+        log.info("[5] Slack 전송 호출 전");
+
         sendAndUpdateStatus(slackMessage);
+
+        log.info("[6] Slack 전송 처리 완료");
     }
 
 

@@ -38,6 +38,11 @@ public class UserApprovalHistory {
     @Column(name = "processed_by")
     private UUID processedBy;
 
-    @Column(name = "processed_at", nullable = false)
+    @Column(name = "processed_at", nullable = false, updatable = false)
     private LocalDateTime processedAt;
+
+    @PrePersist
+    protected void onPersist() {
+        this.processedAt = LocalDateTime.now();
+    }
 }

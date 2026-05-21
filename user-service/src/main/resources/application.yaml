@@ -1,10 +1,13 @@
+server:
+  port: 19093
+
 spring:
   application:
     name: user-service
   profiles:
     active: local
   config:
-    import: "configserver:"
+    import: "optional:configserver:"
   cloud:
     config:
       discovery:
@@ -13,9 +16,6 @@ spring:
 #    circuitbreaker:
 #      resilience4j:
 #        enabled: true
-
-server:
-  port: 19093
 
 eureka:
   client:

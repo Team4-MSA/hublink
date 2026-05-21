@@ -33,7 +33,7 @@ public class User extends BaseEntity {
     @Column(name = "email", unique = true)
     private String email;
 
-    @Column(name = "slack_id", length = 100)
+    @Column(name = "slack_id", nullable = false, length = 100)
     private String slackId;
 
     @Column(name = "role", nullable = false, length = 50)
@@ -44,4 +44,27 @@ public class User extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private UserStatus status;
 
+    @Column(name = "hub_id", columnDefinition = "uuid")
+    private UUID hubId;
+
+    @Column(name = "company_id", columnDefinition = "uuid")
+    private UUID companyId;
+
+    public void approve() {
+        this.status = UserStatus.APPROVED;
+    }
+
+    public void reject() {
+        this.status = UserStatus.REJECTED;
+    }
+
+    public void inactive() {
+        this.status = UserStatus.INACTIVE;
+    }
+
+    public void update(String name, String email, String slackId) {
+        this.name = name;
+        this.email = email;
+        this.slackId = slackId;
+    }
 }

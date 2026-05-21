@@ -25,6 +25,11 @@ spring:
         format_sql: true
     show-sql: true
 
+  task:
+    scheduling:
+      pool:
+        size: 3
+
 eureka:
   client:
     service-url:

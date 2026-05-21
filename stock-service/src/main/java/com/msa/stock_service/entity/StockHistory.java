@@ -37,17 +37,55 @@ public class StockHistory extends BaseEntity {
     @Column(name = "change_quantity", nullable = false)
     private Integer changeQuantity; //변경할 수량
 
+    @Builder.Default
     @Column(name = "before_quantity", nullable = false)
-    private Integer beforeQuantity; //변경 전 수량
+    private Integer beforeQuantity = 0; //변경 전 수량
 
     @Column(name = "after_quantity", nullable = false)
     private Integer afterQuantity; //변경 후 수량
 
+    @Builder.Default
     @Column(nullable = false)
-    private String reason;
+    private StockChangeReason reason = StockChangeReason.PRODUCT_CREATED;
 
     @Column(name = "reference_id")
     private UUID referenceId;
+
+    //상품 생성 시, 재고 이력 생성.
+    public static StockHistory create(Stock stock) {
+        return StockHistory.builder()
+            .stockId(stock.getId())
+            .productId(stock.getProductId())
+            .hubId(stock.getHubId())
+            .changeQuantity(stock.getQuantity())
+            .afterQuantity(stock.getQuantity())
+            .build();
+    }
+
+    //재고 감소시, 재고 이력 생성
+    public static StockHistory createDecreaStock(Stock stock, Integer orderQuantity) {
+        return StockHistory.builder().
+            stockId(stock.getId()).
+            productId(stock.getProductId()).
+            hubId(stock.getHubId()).
+            changeQuantity(orderQuantity).
+            beforeQuantity(stock.getQuantity()).
+            afterQuantity(stock.getQuantity() - orderQuantity).
+            reason(StockChangeReason.ORDER_CREATED).
+            build();
+    }
+
+    // 재고 감소 실패 시, 재고 이력 생성.
+    public static StockHistory createOutOfStock(Stock stock, Integer orderQuantity) {
+        return StockHistory.builder().
+            stockId(stock.getId()).
+            productId(stock.getProductId()).
+            hubId(stock.getHubId()).
+            changeQuantity(orderQuantity).
+            beforeQuantity(stock.getQuantity()).
+            reason(StockChangeReason.OUT_OF_STOCK).
+            build();
+    }
 
 
 }

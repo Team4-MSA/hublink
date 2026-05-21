@@ -25,7 +25,7 @@ public class AiMessage extends BaseEntity {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(name = "request_type", nullable = false, length = 50)
-    private AiRequestType requestType = AiRequestType.DEADLINE;
+    private AiRequestType requestType = AiRequestType.DELIVERY_DEADLINE;
 
     @Column(name = "prompt", nullable = false, columnDefinition = "TEXT")
     private String prompt;

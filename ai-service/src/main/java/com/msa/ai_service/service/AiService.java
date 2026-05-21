@@ -29,7 +29,7 @@ public class AiService {
 
         AiMessage aiMessage = aiMessageService.saveMessage(
                 event.getDeliveryId(),
-                AiRequestType.DEADLINE,
+                AiRequestType.DELIVERY_DEADLINE,
                 prompt,
                 toRequestPayload(event)
         );

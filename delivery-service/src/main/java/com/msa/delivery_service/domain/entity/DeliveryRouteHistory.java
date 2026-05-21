@@ -1,4 +1,4 @@
-package com.msa.delivery_service.domain;
+package com.msa.delivery_service.domain.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
 import com.msa.delivery_service.domain.enums.DeliveryLocationType;
@@ -124,13 +124,10 @@ public class DeliveryRouteHistory extends BaseEntity {
         this.estimatedDurationMin = estimatedDurationMin;
     }
 
-    public void updateActualRouteInfo(BigDecimal actualDistanceKm, Integer actualDurationMin) {
+    public void complete(BigDecimal actualDistanceKm, Integer actualDurationMin) {
+        this.status = DeliveryRouteStatus.COMPLETED;
         this.actualDistanceKm = actualDistanceKm;
         this.actualDurationMin = actualDurationMin;
-    }
-
-    public void complete() {
-        this.status = DeliveryRouteStatus.COMPLETED;
         this.processedAt = LocalDateTime.now();
     }
 }

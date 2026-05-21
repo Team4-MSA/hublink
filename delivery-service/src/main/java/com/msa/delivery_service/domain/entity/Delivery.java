@@ -1,4 +1,4 @@
-package com.msa.delivery_service.domain;
+package com.msa.delivery_service.domain.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
 import com.msa.delivery_service.domain.enums.DeliveryStatus;

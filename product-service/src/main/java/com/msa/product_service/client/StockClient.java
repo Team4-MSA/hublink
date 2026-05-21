@@ -8,6 +8,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 
 @FeignClient(name = "stock-service")
 public interface StockClient {
-    @PostMapping("/api/v1/stocks/history")
-    Void createStockHistory(StockRequestDto dto);
+    @PostMapping("/api/v1/stocks")
+    Void createStock(StockRequestDto dto);
 }

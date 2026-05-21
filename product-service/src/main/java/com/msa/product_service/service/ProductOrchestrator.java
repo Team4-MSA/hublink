@@ -60,7 +60,7 @@ public class ProductOrchestrator {
                 build();
 
             //이 상품에 대한 재고와 재고 이력을 DB에 저장.
-            stockClient.createStockHistory(stockRequestDto);
+            stockClient.createStock(stockRequestDto);
         } catch (Exception e) {
             //재고 서비스에 문제가 발생 시, DB에 저장된 상품을 삭제.
             productService.deleteProduct(newProduct.getId(), username);

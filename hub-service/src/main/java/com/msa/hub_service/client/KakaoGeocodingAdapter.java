@@ -1,7 +1,9 @@
 package com.msa.hub_service.client;
 
+import com.msa.core_common.error.exception.CustomException;
 import com.msa.hub_service.dto.CoordinateDto;
 import com.msa.hub_service.dto.KakaoAddressResponse;
+import com.msa.hub_service.global.HubErrorCode;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
@@ -43,7 +45,7 @@ public class KakaoGeocodingAdapter implements AddressGeocodingPort {
 
         // 2. 응답 검증 (결과가 없는 경우)
         if (response == null || response.documents() == null || response.documents().isEmpty()) {
-            throw new IllegalArgumentException("유효하지 않은 주소이거나 좌표를 찾을 수 없습니다: " + address);
+            throw new CustomException(HubErrorCode.ADDRESS_NOT_FOUND);
         }
 
         // 3. String으로 받은 위경도를 BigDecimal로 변환
@@ -56,10 +58,9 @@ public class KakaoGeocodingAdapter implements AddressGeocodingPort {
     }
 
     private CoordinateDto fallbackCoordinate(String address, Exception e) {
-        log.error("[Fallback] 카카오 API 호출 최종 실패. 주소: {}, 사유: {}", address, e.getMessage());
 
-        // 방법 1. 에러를 던져서 Service 단의 catch 블록으로 넘김 (추천)
-        throw new RuntimeException("카카오 지도 API 장애로 좌표 변환에 실패했습니다.", e);
+        log.error("[Fallback] 카카오 API 호출 최종 실패. 주소: {}, 사유: {}", address, e.getMessage());
+        throw new CustomException(HubErrorCode.COORDINATE_API_ERROR);
 
     }
 }

@@ -1,9 +1,11 @@
 package com.msa.hub_service.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
+import com.msa.core_common.error.exception.CustomException;
+import com.msa.hub_service.global.HubErrorCode;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.util.Assert;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -14,6 +16,7 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder(access = AccessLevel.PRIVATE)
 @Table(name = "p_hubs")
+@SQLRestriction("deleted_at IS NULL")
 public class HubEntity extends BaseEntity {
 
     private static final BigDecimal MIN_LATITUDE = new BigDecimal("-90.0");
@@ -38,14 +41,14 @@ public class HubEntity extends BaseEntity {
     @Column(precision = 10, scale = 7)
     private BigDecimal longitude;
 
-    // 정상 등록
+    // 등록
     public static HubEntity create(String name, String address, BigDecimal latitude, BigDecimal longitude) {
-        Assert.hasText(name, "허브 이름은 필수입니다.");
-        Assert.hasText(address, "허브 주소는 필수입니다.");
-        Assert.notNull(latitude, "위도는 필수입니다.");
-        Assert.notNull(longitude, "경도는 필수입니다.");
+        validateNotBlank(name, HubErrorCode.HUB_NAME_REQUIRED);
+        validateNotBlank(address, HubErrorCode.HUB_ADDRESS_REQUIRED);
 
-        validateCoordinates(latitude, longitude);
+        if (latitude != null && longitude != null) {
+            validateCoordinates(latitude, longitude);
+        }
 
         return HubEntity.builder()
                 .name(name)
@@ -55,22 +58,11 @@ public class HubEntity extends BaseEntity {
                 .build();
     }
 
-    // 이름과 주소만 일단 등록
-    public static HubEntity createPendingCoordinates(String name, String address) {
-        Assert.hasText(name, "허브 이름은 필수입니다.");
-        Assert.hasText(address, "허브 주소는 필수입니다.");
-
-        return HubEntity.builder()
-                .name(name)
-                .address(address)
-                // latitude, longitude는 자동으로 null이 됨
-                .build();
-    }
-
-    //누락 좌표 업데이트
+    // 누락 좌표 업데이트
     public void updateCoordinates(BigDecimal latitude, BigDecimal longitude) {
-        Assert.notNull(latitude, "위도는 필수입니다.");
-        Assert.notNull(longitude, "경도는 필수입니다.");
+        if (latitude == null || longitude == null) {
+            throw new CustomException(HubErrorCode.NULL_COORDINATES);
+        }
 
         validateCoordinates(latitude, longitude);
 
@@ -78,12 +70,34 @@ public class HubEntity extends BaseEntity {
         this.longitude = longitude;
     }
 
-    private static void validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
-        if (latitude.compareTo(MIN_LATITUDE) < 0 || latitude.compareTo(MAX_LATITUDE) > 0) {
-            throw new IllegalArgumentException("위도는 -90에서 90 사이여야 합니다. 입력값: " + latitude);
+    // 주소 변경
+    public void updateHub(String name, String address, BigDecimal latitude, BigDecimal longitude) {
+
+        validateNotBlank(name, HubErrorCode.HUB_NAME_REQUIRED);
+        validateNotBlank(address, HubErrorCode.HUB_ADDRESS_REQUIRED);
+
+        if (latitude != null && longitude != null) {
+            validateCoordinates(latitude, longitude);
         }
-        if (longitude.compareTo(MIN_LONGITUDE) < 0 || longitude.compareTo(MAX_LONGITUDE) > 0) {
-            throw new IllegalArgumentException("경도는 -180에서 180 사이여야 합니다. 입력값: " + longitude);
+
+        this.name = name;
+        this.address = address;
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    // 위도 경도 유효성 검사
+    private static void validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
+        if (latitude.compareTo(MIN_LATITUDE) < 0 || latitude.compareTo(MAX_LATITUDE) > 0 ||
+                longitude.compareTo(MIN_LONGITUDE) < 0 || longitude.compareTo(MAX_LONGITUDE) > 0) {
+            throw new CustomException(HubErrorCode.INVALID_COORDINATES);
+        }
+    }
+
+    // 문자열 유효성 검사
+    private static void validateNotBlank(String value, HubErrorCode errorCode) {
+        if (value == null || value.isBlank()) {
+            throw new CustomException(errorCode);
         }
     }
 

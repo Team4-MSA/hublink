@@ -1,5 +1,7 @@
 package com.msa.hub_service.global;
 
+import com.msa.core_common.error.exception.CustomException;
+
 import java.math.BigDecimal;
 
 public class Util {
@@ -12,7 +14,7 @@ public class Util {
         public static double getDistance(BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
 
             if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) {
-                throw new IllegalArgumentException("위도와 경도 값은 null일 수 없습니다.");
+                throw new CustomException(HubErrorCode.NULL_COORDINATES);
             }
 
             // Math 삼각함수 사용을 위해 double 타입으로 변환

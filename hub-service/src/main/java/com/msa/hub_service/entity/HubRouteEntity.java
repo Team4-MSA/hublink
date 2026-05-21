@@ -1,10 +1,11 @@
 package com.msa.hub_service.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
+import com.msa.core_common.error.exception.CustomException;
+import com.msa.hub_service.global.HubErrorCode;
 import com.msa.hub_service.global.Util;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.util.Assert;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -54,11 +55,15 @@ public class HubRouteEntity extends BaseEntity {
             HubEntity departureHub,
             HubEntity arrivalHub
     ) {
-        Assert.notNull(departureHub, "출발 허브 ID는 필수입니다.");
-        Assert.notNull(arrivalHub, "도착 허브 ID는 필수입니다.");
+        if (departureHub == null) {
+            throw new CustomException(HubErrorCode.DEPARTURE_HUB_REQUIRED);
+        }
+        if (arrivalHub == null) {
+            throw new CustomException(HubErrorCode.ARRIVAL_HUB_REQUIRED);
+        }
 
         if (departureHub.getHubId().equals(arrivalHub.getHubId())) {
-            throw new IllegalArgumentException("출발 허브와 도착 허브는 같을 수 없습니다.");
+            throw new CustomException(HubErrorCode.SAME_HUB_NOT_ALLOWED);
         }
 
         // 위경도를 이용한 직선 거리 계산 (km)

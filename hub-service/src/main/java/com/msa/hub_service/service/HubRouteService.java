@@ -20,7 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -67,7 +69,7 @@ public class HubRouteService {
     @Async
     @EventListener
     @Transactional
-    public void creatRoutesForNewHub(HubCreatedEvent event) {
+    public void createRoutesForNewHub(HubCreatedEvent event) {
         HubEntity newHub = hubRepository.findById(event.hubId())
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_NOT_FOUND));
 
@@ -82,14 +84,31 @@ public class HubRouteService {
             return;
         }
 
+        // 이미 연결되어 있을 경우
+        List<HubRouteEntity> existingRoutes = hubRouteRepository.findByInvolvedHubId(newHub.getHubId());
+        // 중복 검사
+        Set<String> existingRouteSet = existingRoutes.stream()
+                .map(route -> route.getDepartureHub().getHubId().toString() + "_" + route.getArrivalHub().getHubId().toString())
+                .collect(Collectors.toSet());
+
         List<HubRouteEntity> newRoutes = new ArrayList<>();
 
         for (HubEntity existingHub : validExistingHubs) {
-            newRoutes.add(HubRouteEntity.create(newHub, existingHub));
-            newRoutes.add(HubRouteEntity.create(existingHub, newHub));
+            String forwardKey = newHub.getHubId().toString() + "_" + existingHub.getHubId().toString();
+            String backwardKey = existingHub.getHubId().toString() + "_" + newHub.getHubId().toString();
+
+            // 중복 아닐 때만 생성
+            if (!existingRouteSet.contains(forwardKey)) {
+                newRoutes.add(HubRouteEntity.create(newHub, existingHub));
+            }
+            if (!existingRouteSet.contains(backwardKey)) {
+                newRoutes.add(HubRouteEntity.create(existingHub, newHub));
+            }
         }
 
-        hubRouteRepository.saveAll(newRoutes);
+        if (!newRoutes.isEmpty()) {
+            hubRouteRepository.saveAll(newRoutes);
+        }
     }
 
     @Async
@@ -100,7 +119,7 @@ public class HubRouteService {
 
         if (affectedRoutes.isEmpty()) {
             //기존 경로가 없지만 수정된 경우
-            creatRoutesForNewHub(new HubCreatedEvent(event.hubId()));
+            createRoutesForNewHub(new HubCreatedEvent(event.hubId()));
             return;
         }
 
@@ -114,10 +133,12 @@ public class HubRouteService {
     @Async
     @EventListener
     @Transactional
-    public void deleteRoutesForDeletedHub(HubDeletedEvent event){
+    public void deleteRoutesForDeletedHub(HubDeletedEvent event) {
         List<HubRouteEntity> affectedRoutes = hubRouteRepository.findByInvolvedHubId(event.hubId());
 
-        if (affectedRoutes.isEmpty()) {return;}
+        if (affectedRoutes.isEmpty()) {
+            return;
+        }
 
         String deletedBy = auditorAware.getCurrentAuditor().orElse("SYSTEM");
 

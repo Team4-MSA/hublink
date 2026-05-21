@@ -7,11 +7,9 @@ import com.msa.hub_service.global.HubErrorCode;
 import com.msa.hub_service.global.Util;
 import jakarta.persistence.*;
 import lombok.*;
-import org.apache.hc.client5.http.RouteInfo;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.UUID;
 
 @Entity

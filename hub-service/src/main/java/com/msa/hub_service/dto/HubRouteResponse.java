@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 public record HubRouteResponse(
-        UUID HubRouteId,
+        UUID hubRouteId,
         UUID departureHub,
         UUID arrivalHub,
         BigDecimal estimatedDistanceKm,

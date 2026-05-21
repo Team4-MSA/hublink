@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -30,4 +31,7 @@ public class DeadlineGeneratedEvent {
 
     @NotBlank(message = "메시지 내용은 필수입니다.")
     private String message;
+
+    @NotNull(message = "최종 발송 시한은 필수입니다.")
+    private LocalDateTime finalDepartureDeadline;
 }

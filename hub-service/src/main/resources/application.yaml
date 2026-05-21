@@ -17,10 +17,10 @@ spring:
         format_sql: true
   data:
     redis:
-      host: localhost
-      port: 6379
-      username: default
-      password: systempass
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME:default}
+      password: ${REDIS_PASSWORD}
 
 eureka:
   client:
@@ -29,3 +29,4 @@ eureka:
 
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY}
+  base-url: "https://dapi.kakao.com"

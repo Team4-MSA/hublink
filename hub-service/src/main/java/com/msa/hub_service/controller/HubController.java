@@ -42,7 +42,7 @@ public class HubController {
     @GetMapping
     public PageRes<HubResponse> getHubs(
             @RequestParam(required = false) String name,
-            @PageableDefault(page = 0, size = 10, sort = "createdTime", direction = Sort.Direction.DESC) Pageable pageable
+            @PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ){
         return hubService.getHubs(name, pageable);
     }

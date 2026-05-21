@@ -22,9 +22,10 @@ public class KakaoGeocodingAdapter implements AddressGeocodingPort {
 
     public KakaoGeocodingAdapter(
             RestClient.Builder restClientBuilder,
-            @Value("${kakao.rest-api-key}") String kakaoRestApiKey
+            @Value("${kakao.rest-api-key}") String kakaoRestApiKey,
+            @Value("${kakao.base-url}") String baseUrl
     ) {
-        this.restClient = restClientBuilder.baseUrl("https://dapi.kakao.com").build();
+        this.restClient = restClientBuilder.baseUrl(baseUrl).build();
         this.kakaoRestApiKey = kakaoRestApiKey;
     }
 

@@ -1,8 +1,8 @@
 package com.msa.user_service.refresh;
 
+import com.msa.core_common.error.exception.CommonErrorCode;
 import com.msa.user_service.dto.ExamDto;
 import com.msa.core_common.error.exception.CustomException;
-import com.msa.core_common.error.exception.ErrorCode;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
 import org.springframework.validation.annotation.Validated;
@@ -31,7 +31,7 @@ public class RefreshController {
 
     @GetMapping("/errorTest")
     public void errorTest() {
-        throw new CustomException(ErrorCode.TEST_ERROR_CODE);
+        throw new CustomException(CommonErrorCode.TEST_ERROR_CODE);
     }
 
     @PostMapping("/validTest")

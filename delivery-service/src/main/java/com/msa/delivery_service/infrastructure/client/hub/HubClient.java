@@ -16,7 +16,7 @@ public interface HubClient {
     @GetMapping("/hubs/{hubId}")
     HubResponse getHub(@PathVariable UUID hubId);
 
-    @GetMapping("/routes")
+    @GetMapping("/hub-routes/path")
     List<HubRouteResponse> getRoutes(
             @RequestParam UUID departureHubId,
             @RequestParam UUID destinationHubId

@@ -5,7 +5,6 @@ import com.msa.delivery_service.domain.enums.DeliveryStatus;
 import lombok.Builder;
 import lombok.Getter;
 
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -34,7 +33,7 @@ public class DeliveryResponse {
                 .status(delivery.getStatus())
                 .deliveryAddress(delivery.getDeliveryAddress())
                 .receiverName(delivery.getReceiverName())
-                .deliveryManagerSlackId(delivery.getDeliveryManagerSlackId())
+                .deliveryManagerSlackId(delivery.getHubManagerSlackId())
                 .build();
     }
 }

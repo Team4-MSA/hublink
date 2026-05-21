@@ -10,6 +10,9 @@ import com.msa.hub_service.global.HubErrorCode;
 import com.msa.hub_service.repository.HubRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,6 +45,7 @@ public class HubService {
     }
 
     // Hub 상세 조회
+    @Cacheable(value = "hub", key="#hubId")
     public HubResponse getHub(UUID hubId) {
         HubEntity hub = hubRepository.findById(hubId)
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_NOT_FOUND));
@@ -49,6 +53,7 @@ public class HubService {
     }
 
     // Hub 이름/주소 변경
+    @CachePut(value = "hub", key = "#hubId")
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public HubResponse updateHub(UUID hubId, String name, String address) {
 
@@ -83,6 +88,7 @@ public class HubService {
     }
 
     // 허브 삭제
+    @CacheEvict(value = "hub", key="#hubId")
     @Transactional
     public HubResponse deleteHub(UUID hubId) {
         HubEntity hub = hubRepository.findById(hubId)

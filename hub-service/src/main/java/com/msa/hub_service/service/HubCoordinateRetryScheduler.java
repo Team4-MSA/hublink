@@ -6,6 +6,8 @@ import com.msa.hub_service.entity.HubEntity;
 import com.msa.hub_service.repository.HubRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +20,7 @@ public class HubCoordinateRetryScheduler {
 
     private final HubRepository hubRepository;
     private final AddressGeocodingPort geocodingPort;
+    private final RedisCacheManager cacheManager;
 
 
     @Scheduled(cron = "0 0 * * * *")
@@ -43,6 +46,12 @@ public class HubCoordinateRetryScheduler {
                 hubRepository.save(hub);
 
                 log.info("허브 [{}] 좌표 업데이트 성공", hub.getName());
+
+                // 캐시 관리(갱신되었으로 삭제)
+                Cache cache = cacheManager.getCache("hub");
+                if (cache!=null){
+                    cache.evict(hub.getHubId());
+                }
 
             } catch (Exception e) {
                 // 실패 시 건너뛰기

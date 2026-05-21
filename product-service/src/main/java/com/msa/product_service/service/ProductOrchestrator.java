@@ -17,10 +17,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class ProductOrchestrator {
 
-    private ProductService productService;
-    private StockClient stockClient;
-    private CompanyClient companyClient;
-    private UserClient  userClient;
+    private final ProductService productService;
+    private final StockClient stockClient;
+    private final CompanyClient companyClient;
+    private final UserClient  userClient;
 
     /**
      * 상품 생성 로직 상품 생성 -> 재고 수량 증가 -> 재고 이력 남기기
@@ -38,12 +38,18 @@ public class ProductOrchestrator {
 
         //HUB_MANAGER는 본인 허브인지 확인.
         if(userRole.equals("HUB_MANAGER")){
-            userClient.IsHubManager(userId,dto.getHubId());
+            Boolean ishubManager = userClient.IsHubManager(userId,dto.getHubId()).getData();
+            if(ishubManager == null ||  !ishubManager) {
+                throw new IllegalArgumentException("해당 허브에 대한 관리 권한이 없음.");
+            }
         }
 
         //COMPANY_MANAGER는 본인 업체인지 확인.
         if(userRole.equals("COMPANY_MANAGER")) {
-            userClient.IsCompanyManager(userId,dto.getCompanyId());
+            Boolean isCompanyManager = userClient.IsCompanyManager(userId,dto.getCompanyId()).getData();
+            if(isCompanyManager == null ||  !isCompanyManager) {
+                throw new IllegalArgumentException("해당 업체에 대한 권한이 업음.");
+            }
         }
 
         //업체가 허브에 속해 있는지 확인.

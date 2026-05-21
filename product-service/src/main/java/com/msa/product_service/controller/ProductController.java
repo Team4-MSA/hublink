@@ -6,6 +6,7 @@ import com.msa.product_service.entity.Product;
 import com.msa.product_service.service.ProductOrchestrator;
 import com.msa.product_service.service.ProductService;
 import java.util.UUID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -15,13 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/products")
+@RequiredArgsConstructor
 public class ProductController {
-
-    @Autowired
-    private ProductService productService;
-
-    @Autowired
-    private ProductOrchestrator productOrchestrator;
+    private final ProductOrchestrator productOrchestrator;
 
     /**
      * 상품 생성

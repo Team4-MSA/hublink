@@ -2,13 +2,13 @@ package com.msa.slack_service.service;
 
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.slack_service.client.SlackClient;
-import com.msa.slack_service.dto.DeadlineGeneratedEvent;
 import com.msa.slack_service.dto.SlackMessageResponse;
 import com.msa.slack_service.entity.MessageType;
 import com.msa.slack_service.entity.SlackMessage;
 import com.msa.slack_service.entity.SlackMessageStatus;
 import com.msa.slack_service.exception.SlackErrorCode;
 import com.msa.slack_service.repository.SlackMessageRepository;
+import com.msa.slack_service.stream.event.DeadlineGeneratedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

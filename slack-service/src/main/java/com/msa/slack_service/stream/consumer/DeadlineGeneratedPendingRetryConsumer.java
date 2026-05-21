@@ -27,9 +27,8 @@ public class DeadlineGeneratedPendingRetryConsumer {
     private final SlackService slackService;
     private final Validator validator;
 
-    @Scheduled(fixedDelay = 10000)
+    @Scheduled(fixedDelay = 300000)
     public void retryPendingMessages() {
-        log.info("Pending Slack 이벤트 재처리 스케줄러 실행");
         var records = stringRedisTemplate.opsForStream().read(
                 Consumer.from(
                         DeadlineStreamConstants.SLACK_SERVICE_GROUP,

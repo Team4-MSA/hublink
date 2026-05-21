@@ -96,8 +96,7 @@ public class HubRouteService {
     @EventListener
     @Transactional
     public void updateRoutesForUpdatedHub(HubUpdatedEvent event) {
-        List<HubRouteEntity> affectedRoutes = hubRouteRepository
-                .findByDepartureHub_HubIdOrArrivalHub_HubId(event.hubId(), event.hubId());
+        List<HubRouteEntity> affectedRoutes = hubRouteRepository.findByInvolvedHubId(event.hubId());
 
         if (affectedRoutes.isEmpty()) {
             //기존 경로가 없지만 수정된 경우
@@ -116,8 +115,9 @@ public class HubRouteService {
     @EventListener
     @Transactional
     public void deleteRoutesForDeletedHub(HubDeletedEvent event){
-        List<HubRouteEntity> affectedRoutes = hubRouteRepository
-                .findByDepartureHub_HubIdOrArrivalHub_HubId(event.hubId(), event.hubId());
+        List<HubRouteEntity> affectedRoutes = hubRouteRepository.findByInvolvedHubId(event.hubId());
+
+        if (affectedRoutes.isEmpty()) {return;}
 
         String deletedBy = auditorAware.getCurrentAuditor().orElse("SYSTEM");
 

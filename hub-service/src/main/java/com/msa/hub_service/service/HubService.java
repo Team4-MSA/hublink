@@ -84,6 +84,10 @@ public class HubService {
         CoordinateDto coordinate;
         if(isAddressChanged){
             coordinate = getCoordinate(address);
+
+            if (coordinate.latitude() == null || coordinate.longitude() == null){
+                throw new CustomException(HubErrorCode.GEOCODING_FAILED);
+            }
         }else {
             coordinate = new CoordinateDto(hub.getLatitude(), hub.getLongitude());
         }

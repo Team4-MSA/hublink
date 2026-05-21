@@ -8,10 +8,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.connection.stream.Consumer;
-import org.springframework.data.redis.connection.stream.MapRecord;
-import org.springframework.data.redis.connection.stream.ReadOffset;
-import org.springframework.data.redis.connection.stream.StreamOffset;
+import org.springframework.data.redis.connection.stream.*;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -34,6 +31,7 @@ public class DeadlineGeneratedStreamConsumer {
                         DeadlineStreamConstants.SLACK_SERVICE_GROUP,
                         DeadlineStreamConstants.SLACK_SERVICE_CONSUMER
                 ),
+                StreamReadOptions.empty().count(100),
                 StreamOffset.create(
                         DeadlineStreamConstants.DEADLINE_GENERATED_STREAM,
                         ReadOffset.lastConsumed()

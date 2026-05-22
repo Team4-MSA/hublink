@@ -7,7 +7,7 @@ import java.util.UUID;
 
 @Getter
 @Builder
-public class SignInResponse {
+public class LogInResponse {
 
     private String accessToken;
     private String refreshToken;

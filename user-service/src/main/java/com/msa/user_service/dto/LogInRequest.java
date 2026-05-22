@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-public class SignInRequest {
+public class LogInRequest {
 
     @NotBlank
     private String username;

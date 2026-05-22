@@ -31,18 +31,12 @@ public class StockOrchestrator {
         // 재고 감소를 하고, 그에 대한 재고 이력을 만든 다음, 재고 이력 리스트를 가져온다.
          List<StockHistory> histories = stockService.decreaStock(listDto);
 
-         //재고이력 리스트로 productId 리스트를 만든다.
-         List<UUID> productIdList = histories.stream()
-             .map(StockHistory::getProductId).collect(Collectors.toList());
-
-         //외부 서비스로 productId 리스트에 해당하는 상품 리스트를 가져온다.
+        //외부 서비스로 productId 리스트에 해당하는 상품 리스트를 가져온다.
+         List<UUID> productIdList = histories.stream().map(StockHistory::getProductId).collect(Collectors.toList());
         List<ProductResponse> productList = productClient.getProductsById(productIdList);
 
         //이 상품 목록을 Map으로 변환한다.
-        Map<UUID,ProductResponse> productMap = new HashMap<>();
-        for(ProductResponse product: productList) {
-            productMap.put(product.getProductId(),  product);
-        }
+        Map<UUID, ProductResponse> productMap = productList.stream().collect(Collectors.toMap(ProductResponse::getProductId, product -> product));
 
         //반환할 StockHistoryResponseDto 리스트를 만든다.
         List<StockHistoryResponseDto> stockHistoryResponseDtos = new ArrayList<>();
@@ -53,11 +47,7 @@ public class StockOrchestrator {
             ProductResponse productResponse = productMap.get(history.getProductId());
             //StockHistoryResponseDto에 넣을 재고 감소 성공 여부를 만든다.
             boolean isSuccess = true;
-            //특정 history에 reason이 수량 초과라면
-            if(history.getReason() == StockChangeReason.OUT_OF_STOCK) {
-                //그 성공여부는 false가 된다.
-                isSuccess = false;
-            }
+
             //이제 반환할 StockHistoryResponseDto(상품 정보가 포함된 이력)를 하나씩 만든다.
             StockHistoryResponseDto result = StockHistoryResponseDto.from(history,isSuccess,productResponse.getName(),productResponse.getPrice());
             //만든 StockHistoryResponseDto을 StockHistoryResponseDto 리스트에 저장한다.

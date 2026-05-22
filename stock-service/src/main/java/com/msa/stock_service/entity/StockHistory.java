@@ -87,5 +87,17 @@ public class StockHistory extends BaseEntity {
             build();
     }
 
+    public static StockHistory restore(Stock stock, Integer orderQuantity) {
+        return StockHistory.builder().
+            stockId(stock.getId()).
+            productId(stock.getProductId()).
+            hubId(stock.getHubId()).
+            changeQuantity(orderQuantity).
+            beforeQuantity(stock.getQuantity()).
+            afterQuantity(stock.getQuantity() + orderQuantity).
+            reason(StockChangeReason.ORDER_CANCELED).
+            build();
+    }
+
 
 }

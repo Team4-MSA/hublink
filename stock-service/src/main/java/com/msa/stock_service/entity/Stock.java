@@ -46,7 +46,7 @@ public class Stock extends BaseEntity {
 //    private Integer version;
 
     public static Stock create(StockRequestDto dto){
-        return Stock.builder()
+        return com.msa.stock_service.entity.Stock.builder()
             .productId(dto.getProductId())
             .hubId(dto.getHubId())
             .quantity(dto.getQuantity())
@@ -57,6 +57,11 @@ public class Stock extends BaseEntity {
     public void decreaStock(Integer quantity){
         this.quantity = this.quantity - quantity;
         this.reservedQuantity = quantity;
+    }
+
+    public void restore(Integer orderQuantity){
+        this.quantity = this.quantity + orderQuantity;
+        this.reservedQuantity = orderQuantity;
     }
 
 }

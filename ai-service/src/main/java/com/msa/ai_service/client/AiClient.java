@@ -34,6 +34,6 @@ public class AiClient {
     }
 
     private AiResponse fallbackGenerate(String prompt, Throwable throwable) {
-        throw new CustomException(AiErrorCode.AI_REQUEST_FAILED);
+        throw new CustomException(AiErrorCode.AI_CIRCUIT_BREAKER_OPEN);
     }
 }

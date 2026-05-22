@@ -3,10 +3,12 @@ package com.msa.ai_service.stream.consumer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.msa.ai_service.dto.AiDeadlineResult;
 import com.msa.ai_service.entity.AiRequestType;
+import com.msa.ai_service.exception.AiErrorCode;
 import com.msa.ai_service.service.AiService;
 import com.msa.ai_service.stream.event.DeadlineGeneratedEvent;
 import com.msa.ai_service.stream.event.DeadlineNotificationRequestedEvent;
 import com.msa.ai_service.stream.publisher.DeadlineGeneratedEventPublisher;
+import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.stream.DeadlineStreamConstants;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -97,8 +99,15 @@ public class DeadlineNotificationRequestedPendingRetryConsumer {
 
                 log.info("AI Pending 이벤트 재처리 ACK 완료: recordId={}", record.getId());
 
-            } catch (Exception e) {
-                log.error("AI Pending 이벤트 재처리 실패. ACK 미처리: recordId={}", record.getId(), e);
+            } catch (CustomException e) {
+                if (e.getErrorCode() == AiErrorCode.AI_CIRCUIT_BREAKER_OPEN) {
+                    log.warn("AI Pending 이벤트 재처리 일시 실패. Circuit Breaker OPEN으로 ACK 미처리: recordId={}", record.getId(), e);
+                    continue;
+                }
+                log.error("AI Pending 이벤트 재처리 최종 실패. 실패 처리 후 ACK: recordId={}", record.getId(), e);
+                acknowledge(record.getId());
+            }   catch (Exception e) {
+                log.error("AI Pending 이벤트 재처리 실패. 실패 처리 후 ACK: recordId={}", record.getId(), e);
                 acknowledge(record.getId());
             }
         }

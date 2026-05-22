@@ -34,7 +34,7 @@ public class Delivery extends BaseEntity {
     @Column(name = "delivery_id", nullable = false)
     private UUID deliveryId;
 
-    @Column(name = "order_id", nullable = false)
+    @Column(name = "order_id", nullable = false, unique = true)
     private UUID orderId;
 
     @Column(name = "departure_hub_id", nullable = false)
@@ -59,7 +59,7 @@ public class Delivery extends BaseEntity {
     @Column(name = "receiver_name", length = 100, nullable = false)
     private String receiverName;
 
-    @Column(name = "delivery_manager_slack_id", length = 100,  nullable = false)
+    @Column(name = "hub_manager_slack_id", length = 100,  nullable = false)
     private String hubManagerSlackId;
 
     @Column(name = "estimated_arrival_at")

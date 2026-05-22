@@ -40,7 +40,7 @@ public class DeliveryRouteHistory extends BaseEntity {
     @JoinColumn(name = "delivery_id", nullable = false)
     private Delivery delivery;
 
-    @Column(name = "delivery_manager_id", nullable = false)
+    @Column(name = "delivery_manager_id")
     private UUID deliveryManagerId;
 
     @Column(name = "sequence", nullable = false)
@@ -133,7 +133,7 @@ public class DeliveryRouteHistory extends BaseEntity {
     }
 
     public void complete(BigDecimal actualDistanceKm, Integer actualDurationMin) {
-        this.status = DeliveryRouteStatus.COMPLETED;
+        updateStatus(DeliveryRouteStatus.COMPLETED);
         this.actualDistanceKm = actualDistanceKm;
         this.actualDurationMin = actualDurationMin;
         this.processedAt = LocalDateTime.now();

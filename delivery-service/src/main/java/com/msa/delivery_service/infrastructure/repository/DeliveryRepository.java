@@ -12,6 +12,8 @@ import java.util.UUID;
 
 public interface DeliveryRepository extends JpaRepository<Delivery, UUID> {
 
+    boolean existsByOrderId(UUID orderId);
+
     // 상태를 통해 배송 중인 기사들 조회
     @Query("""
         select distinct d.companyDeliveryManagerId 

@@ -20,7 +20,7 @@ public class DeliveryResponse {
     private DeliveryStatus status;
     private String deliveryAddress;
     private String receiverName;
-    private String deliveryManagerSlackId;
+    private String hubManagerSlackId;
 
     public static DeliveryResponse from(Delivery delivery) {
         return DeliveryResponse.builder()
@@ -33,7 +33,7 @@ public class DeliveryResponse {
                 .status(delivery.getStatus())
                 .deliveryAddress(delivery.getDeliveryAddress())
                 .receiverName(delivery.getReceiverName())
-                .deliveryManagerSlackId(delivery.getHubManagerSlackId())
+                .hubManagerSlackId(delivery.getHubManagerSlackId())
                 .build();
     }
 }

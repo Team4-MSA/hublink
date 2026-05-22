@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Getter
@@ -28,18 +29,22 @@ public class HubRouteResponse {
 
     public static List<DeliveryRouteHistory> toDeliveryRouteHistories(
             Delivery delivery,
-            UUID deliveryManagerId,
-            List<HubRouteResponse> hubRoutes
+            UUID companyDeliveryManagerId,
+            List<HubRouteResponse> hubRoutes,
+            Map<UUID, UUID> hubDeliveryManagerIds
     ) {
         List<DeliveryRouteHistory> routeHistories = new ArrayList<>();
 
         for (HubRouteResponse hubRoute : hubRoutes) {
-            routeHistories.add(hubRoute.toDeliveryRouteHistory(delivery, deliveryManagerId));
+            routeHistories.add(hubRoute.toDeliveryRouteHistory(
+                    delivery,
+                    hubDeliveryManagerIds.get(hubRoute.getHubRouteId())
+            ));
         }
 
         routeHistories.add(DeliveryRouteHistory.create(
                 delivery,
-                deliveryManagerId,
+                companyDeliveryManagerId,
                 routeHistories.size() + 1,
                 DeliveryRouteType.HUB_TO_COMPANY,
                 DeliveryLocationType.HUB,
@@ -53,10 +58,10 @@ public class HubRouteResponse {
         return routeHistories;
     }
 
-    public DeliveryRouteHistory toDeliveryRouteHistory(Delivery delivery, UUID deliveryManagerId) {
+    public DeliveryRouteHistory toDeliveryRouteHistory(Delivery delivery, UUID hubDeliveryManagerId) {
         return DeliveryRouteHistory.create(
                 delivery,
-                deliveryManagerId,
+                hubDeliveryManagerId,
                 sequence,
                 DeliveryRouteType.HUB_TO_HUB,
                 DeliveryLocationType.HUB,

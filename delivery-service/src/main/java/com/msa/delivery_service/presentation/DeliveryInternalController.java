@@ -19,6 +19,7 @@ public class DeliveryInternalController {
 
     private final DeliveryService deliveryService;
 
+    // 주문 정보를 기반으로 배송과 배송 경로를 생성한다.
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public DeliveryResponse createDelivery(@Valid @RequestBody DeliveryRequest request) {

@@ -101,6 +101,34 @@ public class DeliveryRouteHistory extends BaseEntity {
             BigDecimal estimatedDistanceKm,
             Integer estimatedDurationMin
     ) {
+        return create(
+                delivery,
+                deliveryManagerId,
+                sequence,
+                routeType,
+                departureType,
+                departureId,
+                arrivalType,
+                arrivalId,
+                null,
+                estimatedDistanceKm,
+                estimatedDurationMin
+        );
+    }
+
+    public static DeliveryRouteHistory create(
+            Delivery delivery,
+            UUID deliveryManagerId,
+            Integer sequence,
+            DeliveryRouteType routeType,
+            DeliveryLocationType departureType,
+            UUID departureId,
+            DeliveryLocationType arrivalType,
+            UUID arrivalId,
+            String locationName,
+            BigDecimal estimatedDistanceKm,
+            Integer estimatedDurationMin
+    ) {
         return DeliveryRouteHistory.builder()
                 .delivery(delivery)
                 .deliveryManagerId(deliveryManagerId)
@@ -110,6 +138,7 @@ public class DeliveryRouteHistory extends BaseEntity {
                 .departureId(departureId)
                 .arrivalType(arrivalType)
                 .arrivalId(arrivalId)
+                .locationName(locationName)
                 .estimatedDistanceKm(estimatedDistanceKm)
                 .estimatedDurationMin(estimatedDurationMin)
                 .status(DeliveryRouteStatus.PENDING)

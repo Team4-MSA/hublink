@@ -1,6 +1,7 @@
 package com.msa.delivery_service.application;
 
 import com.msa.core_common.error.exception.CustomException;
+import com.msa.core_common.response.paging.PageRes;
 import com.msa.delivery_service.domain.entity.Delivery;
 import com.msa.delivery_service.domain.entity.DeliveryRouteHistory;
 import com.msa.delivery_service.domain.enums.DeliveryErrorCode;
@@ -15,10 +16,16 @@ import com.msa.delivery_service.infrastructure.repository.DeliveryRepository;
 import com.msa.delivery_service.infrastructure.repository.DeliveryRouteHistoryRepository;
 import com.msa.delivery_service.infrastructure.stream.DeadlineRequestedEvent;
 import com.msa.delivery_service.infrastructure.stream.RedisStreamEventPublisher;
+import com.msa.delivery_service.presentation.dto.DeliveryDetailResponse;
 import com.msa.delivery_service.presentation.dto.DeliveryRequest;
 import com.msa.delivery_service.presentation.dto.DeliveryResponse;
+import com.msa.delivery_service.presentation.dto.DeliveryRouteHistoryResponse;
+import com.msa.delivery_service.presentation.dto.DeliveryRouteStatusUpdateRequest;
+import com.msa.delivery_service.presentation.dto.DeliveryStatusUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,16 +43,162 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DeliveryService {
 
+    // 배송 담당자 근무 시간 고정
     private static final String WORK_START_TIME = "09:00";
     private static final String WORK_END_TIME = "18:00";
+
+    // 배송 담당자 타입 구분
     private static final String COMPANY_DELIVERY_MANAGER_TYPE = "COMPANY_DELIVERY";
     private static final String HUB_DELIVERY_MANAGER_TYPE = "HUB_DELIVERY";
+
+    // USER 권한
+    private static final String MASTER = "MASTER";
+    private static final String HUB_MANAGER = "HUB_MANAGER";
+    private static final String DELIVERY_MANAGER = "DELIVERY_MANAGER";
+    private static final String SUPPLIER_MANAGER = "SUPPLIER_MANAGER";
 
     private final DeliveryRepository deliveryRepository;
     private final DeliveryRouteHistoryRepository deliveryRouteHistoryRepository;
     private final HubClient hubClient;
     private final UserClient userClient;
     private final RedisStreamEventPublisher redisStreamEventPublisher;
+
+    @Transactional(readOnly = true)
+    public PageRes<DeliveryResponse> getDeliveries(String role, Pageable pageable) {
+        // MASTER: 전체 배송 목록 조회 가능
+        // 그 외 권한: 접근 불가
+        Page<DeliveryResponse> deliveries = switch (role) {
+            case MASTER -> deliveryRepository.findAll(pageable)
+                    .map(DeliveryResponse::from);
+            default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
+        };
+
+        return new PageRes<>(deliveries);
+    }
+
+    @Transactional(readOnly = true)
+    public PageRes<DeliveryResponse> getMyDeliveries(UUID userId, String role, Pageable pageable) {
+        // DELIVERY_MANAGER: 본인에게 배정된 배송 목록 조회 가능
+        // 그 외 권한: 접근 불가
+        Page<DeliveryResponse> deliveries = switch (role) {
+            case DELIVERY_MANAGER -> deliveryRepository.findAllByCompanyDeliveryManagerId(userId, pageable)
+                    .map(DeliveryResponse::from);
+            default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
+        };
+
+        return new PageRes<>(deliveries);
+    }
+
+    @Transactional(readOnly = true)
+    public DeliveryDetailResponse getDelivery(UUID userId, String role, UUID deliveryId) {
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+        List<DeliveryRouteHistory> routeHistories = deliveryRouteHistoryRepository
+                .findByDeliveryDeliveryIdOrderBySequenceAsc(deliveryId);
+
+        // MASTER, HUB_MANAGER, SUPPLIER_MANAGER: 배송 상세 조회 가능
+        // DELIVERY_MANAGER: 본인에게 배정된 배송만 조회 가능 (경로를 포함하기 때문에 허브 배송 담당자도 조회 가능)
+        return switch (role) {
+            case MASTER, HUB_MANAGER, SUPPLIER_MANAGER -> DeliveryDetailResponse.of(delivery, routeHistories);
+            case DELIVERY_MANAGER -> {
+                boolean assignedDelivery = userId.equals(delivery.getCompanyDeliveryManagerId())
+                        || deliveryRouteHistoryRepository.existsByDeliveryDeliveryIdAndDeliveryManagerId(
+                        delivery.getDeliveryId(),
+                        userId
+                );
+                if (!assignedDelivery) {
+                    throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
+                }
+                yield DeliveryDetailResponse.of(delivery, routeHistories);
+            }
+            default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
+        };
+    }
+
+    @Transactional(readOnly = true)
+    public DeliveryResponse getDeliveryByOrderId(String role, UUID orderId) {
+        Delivery delivery = deliveryRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        // MASTER, HUB_MANAGER, SUPPLIER_MANAGER: 주문 기준 배송 조회 가능
+        // 그 외 권한: 접근 불가
+        return switch (role) {
+            case MASTER, HUB_MANAGER, SUPPLIER_MANAGER -> DeliveryResponse.from(delivery);
+            default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
+        };
+    }
+
+    @Transactional
+    public DeliveryResponse updateDeliveryStatus(
+            UUID userId,
+            String role,
+            UUID deliveryId,
+            DeliveryStatusUpdateRequest request
+    ) {
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        // MASTER, HUB_MANAGER: 대표 배송 상태 변경 가능
+        // DELIVERY_MANAGER: 업체 배송 담당자인 경우만 변경 가능
+        // 그 외 권한: 접근 불가
+        switch (role) {
+            case MASTER, HUB_MANAGER -> {}
+            case DELIVERY_MANAGER -> {
+                if (!userId.equals(delivery.getCompanyDeliveryManagerId())) {
+                    throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
+                }
+            }
+            default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
+        }
+
+        if (request.getStatus() == DeliveryStatus.DELIVERED) {
+            delivery.complete();
+        } else {
+            delivery.updateStatus(request.getStatus());
+        }
+
+        return DeliveryResponse.from(delivery);
+    }
+
+    @Transactional
+    public DeliveryRouteHistoryResponse updateRouteHistoryStatus(
+            UUID userId,
+            String role,
+            UUID routeHistoryId,
+            DeliveryRouteStatusUpdateRequest request
+    ) {
+        DeliveryRouteHistory routeHistory = deliveryRouteHistoryRepository.findById(routeHistoryId)
+                .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_ROUTE_HISTORY_NOT_FOUND));
+
+        // MASTER, HUB_MANAGER: 경로 상태 변경 가능
+        // DELIVERY_MANAGER: 본인에게 배정된 경로만 변경 가능
+        // 그 외 권한: 접근 불가
+        switch (role) {
+            case MASTER, HUB_MANAGER -> {}
+            case DELIVERY_MANAGER -> {
+                if (!userId.equals(routeHistory.getDeliveryManagerId())) {
+                    throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
+                }
+            }
+            default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
+        }
+
+        if (request.getStatus() == DeliveryRouteStatus.COMPLETED) {
+            routeHistory.complete(request.getActualDistanceKm(), request.getActualDurationMin());
+        } else {
+            routeHistory.updateStatus(request.getStatus());
+        }
+
+        if (request.getStatusMessage() != null) {
+            routeHistory.updateStatusMessage(request.getStatusMessage());
+        }
+
+        return DeliveryRouteHistoryResponse.from(routeHistory);
+    }
+
+    /*
+        내부 호출 API
+    */
 
     @Transactional
     public DeliveryResponse createDelivery(DeliveryRequest request) {
@@ -225,4 +378,5 @@ public class DeliveryService {
 
         return hubRoutes;
     }
+
 }

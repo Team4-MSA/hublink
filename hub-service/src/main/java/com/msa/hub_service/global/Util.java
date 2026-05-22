@@ -68,12 +68,20 @@ public class Util {
             BigDecimal distanceKm = BigDecimal.valueOf(actualDistance).setScale(2, RoundingMode.HALF_UP);
 
             // 주행 시간
-            int durationMin = (int) Math.round((actualDistance / AVERAGE_TRUCK_SPEED_KMH) * 60.0);
+            int durationMin = calculateDuration(actualDistance);
 
             // 거리에 따른 루트 타입
-            RouteType type = (actualDistance > H2H_DISTANCE_THRESHOLD_KM) ? RouteType.H2H : RouteType.P2P;
+            RouteType type = determineRouteType(actualDistance);
 
             return new RouteCalculationResult(distanceKm, durationMin, type);
+        }
+
+        public static RouteType determineRouteType(double km) {
+            return (km > H2H_DISTANCE_THRESHOLD_KM) ? RouteType.H2H : RouteType.P2P;
+        }
+
+        public static Integer calculateDuration(double km) {
+            return (int) Math.round((km / AVERAGE_TRUCK_SPEED_KMH) * 60.0);
         }
     }
 }

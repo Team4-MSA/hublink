@@ -22,6 +22,7 @@ public enum HubErrorCode implements ErrorCode {
 
     // 404 NOT_FOUND: 리소스를 찾을 수 없음
     HUB_NOT_FOUND("HUB-404-1", "존재하지 않는 허브입니다.", HttpStatus.NOT_FOUND),
+    HUB_ROUTE_NOT_FOUND("HUB-404-2", "존재하지 않는 허브 루트입니다.", HttpStatus.NOT_FOUND),
 
     // 409 CONFLICT: 리소스 충돌 (중복)
     HUB_NAME_DUPLICATED("HUB-409-1", "이미 존재하는 허브 이름입니다.", HttpStatus.CONFLICT),

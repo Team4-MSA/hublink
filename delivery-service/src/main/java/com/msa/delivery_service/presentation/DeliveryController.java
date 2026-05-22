@@ -7,6 +7,8 @@ import com.msa.delivery_service.presentation.dto.DeliveryResponse;
 import com.msa.delivery_service.presentation.dto.DeliveryRouteHistoryResponse;
 import com.msa.delivery_service.presentation.dto.DeliveryRouteStatusUpdateRequest;
 import com.msa.delivery_service.presentation.dto.DeliveryStatusUpdateRequest;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -25,11 +27,13 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
+@Tag(name = "Delivery", description = "배송 조회 및 상태 변경 API")
 public class DeliveryController {
 
     private final DeliveryService deliveryService;
 
     // 전체 배송 목록 조회
+    @Operation(summary = "전체 배송 목록 조회")
     @GetMapping("/deliveries")
     public PageRes<DeliveryResponse> getDeliveries(
             @RequestHeader("X-User-Role") String role,
@@ -39,6 +43,7 @@ public class DeliveryController {
     }
 
     // 로그인한 배송 담당자의 배송 목록 조회
+    @Operation(summary = "내 담당 배송 목록 조회")
     @GetMapping("/deliveries/me")
     public PageRes<DeliveryResponse> getMyDeliveries(
             @RequestHeader("X-User-Id") UUID userId,
@@ -49,6 +54,7 @@ public class DeliveryController {
     }
 
     // 특정 배송의 기본 정보와 경로 기록 조회
+    @Operation(summary = "배송 상세 조회")
     @GetMapping("/deliveries/{deliveryId}")
     public DeliveryDetailResponse getDelivery(
             @RequestHeader("X-User-Id") UUID userId,
@@ -59,6 +65,7 @@ public class DeliveryController {
     }
 
     // 주문 ID로 연결된 배송 정보를 조회
+    @Operation(summary = "주문 기준 배송 조회")
     @GetMapping("/orders/{orderId}/deliveries")
     public DeliveryResponse getDeliveryByOrderId(
             @RequestHeader("X-User-Role") String role,
@@ -68,6 +75,7 @@ public class DeliveryController {
     }
 
     // 대표 배송 상태 변경
+    @Operation(summary = "배송 상태 변경")
     @PatchMapping("/deliveries/{deliveryId}/status")
     public DeliveryResponse updateDeliveryStatus(
             @RequestHeader("X-User-Id") UUID userId,
@@ -79,6 +87,7 @@ public class DeliveryController {
     }
 
     // 특정 배송 경로 이력의 상태 변경
+    @Operation(summary = "배송 경로 상태 변경")
     @PatchMapping("/delivery-route-histories/{routeHistoryId}/status")
     public DeliveryRouteHistoryResponse updateRouteHistoryStatus(
             @RequestHeader("X-User-Id") UUID userId,

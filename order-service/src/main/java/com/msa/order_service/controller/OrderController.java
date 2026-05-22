@@ -34,7 +34,7 @@ public class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "주문 생성", description = "수령업체가 공급업체의 상품을 주문")
     @PostMapping
-    public MakeOrderDetailResDto makeOrders(@RequestBody @Valid OrderMakeReqDto orderMakeReqDto, @RequestHeader("X-User-Id") UUID userId) {
+    public MakeOrderDetailResDto makeOrders(@RequestBody @Valid OrderMakeReqDto orderMakeReqDto, @RequestHeader("X-User-Id") UUID userId, @RequestHeader("X-Order-Key") UUID orderKey) {
         return orderService.makeOrders(orderMakeReqDto, userId);
     }
 

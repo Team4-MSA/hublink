@@ -25,7 +25,7 @@ public class ProductCircuitService {
         return productFeignClient.decreaseProductStock(items);
     }
 
-    public List<ProductNPAResDto> increaseFallback(List<UUID> productIds, Throwable t) {
+    public List<ProductNPAResDto> increaseFallback(List<OrderMakeReqDto.Items> items, Throwable t) {
         log.error("[Product Service] 장애로 인해 재고 감소 요청 불가. 원인: {}", t.getMessage());
 
         throw new CustomException(OrderErrorCode.PRODUCT_FEIGN_FAIL);
@@ -36,7 +36,7 @@ public class ProductCircuitService {
         return productFeignClient.increaseProductStock(items).getIsSuccess();
     }
 
-    public List<ProductNPAResDto> decreaseFallback(List<UUID> productIds, Throwable t) {
+    public Boolean decreaseFallback(List<OrderMakeReqDto.Items> items, Throwable t) {
         log.error("[Product Service] 장애로 인해 재고 복구 요청 불가. 원인: {}", t.getMessage());
 
         throw new CustomException(OrderErrorCode.PRODUCT_FEIGN_FAIL);

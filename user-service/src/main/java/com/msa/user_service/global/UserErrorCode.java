@@ -31,6 +31,8 @@ public enum UserErrorCode implements ErrorCode {
     HUB_MANAGER_NOT_FOUND("USER-404-2", "허브 관리자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     COMPANY_MANAGER_NOT_FOUND("USER-404-3", "업체 담당자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     DELIVERY_MANAGER_NOT_FOUND("USER-404-4", "배송 담당자를 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    HUB_NOT_FOUND("USER-404-5", "존재하지 않는 허브입니다.", HttpStatus.NOT_FOUND),
+    COMPANY_NOT_FOUND("USER-404-6", "존재하지 않는 업체입니다.", HttpStatus.NOT_FOUND),
 
     // 409 CONFLICT
     DUPLICATE_USERNAME("USER-409-1", "이미 사용중인 username입니다.", HttpStatus.CONFLICT),

@@ -2,6 +2,7 @@ package com.msa.user_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
+import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.HubManagerRequest;
 import com.msa.user_service.dto.HubManagerResponse;
 import com.msa.user_service.dto.InternalHubManagerResponse;
@@ -24,9 +25,18 @@ public class HubManagerService {
 
     private final HubManagerRepository hubManagerRepository;
     private final UserRepository userRepository;
+    private final HubClient hubClient;
+
+    private void validateHubExists(UUID hubId) {
+        if (!hubClient.checkHubExists(hubId).isExists()) {
+            throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
+        }
+    }
 
     @Transactional
     public HubManagerResponse register(HubManagerRequest request) {
+        validateHubExists(request.getHubId());
+
         HubManager hubManager = HubManager.builder()
                 .userId(request.getUserId())
                 .hubId(request.getHubId())

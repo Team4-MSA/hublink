@@ -2,6 +2,7 @@ package com.msa.user_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
+import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.DeliveryManagerRequest;
 import com.msa.user_service.dto.DeliveryManagerResponse;
 import com.msa.user_service.dto.InternalDeliveryManagerResponse;
@@ -28,6 +29,13 @@ public class DeliveryManagerService {
     private final DeliveryManagerRepository deliveryManagerRepository;
     private final HubManagerRepository hubManagerRepository;
     private final UserRepository userRepository;
+    private final HubClient hubClient;
+
+    private void validateHubExists(UUID hubId) {
+        if (!hubClient.checkHubExists(hubId).isExists()) {
+            throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
+        }
+    }
 
     private void validateHubAccess(UUID requestUserId, UUID hubId) {
         if (!hubManagerRepository.existsByUserIdAndHubIdAndDeletedAtIsNull(requestUserId, hubId)) {
@@ -52,6 +60,13 @@ public class DeliveryManagerService {
             validateHubAccess(requestUserId, request.getHubId());
         }
 
+        if (request.getType() == DeliveryManagerType.COMPANY_DELIVERY) {
+            validateHubExists(request.getHubId());
+        }
+
+        User user = userRepository.findByUserIdAndDeletedAtIsNull(request.getUserId())
+                .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+
         int nextSequence = deliveryManagerRepository
                 .findMaxDeliverySequenceByHubId(request.getHubId())
                 .map(max -> max + 1)
@@ -62,7 +77,9 @@ public class DeliveryManagerService {
                 .hubId(request.getHubId())
                 .type(request.getType())
                 .deliverySequence(nextSequence)
+                .slackId(user.getSlackId())
                 .build();
+        
         return DeliveryManagerResponse.from(deliveryManagerRepository.save(deliveryManager));
     }
 

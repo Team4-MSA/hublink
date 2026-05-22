@@ -13,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -36,7 +37,7 @@ public class HubRouteController {
     // 수정
     @PatchMapping("/{hubRouteId}")
     public HubRouteResponse updateHubRoute(@PathVariable UUID hubRouteId, @Valid @RequestBody HubRouteUpdateRequest request){
-        return hubRouteService.updateHub(hubRouteId, request);
+        return hubRouteService.updateHubRoute(hubRouteId, request);
     }
 
     // 삭제
@@ -54,5 +55,13 @@ public class HubRouteController {
             @PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ){
         return hubRouteService.getHubRoutes(departureHubId, arrivalHubId, routeType, pageable);
+    }
+
+    @GetMapping("/path")
+    public List<HubRouteResponse> getHubPath(
+            @RequestParam UUID departureHubId,
+            @RequestParam UUID arrivalHubId
+    ){
+        return hubRouteService.getHubPath(departureHubId, arrivalHubId);
     }
 }

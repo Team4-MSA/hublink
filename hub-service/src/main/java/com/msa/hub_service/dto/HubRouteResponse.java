@@ -12,7 +12,8 @@ public record HubRouteResponse(
         UUID arrivalHub,
         BigDecimal estimatedDistanceKm,
         Integer estimatedDurationMin,
-        RouteType routeType
+        RouteType routeType,
+        Integer sequence
 ) {
     public static HubRouteResponse from(HubRouteEntity hubRoute) {
         return new HubRouteResponse(
@@ -21,7 +22,8 @@ public record HubRouteResponse(
                 hubRoute.getArrivalHub().getHubId(),
                 hubRoute.getEstimatedDistanceKm(),
                 hubRoute.getEstimatedDurationMin(),
-                hubRoute.getRouteType()
+                hubRoute.getRouteType(),
+                null
         );
     }
 }

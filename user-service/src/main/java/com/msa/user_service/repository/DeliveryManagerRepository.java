@@ -35,6 +35,6 @@ public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager
 
     Page<DeliveryManager> findAllByHubIdInAndTypeAndDeletedAtIsNull(Collection<UUID> hubIds, DeliveryManagerType type, Pageable pageable);
 
-    @Query("SELECT MAX(d.deliverySequence) FROM DeliveryManager d WHERE d.hubId = :hubId AND d.deletedAt IS NULL")
+    @Query("SELECT MAX(d.deliverySequence) FROM DeliveryManager d WHERE d.hubId = :hubId")
     Optional<Integer> findMaxDeliverySequenceByHubId(@Param("hubId") UUID hubId);
 }

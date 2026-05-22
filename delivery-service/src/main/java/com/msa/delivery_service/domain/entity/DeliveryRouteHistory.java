@@ -1,6 +1,8 @@
-package com.msa.delivery_service.domain;
+package com.msa.delivery_service.domain.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
+import com.msa.core_common.error.exception.CustomException;
+import com.msa.delivery_service.domain.enums.DeliveryErrorCode;
 import com.msa.delivery_service.domain.enums.DeliveryLocationType;
 import com.msa.delivery_service.domain.enums.DeliveryRouteStatus;
 import com.msa.delivery_service.domain.enums.DeliveryRouteType;
@@ -38,7 +40,7 @@ public class DeliveryRouteHistory extends BaseEntity {
     @JoinColumn(name = "delivery_id", nullable = false)
     private Delivery delivery;
 
-    @Column(name = "delivery_manager_id", nullable = false)
+    @Column(name = "delivery_manager_id")
     private UUID deliveryManagerId;
 
     @Column(name = "sequence", nullable = false)
@@ -89,28 +91,63 @@ public class DeliveryRouteHistory extends BaseEntity {
 
     public static DeliveryRouteHistory create(
             Delivery delivery,
+            UUID deliveryManagerId,
             Integer sequence,
             DeliveryRouteType routeType,
             DeliveryLocationType departureType,
             UUID departureId,
             DeliveryLocationType arrivalType,
-            UUID arrivalId
+            UUID arrivalId,
+            BigDecimal estimatedDistanceKm,
+            Integer estimatedDurationMin
+    ) {
+        return create(
+                delivery,
+                deliveryManagerId,
+                sequence,
+                routeType,
+                departureType,
+                departureId,
+                arrivalType,
+                arrivalId,
+                null,
+                estimatedDistanceKm,
+                estimatedDurationMin
+        );
+    }
+
+    public static DeliveryRouteHistory create(
+            Delivery delivery,
+            UUID deliveryManagerId,
+            Integer sequence,
+            DeliveryRouteType routeType,
+            DeliveryLocationType departureType,
+            UUID departureId,
+            DeliveryLocationType arrivalType,
+            UUID arrivalId,
+            String locationName,
+            BigDecimal estimatedDistanceKm,
+            Integer estimatedDurationMin
     ) {
         return DeliveryRouteHistory.builder()
                 .delivery(delivery)
+                .deliveryManagerId(deliveryManagerId)
                 .sequence(sequence)
                 .routeType(routeType)
                 .departureType(departureType)
                 .departureId(departureId)
                 .arrivalType(arrivalType)
                 .arrivalId(arrivalId)
+                .locationName(locationName)
+                .estimatedDistanceKm(estimatedDistanceKm)
+                .estimatedDurationMin(estimatedDurationMin)
                 .status(DeliveryRouteStatus.PENDING)
                 .build();
     }
 
     public void updateStatus(DeliveryRouteStatus status) {
         if (!this.status.canChangeTo(status)) {
-            throw new IllegalStateException();
+            throw new CustomException(DeliveryErrorCode.INVALID_ROUTE_STATUS_TRANSITION);
         }
         this.status = status;
     }
@@ -124,13 +161,10 @@ public class DeliveryRouteHistory extends BaseEntity {
         this.estimatedDurationMin = estimatedDurationMin;
     }
 
-    public void updateActualRouteInfo(BigDecimal actualDistanceKm, Integer actualDurationMin) {
+    public void complete(BigDecimal actualDistanceKm, Integer actualDurationMin) {
+        updateStatus(DeliveryRouteStatus.COMPLETED);
         this.actualDistanceKm = actualDistanceKm;
         this.actualDurationMin = actualDurationMin;
-    }
-
-    public void complete() {
-        this.status = DeliveryRouteStatus.COMPLETED;
         this.processedAt = LocalDateTime.now();
     }
 }

@@ -1,6 +1,8 @@
-package com.msa.delivery_service.domain;
+package com.msa.delivery_service.domain.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
+import com.msa.core_common.error.exception.CustomException;
+import com.msa.delivery_service.domain.enums.DeliveryErrorCode;
 import com.msa.delivery_service.domain.enums.DeliveryStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -32,7 +34,7 @@ public class Delivery extends BaseEntity {
     @Column(name = "delivery_id", nullable = false)
     private UUID deliveryId;
 
-    @Column(name = "order_id", nullable = false)
+    @Column(name = "order_id", nullable = false, unique = true)
     private UUID orderId;
 
     @Column(name = "departure_hub_id", nullable = false)
@@ -57,8 +59,8 @@ public class Delivery extends BaseEntity {
     @Column(name = "receiver_name", length = 100, nullable = false)
     private String receiverName;
 
-    @Column(name = "delivery_manager_slack_id", length = 100,  nullable = false)
-    private String deliveryManagerSlackId;
+    @Column(name = "hub_manager_slack_id", length = 100,  nullable = false)
+    private String hubManagerSlackId;
 
     @Column(name = "estimated_arrival_at")
     private LocalDateTime estimatedArrivalAt;
@@ -77,8 +79,7 @@ public class Delivery extends BaseEntity {
             UUID companyDeliveryManagerId,
             String deliveryAddress,
             String receiverName,
-            String deliveryManagerSlackId,
-            LocalDateTime estimatedArrivalAt
+            String hubManagerSlackId
     ) {
         return Delivery.builder()
                 .orderId(orderId)
@@ -89,14 +90,13 @@ public class Delivery extends BaseEntity {
                 .status(DeliveryStatus.PENDING)
                 .deliveryAddress(deliveryAddress)
                 .receiverName(receiverName)
-                .deliveryManagerSlackId(deliveryManagerSlackId)
-                .estimatedArrivalAt(estimatedArrivalAt)
+                .hubManagerSlackId(hubManagerSlackId)
                 .build();
     }
 
     public void updateStatus(DeliveryStatus status) {
         if (!this.status.canChangeTo(status)) {
-            throw new IllegalArgumentException();
+            throw new CustomException(DeliveryErrorCode.INVALID_DELIVERY_STATUS_TRANSITION);
         }
         this.status = status;
     }

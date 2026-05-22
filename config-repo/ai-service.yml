@@ -25,6 +25,7 @@ spring:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD:}
+
 gemini:
   api:
     url: ${AI_API_URL}
@@ -51,3 +52,6 @@ management:
   endpoint:
     health:
       show-details: always
+
+swagger:
+  gateway-url: ${SWAGGER_GATEWAY_URL}

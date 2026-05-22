@@ -51,5 +51,9 @@ management:
   endpoint:
     health:
       show-details: always
+
 slack:
   bot-token: ${SLACK_BOT_TOKEN}
+
+swagger:
+  gateway-url: ${SWAGGER_GATEWAY_URL}

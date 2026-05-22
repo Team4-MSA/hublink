@@ -17,7 +17,6 @@ public class StockResponseDto {
     private UUID hubId;
     private Integer quantity;
     private Integer reservedQuantity;
-    private Integer version;
 
     public static StockResponseDto from(Stock stock){
         return StockResponseDto.builder()
@@ -26,7 +25,6 @@ public class StockResponseDto {
             .hubId(stock.getHubId())
             .quantity(stock.getQuantity())
             .reservedQuantity(stock.getReservedQuantity())
-            .version(stock.getVersion())
             .build();
     }
 

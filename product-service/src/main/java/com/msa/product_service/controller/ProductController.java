@@ -40,7 +40,7 @@ public class ProductController {
         return ProductResponseDto.from(newProduct);
     }
 
-    @GetMapping("/byIdList")
+    @PostMapping("/byIdList")
     public List<ProductResponseDto> getProductsById(@RequestBody  List<UUID> productIdList) {
         return productService.getProductsById(productIdList);
     }

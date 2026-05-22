@@ -54,14 +54,14 @@ public class Stock extends BaseEntity {
     }
 
     // 재고 감소.
-    public void decreaStock(Integer quantity){
-        this.quantity = this.quantity - quantity;
-        this.reservedQuantity = quantity;
+    public void decreaseStock(Integer quantity){
+        this.quantity -= quantity;
+        this.reservedQuantity += quantity;
     }
 
     public void restore(Integer orderQuantity){
-        this.quantity = this.quantity + orderQuantity;
-        this.reservedQuantity = orderQuantity;
+        this.quantity += orderQuantity;
+        this.reservedQuantity -= orderQuantity;
     }
 
 }

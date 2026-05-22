@@ -27,9 +27,9 @@ public class StockOrchestrator {
      * @param listDto
      * @return
      */
-    public List<StockHistoryResponseDto> decreaStock (List<StockDecreaRequestDto> listDto){
+    public List<StockHistoryResponseDto> decreaseStock (List<StockDecreaRequestDto> listDto){
         // 재고 감소를 하고, 그에 대한 재고 이력을 만든 다음, 재고 이력 리스트를 가져온다.
-         List<StockHistory> histories = stockService.decreaStock(listDto);
+         List<StockHistory> histories = stockService.decreaseStock(listDto);
 
         //외부 서비스로 productId 리스트에 해당하는 상품 리스트를 가져온다.
          List<UUID> productIdList = histories.stream().map(StockHistory::getProductId).collect(Collectors.toList());

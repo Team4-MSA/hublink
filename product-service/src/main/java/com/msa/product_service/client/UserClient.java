@@ -13,8 +13,8 @@ public interface UserClient {
     // 주소는 추후에 추가할 예정
     // 허브 담당자 본인 확인 여부
     @GetMapping("/internal/users/{userId}/hub/{hubId}/verify")
-    GlobalResponse<Map<String,Boolean>> IsHubManager(@PathVariable("userId")UUID userId, @PathVariable("hubId")UUID hubId);
+    GlobalResponse<Map<String,Boolean>> isHubManager(@PathVariable("userId")UUID userId, @PathVariable("hubId")UUID hubId);
     // 업체 담당자 본인 확인 여부
     @GetMapping("/internal/users/{userId}/company/{companyId}/verify")
-    GlobalResponse<Map<String,Boolean>> IsCompanyManager(@PathVariable("userId")UUID userId, @PathVariable("companyId")UUID companyId);
+    GlobalResponse<Map<String,Boolean>> isCompanyManager(@PathVariable("userId")UUID userId, @PathVariable("companyId")UUID companyId);
 }

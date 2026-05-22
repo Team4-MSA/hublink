@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,7 +33,7 @@ public class StockController {
      * @return
      */
     @PostMapping
-    public StockResponseDto createStock(StockRequestDto dto){
+    public StockResponseDto createStock(@RequestBody StockRequestDto dto){
         Stock newStock = stockService.createStock(dto);
         return StockResponseDto.from(newStock);
     }
@@ -42,8 +43,8 @@ public class StockController {
      * @param listDto
      * @return
      */
-    @PostMapping("/decreae")
-    public List<StockHistoryResponseDto> decreaStock(List<StockDecreaRequestDto> listDto){
-        return stockOrchestrator.decreaStock(listDto);
+    @PostMapping("/decrease")
+    public List<StockHistoryResponseDto> decreaseStock(List<StockDecreaRequestDto> listDto){
+        return stockOrchestrator.decreaseStock(listDto);
     }
 }

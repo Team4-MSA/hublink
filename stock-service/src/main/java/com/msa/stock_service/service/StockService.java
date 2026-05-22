@@ -74,7 +74,7 @@ public class StockService {
      * @return
      */
     @Transactional
-    public List<StockHistory> decreaStock (List<StockDecreaRequestDto> listDto){
+    public List<StockHistory> decreaseStock (List<StockDecreaRequestDto> listDto){
         // 전달 받은 데이터를 Map으로 변환, 동일한 productId일 경우 수량을 합산한다.
         Map<UUID, Integer> requestQuantityMap = listDto.stream()
             .collect(Collectors.toMap(
@@ -104,11 +104,11 @@ public class StockService {
             //현재 재고의 수량이 주문한 수량보다 더 크다면
             if (stock.getQuantity() >= requestQuantity) {
                 // 정상 차감 및 이력 생성.
-                stock.decreaStock(requestQuantity);
+                stock.decreaseStock(requestQuantity);
                 newStockHistory.add(StockHistory.createDecreaStock(stock, requestQuantity));
             } else {
                 // 그 외로 재고가 부족하다면, 에러를 일으킨다.
-                throw new RuntimeException("재고가 부족합니다. 상품 ID: " + stock.getProductId());
+                throw new IllegalArgumentException("재고가 부족합니다. 상품 ID: " + stock.getProductId());
             }
         }
 

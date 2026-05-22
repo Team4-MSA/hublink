@@ -14,11 +14,12 @@ public class RedisUtil {
 
     private static final String RT_PREFIX = "RT:";
     private static final String BL_PREFIX = "BL:";
+    private static final long RT_EXPIRATION = 1209600000L;
 
     // RT 저장
-    public void saveRefreshToken(String userId, String refreshToken, long expiration) {
+    public void saveRefreshToken(String userId, String refreshToken) {
         redisTemplate.opsForValue()
-                .set(RT_PREFIX + userId, refreshToken, expiration, TimeUnit.MILLISECONDS);
+                .set(RT_PREFIX + userId, refreshToken, RT_EXPIRATION, TimeUnit.MILLISECONDS);
     }
 
     // RT 조회

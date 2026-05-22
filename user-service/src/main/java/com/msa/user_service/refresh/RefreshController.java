@@ -29,11 +29,6 @@ public class RefreshController {
         return Map.of("msg", message);
     }
 
-    @GetMapping("/errorTest")
-    public void errorTest() {
-        throw new CustomException(ErrorCode.TEST_ERROR_CODE);
-    }
-
     @PostMapping("/validTest")
     public void validTest (@RequestBody @Validated ExamDto examDto){
 

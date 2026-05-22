@@ -13,18 +13,18 @@ import java.time.LocalDateTime;
 @Getter
 public class BaseEntity {
     @CreationTimestamp
-    private LocalDateTime createdTime;
+    private LocalDateTime createdAt;
     @CreatedBy
     private String createdBy;
     @UpdateTimestamp
-    private LocalDateTime updatedTime;
+    private LocalDateTime updatedAt;
     @LastModifiedBy
     private String updatedBy;
-    private LocalDateTime deletedTime;
+    private LocalDateTime deletedAt;
     private String deletedBy;
 
     public void delete(String deletedBy) {
-        this.deletedTime = LocalDateTime.now();
+        this.deletedAt = LocalDateTime.now();
         this.deletedBy = deletedBy;
     }
 }

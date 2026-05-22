@@ -20,8 +20,8 @@ public class CustomExceptionHandler {
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<GlobalResponse> handleCustomException(CustomException e) {
         final ErrorCode errorCode = e.getErrorCode();
-        final ErrorResponse errorResponse = ErrorResponse.of(errorCode.name(), e.getMessage());
-        final GlobalResponse response = GlobalResponse.failure(errorCode.getStatus().value(), errorCode.name() ,errorResponse);
+        final ErrorResponse errorResponse = ErrorResponse.of(errorCode.getCode(), e.getMessage());
+        final GlobalResponse response = GlobalResponse.failure(errorCode.getStatus().value(), errorCode.getCode() ,errorResponse);
         return ResponseEntity.status(errorCode.getStatus()).body(response);
     }
 

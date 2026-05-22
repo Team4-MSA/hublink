@@ -122,7 +122,9 @@ public class UserService {
                         throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
                     }
                     int nextSequence = deliveryManagerRepository
-                            .findMaxDeliverySequenceByHubId(user.getHubId()).orElse(0) + 1;
+                            .findMaxDeliverySequenceByHubId(user.getHubId())
+                            .map(max -> max + 1)
+                            .orElse(1);
                     deliveryManagerRepository.save(DeliveryManager.builder()
                             .userId(userId)
                             .hubId(user.getHubId())

@@ -8,7 +8,14 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 import java.util.UUID;
 
 @Entity
-@Table(name = "p_delivery_managers", schema = "user_service")
+@Table(
+        name = "p_delivery_managers",
+        schema = "user_service",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_hub_delivery_sequence",
+                columnNames = {"hub_id", "delivery_sequence"}
+        )
+)
 @EntityListeners(AuditingEntityListener.class)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

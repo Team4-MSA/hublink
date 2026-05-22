@@ -60,9 +60,7 @@ public class DeliveryManagerService {
             validateHubAccess(requestUserId, request.getHubId());
         }
 
-        if (request.getType() == DeliveryManagerType.COMPANY_DELIVERY) {
-            validateHubExists(request.getHubId());
-        }
+        validateHubExists(request.getHubId());
 
         User user = userRepository.findByUserIdAndDeletedAtIsNull(request.getUserId())
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));

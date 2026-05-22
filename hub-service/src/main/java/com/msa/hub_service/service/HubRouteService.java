@@ -1,9 +1,12 @@
 package com.msa.hub_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
+import com.msa.core_common.response.paging.PageRes;
 import com.msa.hub_service.dto.HubRouteResponse;
+import com.msa.hub_service.dto.HubRouteUpdateRequest;
 import com.msa.hub_service.entity.HubEntity;
 import com.msa.hub_service.entity.HubRouteEntity;
+import com.msa.hub_service.entity.RouteType;
 import com.msa.hub_service.global.HubErrorCode;
 import com.msa.hub_service.message.HubCreatedEvent;
 import com.msa.hub_service.message.HubDeletedEvent;
@@ -12,17 +15,25 @@ import com.msa.hub_service.repository.HubRepository;
 import com.msa.hub_service.repository.HubRouteRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.data.domain.AuditorAware;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import static com.msa.hub_service.global.Util.RouteCalculator.calculateDuration;
+import static com.msa.hub_service.global.Util.RouteCalculator.determineRouteType;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +45,7 @@ public class HubRouteService {
     private final HubRepository hubRepository;
     private final AuditorAware<String> auditorAware;
 
+    // 생성
     @Transactional
     public HubRouteResponse createHubRoute(UUID departureHubId, UUID arrivalHubId) {
 
@@ -66,9 +78,81 @@ public class HubRouteService {
 
     }
 
-    @Async
-    @EventListener
+    // 단건 조회
+    public HubRouteResponse getHubRoute(UUID hubRouteId) {
+        HubRouteEntity hubRoute = hubRouteRepository.findById(hubRouteId)
+                .orElseThrow(() -> new CustomException(HubErrorCode.HUB_ROUTE_NOT_FOUND));
+        return HubRouteResponse.from(hubRoute);
+    }
+
+    // 수정(km, min)
     @Transactional
+    public HubRouteResponse updateHub(UUID hubRouteId, HubRouteUpdateRequest request) {
+        HubRouteEntity hubRoute = hubRouteRepository.findById(hubRouteId)
+                .orElseThrow(() -> new CustomException(HubErrorCode.HUB_ROUTE_NOT_FOUND));
+
+        BigDecimal reqKm = request.estimatedDistanceKm();
+        Integer reqMin = request.estimatedDurationMin();
+
+        // 변경 내용 확인
+        boolean isKmChanged = (reqKm != null) &&
+                (hubRoute.getEstimatedDistanceKm() == null || reqKm.compareTo(hubRoute.getEstimatedDistanceKm()) != 0);
+
+        boolean isMinChanged = (reqMin != null) &&
+                (hubRoute.getEstimatedDurationMin() == null || !reqMin.equals(hubRoute.getEstimatedDurationMin()));
+
+        // 변경 내용 없는 경우
+        if (!isKmChanged && !isMinChanged) {
+            return HubRouteResponse.from(hubRoute);
+        }
+
+        BigDecimal targetKm = hubRoute.getEstimatedDistanceKm();
+        Integer targetMin = hubRoute.getEstimatedDurationMin();
+        RouteType targetType = hubRoute.getRouteType();
+
+        if (isKmChanged && isMinChanged) { // 모두 변경된 경우 - routeType만 자동 갱신
+            targetKm = reqKm;
+            targetMin = reqMin;
+            targetType = determineRouteType(targetKm.doubleValue());
+
+        } else if (isKmChanged) { // km만 변경된 경우 - 나머지 자동 갱신
+            targetKm = reqKm;
+            targetMin = calculateDuration(targetKm.doubleValue());
+            targetType = determineRouteType(targetKm.doubleValue());
+
+        } else { // min만 변경된 경우 - min만 갱신
+            targetMin = reqMin;
+        }
+
+        // 업데이트
+        hubRoute.update(targetKm, targetMin, targetType);
+
+        return HubRouteResponse.from(hubRoute);
+    }
+
+    // 삭제
+    @Transactional
+    public HubRouteResponse deleteHubRoute(UUID hubRouteId) {
+        HubRouteEntity hubRoute = hubRouteRepository.findById(hubRouteId)
+                .orElseThrow(() -> new CustomException(HubErrorCode.HUB_ROUTE_NOT_FOUND));
+
+        String deletedBy = auditorAware.getCurrentAuditor().orElse("SYSTEM");
+        hubRoute.delete(deletedBy);
+        return HubRouteResponse.from(hubRoute);
+    }
+
+    // 출발/도착으로 검색
+    public PageRes<HubRouteResponse> getHubRoutes(UUID departureHubId, UUID arrivalHubId, RouteType routeType, Pageable pageable) {
+
+        Page<HubRouteEntity> hubRoutePage = hubRouteRepository.searchHubRoutes(departureHubId, arrivalHubId, routeType, pageable);
+
+        return new PageRes<>(hubRoutePage.map(HubRouteResponse::from));
+    }
+
+    // 자동 생성
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createRoutesForNewHub(HubCreatedEvent event) {
         HubEntity newHub = hubRepository.findById(event.hubId())
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_NOT_FOUND));
@@ -111,9 +195,10 @@ public class HubRouteService {
         }
     }
 
+    // 자동 수정
     @Async
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void updateRoutesForUpdatedHub(HubUpdatedEvent event) {
         List<HubRouteEntity> affectedRoutes = hubRouteRepository.findByInvolvedHubId(event.hubId());
 
@@ -130,9 +215,10 @@ public class HubRouteService {
         hubRouteRepository.saveAll(affectedRoutes);
     }
 
+    // 자동 삭제
     @Async
-    @EventListener
-    @Transactional
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void deleteRoutesForDeletedHub(HubDeletedEvent event) {
         List<HubRouteEntity> affectedRoutes = hubRouteRepository.findByInvolvedHubId(event.hubId());
 

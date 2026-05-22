@@ -2,6 +2,7 @@ package com.msa.user_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
+import com.msa.user_service.client.CompanyClient;
 import com.msa.user_service.dto.CompanyManagerRequest;
 import com.msa.user_service.dto.CompanyManagerResponse;
 import com.msa.user_service.entity.CompanyManager;
@@ -20,10 +21,18 @@ import java.util.UUID;
 public class CompanyManagerService {
 
     private final CompanyManagerRepository companyManagerRepository;
+    private final CompanyClient companyClient;
 
-    // 업체 담당자 등록
+    private void validateCompanyExists(UUID companyId) {
+        if (!companyClient.checkCompanyExists(companyId).isExists()) {
+            throw new CustomException(UserErrorCode.COMPANY_NOT_FOUND);
+        }
+    }
+
     @Transactional
     public CompanyManagerResponse register(CompanyManagerRequest request) {
+        validateCompanyExists(request.getCompanyId());
+
         CompanyManager companyManager = CompanyManager.builder()
                 .userId(request.getUserId())
                 .companyId(request.getCompanyId())
@@ -31,7 +40,6 @@ public class CompanyManagerService {
         return CompanyManagerResponse.from(companyManagerRepository.save(companyManager));
     }
 
-    // 목록 조회
     public PageRes<CompanyManagerResponse> getList(UUID companyId, Pageable pageable) {
         if (companyId != null) {
             return new PageRes<>(companyManagerRepository.findAllByCompanyIdAndDeletedAtIsNull(companyId, pageable)
@@ -41,14 +49,12 @@ public class CompanyManagerService {
                 .map(CompanyManagerResponse::from));
     }
 
-    // 상세 조회
     public CompanyManagerResponse getOne(UUID companyManagerId) {
         CompanyManager companyManager = companyManagerRepository.findByCompanyManagerIdAndDeletedAtIsNull(companyManagerId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.COMPANY_MANAGER_NOT_FOUND));
         return CompanyManagerResponse.from(companyManager);
     }
 
-    // 삭제
     @Transactional
     public void delete(UUID companyManagerId, String deletedBy) {
         CompanyManager companyManager = companyManagerRepository.findByCompanyManagerIdAndDeletedAtIsNull(companyManagerId)

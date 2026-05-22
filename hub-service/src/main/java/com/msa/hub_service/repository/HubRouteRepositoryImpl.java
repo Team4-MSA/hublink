@@ -25,8 +25,9 @@ import java.util.UUID;
 import static com.msa.hub_service.entity.QHubRouteEntity.hubRouteEntity;
 
 @RequiredArgsConstructor
-public class HubRouteRepositoryImpl implements HubRouteRepositoryCustom{
+public class HubRouteRepositoryImpl implements HubRouteRepositoryCustom {
     private final JPAQueryFactory queryFactory;
+    private static final double H2H_DISTANCE_THRESHOLD_KM = 200.0;
 
     @Override
     public Page<HubRouteEntity> searchHubRoutes(UUID departureHubId, UUID arrivalHubId, RouteType routeType, Pageable pageable) {
@@ -84,16 +85,17 @@ public class HubRouteRepositoryImpl implements HubRouteRepositoryCustom{
 
         Tuple result = queryFactory
                 .select(route1, route2)
-                .from(route1, route2)
+                .from(route1)
+                .innerJoin(route2)
+                .on(route1.arrivalHub.hubId.eq(route2.departureHub.hubId))
                 .where(
-                        // 1. 노선 연결 조건
+                        // 1. 출발지 도착지 설정
                         route1.departureHub.hubId.eq(departureHubId),
                         route2.arrivalHub.hubId.eq(arrivalHubId),
-                        route1.arrivalHub.hubId.eq(route2.departureHub.hubId),
 
                         // 2. 각 구간 거리는 200km 미만
-                        route1.estimatedDistanceKm.lt(200.0),
-                        route2.estimatedDistanceKm.lt(200.0),
+                        route1.estimatedDistanceKm.lt(H2H_DISTANCE_THRESHOLD_KM),
+                        route2.estimatedDistanceKm.lt(H2H_DISTANCE_THRESHOLD_KM),
 
                         // 3. 총 이동 거리는 직접 경로 거리의 1.5배 이하
                         route1.estimatedDistanceKm.add(route2.estimatedDistanceKm).loe(doubleDirectDistance * 1.5)

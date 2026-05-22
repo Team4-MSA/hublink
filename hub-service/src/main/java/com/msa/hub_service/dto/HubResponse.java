@@ -5,14 +5,14 @@ import com.msa.hub_service.entity.HubEntity;
 import java.math.BigDecimal;
 import java.util.UUID;
 
-public record HubResponse (
+public record HubResponse(
         UUID hubId,
         String name,
         String address,
         BigDecimal latitude,
         BigDecimal longitude
-){
-    public static HubResponse from(HubEntity hub){
+) {
+    public static HubResponse from(HubEntity hub) {
         return new HubResponse(
                 hub.getHubId(),
                 hub.getName(),

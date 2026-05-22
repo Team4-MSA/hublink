@@ -170,7 +170,7 @@ public class HubRouteService {
         BigDecimal directDistance = directRoute.getEstimatedDistanceKm();
 
         // 거리 200 미만
-        if (directRoute.getRouteType()==RouteType.P2P){
+        if (directRoute.getRouteType() == RouteType.P2P) {
             return List.of(convertToResponse(directRoute, 1));
         }
         // 거리 200 이상

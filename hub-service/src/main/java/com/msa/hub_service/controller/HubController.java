@@ -35,7 +35,7 @@ public class HubController {
     // 허브 수정
     @PatchMapping("/{hubId}")
     public HubResponse updateHub(@PathVariable UUID hubId, @Valid @RequestBody HubRequest request){
-        return hubService.updateHub(hubId, request.name(), request.address());
+        return hubService.updateHub(hubId, request);
     }
 
     // 허브 검색

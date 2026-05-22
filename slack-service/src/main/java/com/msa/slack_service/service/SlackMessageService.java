@@ -1,6 +1,9 @@
 package com.msa.slack_service.service;
 
+import com.msa.core_common.auth.UserRole;
 import com.msa.core_common.error.exception.CustomException;
+import com.msa.core_common.response.paging.PageRes;
+import com.msa.slack_service.dto.SlackMessageResponse;
 import com.msa.slack_service.entity.MessageType;
 import com.msa.slack_service.entity.SlackMessage;
 import com.msa.slack_service.entity.SlackMessageStatus;
@@ -13,7 +16,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -56,16 +58,41 @@ public class SlackMessageService {
         slackMessage.markFailed(reason);
     }
 
-    public Page<SlackMessage> findAll(
+    // 목록 조회
+    public PageRes<SlackMessageResponse> getSlackMessages(
+            String role,
             SlackMessageStatus status,
             MessageType messageType,
             Pageable pageable
     ) {
-        return slackMessageRepository.findAllByCondition(status, messageType, pageable);
+        validateMaster(role);
+
+        Page<SlackMessageResponse> page = slackMessageRepository
+                .findAllByCondition(status, messageType, pageable)
+                .map(SlackMessageResponse::from);
+
+        return new PageRes<>(page);
     }
 
-    public Optional<SlackMessage> findById(UUID slackMessageId) {
-        return slackMessageRepository.findById(slackMessageId);
+    // 상세 조회
+    public SlackMessageResponse getSlackMessage(String role, UUID slackMessageId) {
+        validateMaster(role);
+
+        SlackMessage slackMessage = getEntity(slackMessageId);
+        return SlackMessageResponse.from(slackMessage);
+    }
+
+    public SlackMessage getEntity(UUID slackMessageId) {
+        return slackMessageRepository.findById(slackMessageId)
+                .orElseThrow(() -> new CustomException(SlackErrorCode.SLACK_MESSAGE_NOT_FOUND));
+    }
+
+
+    // 권한 검증
+    private void validateMaster(String role) {
+        if (!UserRole.MASTER.name().equals(role)) {
+            throw new CustomException(SlackErrorCode.SLACK_MESSAGE_ACCESS_DENIED);
+        }
     }
 
 }

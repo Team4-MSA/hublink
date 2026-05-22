@@ -3,6 +3,9 @@ package com.msa.ai_service.client;
 
 import com.msa.ai_service.dto.AiRequest;
 import com.msa.ai_service.dto.AiResponse;
+import com.msa.ai_service.exception.AiErrorCode;
+import com.msa.core_common.error.exception.CustomException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -19,6 +22,7 @@ public class AiClient {
     @Value("${ai.api-key}")
     private String apiKey;
 
+    @CircuitBreaker(name = "geminiApi", fallbackMethod = "fallbackGenerate")
     public AiResponse generate(String prompt) {
         AiRequest request = AiRequest.of(prompt);
 
@@ -27,5 +31,9 @@ public class AiClient {
                 .body(request)
                 .retrieve()
                 .body(AiResponse.class);
+    }
+
+    private AiResponse fallbackGenerate(String prompt, Throwable throwable) {
+        throw new CustomException(AiErrorCode.AI_REQUEST_FAILED);
     }
 }

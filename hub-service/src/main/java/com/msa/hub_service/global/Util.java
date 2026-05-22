@@ -1,10 +1,19 @@
 package com.msa.hub_service.global;
 
 import com.msa.core_common.error.exception.CustomException;
+import com.msa.hub_service.dto.RouteCalculationResult;
+import com.msa.hub_service.entity.HubEntity;
+import com.msa.hub_service.entity.RouteType;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 public class Util {
+
+    private Util() {
+        throw new IllegalStateException("Utility class는 객체로 생성할 수 없습니다.");
+    }
+
     public static class DistanceCalculator {
 
         // 지구의 평균 반지름 (단위: km)
@@ -39,6 +48,32 @@ public class Util {
 
             // 결과값 리턴 (km 단위)
             return EARTH_RADIUS * c;
+        }
+    }
+
+    public static class RouteCalculator {
+        private static final double AVERAGE_TRUCK_SPEED_KMH = 60.0;
+        private static final double ROAD_CURVATURE_WEIGHT = 1.3;
+        private static final double H2H_DISTANCE_THRESHOLD_KM = 200.0;
+
+        public static RouteCalculationResult calculate(HubEntity dep, HubEntity arr) {
+            // 위경도 상 거리
+            double straightDistance = Util.DistanceCalculator.getDistance(
+                    dep.getLatitude(), dep.getLongitude(),
+                    arr.getLatitude(), arr.getLongitude()
+            );
+
+            // 실제 거리
+            double actualDistance = straightDistance * ROAD_CURVATURE_WEIGHT;
+            BigDecimal distanceKm = BigDecimal.valueOf(actualDistance).setScale(2, RoundingMode.HALF_UP);
+
+            // 주행 시간
+            int durationMin = (int) Math.round((actualDistance / AVERAGE_TRUCK_SPEED_KMH) * 60.0);
+
+            // 거리에 따른 루트 타입
+            RouteType type = (actualDistance > H2H_DISTANCE_THRESHOLD_KM) ? RouteType.H2H : RouteType.P2P;
+
+            return new RouteCalculationResult(distanceKm, durationMin, type);
         }
     }
 }

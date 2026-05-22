@@ -2,13 +2,14 @@ package com.msa.hub_service.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
 import com.msa.core_common.error.exception.CustomException;
+import com.msa.hub_service.dto.RouteCalculationResult;
 import com.msa.hub_service.global.HubErrorCode;
 import com.msa.hub_service.global.Util;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.util.UUID;
 
 @Entity
@@ -17,16 +18,8 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder(access = AccessLevel.PRIVATE)
 @Table(name = "p_hub_routes")
+@SQLRestriction("deleted_at IS NULL")
 public class HubRouteEntity extends BaseEntity {
-
-    // 물류 화물차량의 평균 주행 속도 (60 km/h)
-    private static final double AVERAGE_TRUCK_SPEED_KMH = 60.0;
-
-    // 도로 우회 계수 (직선 거리 대비 실제 주행 거리의 비율, 약 30% 증가)
-    private static final double ROAD_CURVATURE_WEIGHT = 1.3;
-
-    // 허브 간(H2H) 경로로 판별하기 위한 기준 거리 (km)
-    private static final double H2H_DISTANCE_THRESHOLD_KM = 200.0;
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -55,48 +48,37 @@ public class HubRouteEntity extends BaseEntity {
             HubEntity departureHub,
             HubEntity arrivalHub
     ) {
-        if (departureHub == null) {
-            throw new CustomException(HubErrorCode.DEPARTURE_HUB_REQUIRED);
-        }
-        if (arrivalHub == null) {
-            throw new CustomException(HubErrorCode.ARRIVAL_HUB_REQUIRED);
-        }
+        validateHubs(departureHub, arrivalHub);
 
-        if (departureHub.getHubId().equals(arrivalHub.getHubId())) {
-            throw new CustomException(HubErrorCode.SAME_HUB_NOT_ALLOWED);
-        }
-
-        // 위경도를 이용한 직선 거리 계산 (km)
-        double straightDistance = Util.DistanceCalculator.getDistance(
-                departureHub.getLatitude(), departureHub.getLongitude(),
-                arrivalHub.getLatitude(), arrivalHub.getLongitude()
-        );
-
-        // 우회 계수를 적용하여 실제 주행 예상 거리 산출
-        double actualDrivingDistance = straightDistance * ROAD_CURVATURE_WEIGHT;
-
-        BigDecimal estimatedDistanceKm = BigDecimal.valueOf(actualDrivingDistance)
-                .setScale(2, RoundingMode.HALF_UP);
-
-        // 보정된 주행 거리를 바탕으로 예상 소요 시간 계산 (분 단위)
-        double durationMinutes = (actualDrivingDistance / AVERAGE_TRUCK_SPEED_KMH) * 60.0;
-        int estimatedDurationMin = (int) Math.round(durationMinutes);
-
-        RouteType routeType = determineRouteType(actualDrivingDistance);
+        RouteCalculationResult routeInfo = Util.RouteCalculator.calculate(departureHub, arrivalHub);
 
         return HubRouteEntity.builder()
                 .departureHub(departureHub)
                 .arrivalHub(arrivalHub)
-                .estimatedDistanceKm(estimatedDistanceKm)
-                .estimatedDurationMin(estimatedDurationMin)
-                .routeType(routeType)
+                .estimatedDistanceKm(routeInfo.distanceKm())
+                .estimatedDurationMin(routeInfo.durationMinutes())
+                .routeType(routeInfo.routeType())
                 .build();
     }
 
-    private static RouteType determineRouteType(double distanceKm) {
-        if (distanceKm > H2H_DISTANCE_THRESHOLD_KM) {
-            return RouteType.H2H;
-        }
-        return RouteType.P2P;
+    public void recalculateRouteInfo(){
+        RouteCalculationResult routeInfo = Util.RouteCalculator.calculate(departureHub, arrivalHub);
+
+        this.estimatedDistanceKm = routeInfo.distanceKm();
+        this.estimatedDurationMin = routeInfo.durationMinutes();
+        this.routeType = routeInfo.routeType();
+
     }
+
+    private static void validateHubs(HubEntity dep, HubEntity arr) {
+        if (dep == null) throw new CustomException(HubErrorCode.DEPARTURE_HUB_REQUIRED);
+        if (arr == null) throw new CustomException(HubErrorCode.ARRIVAL_HUB_REQUIRED);
+        if (dep.getHubId().equals(arr.getHubId())) throw new CustomException(HubErrorCode.SAME_HUB_NOT_ALLOWED);
+
+        if (dep.getLatitude() == null || dep.getLongitude() == null ||
+                arr.getLatitude() == null || arr.getLongitude() == null) {
+            throw new CustomException(HubErrorCode.NULL_COORDINATES);
+        }
+    }
+
 }

@@ -3,10 +3,12 @@ package com.msa.hub_service.service;
 import com.msa.hub_service.client.AddressGeocodingPort;
 import com.msa.hub_service.dto.CoordinateDto;
 import com.msa.hub_service.entity.HubEntity;
+import com.msa.hub_service.message.HubCreatedEvent;
 import com.msa.hub_service.repository.HubRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -21,6 +23,7 @@ public class HubCoordinateRetryScheduler {
     private final HubRepository hubRepository;
     private final AddressGeocodingPort geocodingPort;
     private final RedisCacheManager cacheManager;
+    private final ApplicationEventPublisher eventPublisher;
 
 
     @Scheduled(cron = "0 0 * * * *")
@@ -51,6 +54,11 @@ public class HubCoordinateRetryScheduler {
                 Cache cache = cacheManager.getCache("hub");
                 if (cache!=null){
                     cache.evict(hub.getHubId());
+                }
+
+                // 갱신된 주소로 루트 생성
+                if (hub.getLatitude() != null && hub.getLongitude() != null) {
+                    eventPublisher.publishEvent(new HubCreatedEvent(hub.getHubId()));
                 }
 
             } catch (Exception e) {

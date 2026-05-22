@@ -255,6 +255,7 @@ public class DeliveryService {
         return DeliveryResponse.from(savedDelivery);
     }
 
+    // 배송 저장 시 중복 주문 예외 처리
     private Delivery saveDelivery(Delivery delivery) {
         try {
             return deliveryRepository.saveAndFlush(delivery);
@@ -263,6 +264,7 @@ public class DeliveryService {
         }
     }
 
+    // 배송 경로에 필요한 허브들의 배송 담당자 목록 조회
     private List<DeliveryManagerResponse> getDeliveryManagers(
             DeliveryRequest request,
             List<HubRouteResponse> hubRoutes
@@ -281,6 +283,7 @@ public class DeliveryService {
         return deliveryManagers;
     }
 
+    // 마지막 업체 배송을 담당할 배송 담당자 배정
     private DeliveryManagerResponse assignCompanyDeliveryManager(
             List<DeliveryManagerResponse> deliveryManagers,
             UUID destinationHubId
@@ -315,6 +318,7 @@ public class DeliveryService {
         );
     }
 
+    // 허브 간 이동 경로마다 허브 배송 담당자 배정 - <허브 ID, 배송 담당자 ID> 반환
     private Map<UUID, UUID> assignHubDeliveryManagers(
             List<HubRouteResponse> hubRoutes,
             List<DeliveryManagerResponse> deliveryManagers
@@ -332,6 +336,7 @@ public class DeliveryService {
         return hubDeliveryManagerIds;
     }
 
+    // 특정 출발 허브 구간을 담당할 허브 배송 담당자 선택
     private DeliveryManagerResponse selectHubDeliveryManager(
             List<DeliveryManagerResponse> deliveryManagers,
             UUID departureHubId
@@ -366,6 +371,7 @@ public class DeliveryService {
         );
     }
 
+    // 출발 허브와 도착 허브 기준으로 배송 경로 조회
     private List<HubRouteResponse> getHubRoutes(DeliveryRequest request) {
         List<HubRouteResponse> hubRoutes = hubClient.getRoutes(
                 request.getDepartureHubId(),

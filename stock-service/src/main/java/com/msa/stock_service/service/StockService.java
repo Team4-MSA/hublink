@@ -14,6 +14,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +27,7 @@ public class StockService {
      * @param dto
      * @return
      */
+    @Transactional
     public Stock createStock(StockRequestDto dto){
         // 재고를 DB에 생성한다.
         Stock newStock = Stock.create(dto);
@@ -39,18 +41,20 @@ public class StockService {
     }
 
     /**
-     * 재고 감소 -> 재고 이력 추가.
+     * 재고 감소 기능
+     * 재고 조회 -> 주문 수량과 재고 수량 비교 -> 재고 감소 -> 이에 따른 재고 이력 생성
      * @param listDto
      * @return
      */
+    @Transactional
     public List<StockHistory> decreaStock (List<StockDecreaRequestDto> listDto){
         //StockDecreaRequestDto를 반복하여 productId를 추출한다.
         List<UUID> productIdList = listDto.stream().
             map(StockDecreaRequestDto::getProductId).
             collect(Collectors.toList());
 
-        // 재고 리스트를 가져온다.
-        List<Stock> stockList = stockRepository.findAllById(productIdList);
+        // 재고 리스트를 가져온다. - 여기에 비관적 락이 걸림.
+        List<Stock> stockList = stockRepository.findAllByProductIdInForUpdate(productIdList);
         // 재고 이력 리스트를 담을 새로운 리스트를 만든다.
         List<StockHistory> newStockHistory = new ArrayList<>();
 
@@ -75,8 +79,11 @@ public class StockService {
                 //재고 수량이 더 많다는 상태값을 넣은 재고 이력을 생성한다.
                 newHistory = StockHistory.createOutOfStock(stock,dto.getQuantity());
             }
+            //새롭게 넣은 재고 이력을 재고이력 리스트에 저장.
             newStockHistory.add(newHistory);
         }
+        //변경된 재고 이력 리스트를 DB에 모두 저장.
+        stockHistoryRepository.saveAll(newStockHistory);
         return newStockHistory;
     }
 

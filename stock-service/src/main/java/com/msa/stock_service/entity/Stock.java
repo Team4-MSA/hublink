@@ -40,8 +40,10 @@ public class Stock extends BaseEntity {
     @Column(name = "reserved_quantity", nullable = false)
     private Integer reservedQuantity = 0;
 
-    @Version
-    private Integer version;
+    //재고 감소 기능은 빈번하게 발생되는 동시성 문제이기 때문에
+    // 비관적 락으로 해결할 것이므로 Version 컬럼을 제외한다.
+//    @Version
+//    private Integer version;
 
     public static Stock create(StockRequestDto dto){
         return Stock.builder()

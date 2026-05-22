@@ -7,6 +7,7 @@ import com.msa.product_service.client.StockRequestDto;
 import com.msa.product_service.client.UserClient;
 import com.msa.product_service.dto.ProductRequestDto;
 import com.msa.product_service.entity.Product;
+import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,7 +39,8 @@ public class ProductOrchestrator {
 
         //HUB_MANAGER는 본인 허브인지 확인.
         if(userRole.equals("HUB_MANAGER")){
-            Boolean ishubManager = userClient.IsHubManager(userId,dto.getHubId()).getData();
+            Map<String,Boolean> ishubManagerStr = userClient.isHubManager(userId,dto.getHubId()).getData();
+            Boolean ishubManager =  ishubManagerStr.get("verified");
             if(ishubManager == null ||  !ishubManager) {
                 throw new IllegalArgumentException("해당 허브에 대한 관리 권한이 없음.");
             }
@@ -46,7 +48,8 @@ public class ProductOrchestrator {
 
         //COMPANY_MANAGER는 본인 업체인지 확인.
         if(userRole.equals("COMPANY_MANAGER")) {
-            Boolean isCompanyManager = userClient.IsCompanyManager(userId,dto.getCompanyId()).getData();
+            Map<String,Boolean> isCompanyManagerStr = userClient.isCompanyManager(userId,dto.getCompanyId()).getData();
+            Boolean isCompanyManager =  isCompanyManagerStr.get("verified");
             if(isCompanyManager == null ||  !isCompanyManager) {
                 throw new IllegalArgumentException("해당 업체에 대한 권한이 업음.");
             }

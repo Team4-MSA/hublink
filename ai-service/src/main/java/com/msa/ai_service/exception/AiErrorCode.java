@@ -12,7 +12,8 @@ public enum AiErrorCode implements ErrorCode {
     AI_REQUEST_FAILED("AI_500_001", HttpStatus.INTERNAL_SERVER_ERROR, "AI 요청 처리에 실패했습니다."),
     AI_EVENT_PUBLISH_FAILED("AI_500_002", HttpStatus.INTERNAL_SERVER_ERROR, "AI 생성 완료 이벤트 발행에 실패했습니다."),
     AI_RESPONSE_PARSE_FAILED("AI_500_003", HttpStatus.INTERNAL_SERVER_ERROR, "AI 응답 파싱에 실패했습니다."),
-    AI_REQUEST_PAYLOAD_CONVERT_FAILED("AI_500_004", HttpStatus.INTERNAL_SERVER_ERROR, "AI 요청 Payload 변환에 실패했습니다.");;
+    AI_REQUEST_PAYLOAD_CONVERT_FAILED("AI_500_004", HttpStatus.INTERNAL_SERVER_ERROR, "AI 요청 Payload 변환에 실패했습니다."),
+    AI_CIRCUIT_BREAKER_OPEN("AI_503_001", HttpStatus.SERVICE_UNAVAILABLE, "AI 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요."),;;
 
     private final String code;
     private final HttpStatus status;

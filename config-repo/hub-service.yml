@@ -19,6 +19,22 @@ management:
         enabled: true
 
 resilience4j:
+  ratelimiter:
+    instances:
+      kakaoApi:
+        limitForPeriod: 10
+        limitRefreshPeriod: 1s
+        timeoutDuration: 5s
+  retry: 
+    instances:
+      kakaoApi:
+        maxAttempts: 3
+        waitDuration: 1s
+        enableExponentialBackoff: true
+        retryExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.HttpClientErrorException.TooManyRequests
+          - org.springframework.web.client.ResourceAccessException
   circuitbreaker:
     configs:
       default:

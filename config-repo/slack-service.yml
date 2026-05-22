@@ -5,6 +5,31 @@ spring:
   application:
     name: slack-service
 
+  datasource:
+    url: ${DB_URL}?currentSchema=slack_service
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: slack_service
+        format_sql: true
+    show-sql: true
+
+  task:
+    scheduling:
+      pool:
+        size: 3
+
 eureka:
   client:
     service-url:
@@ -13,10 +38,22 @@ eureka:
     fetch-registry: true
 
 management:
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: always
+
+slack:
+  bot-token: ${SLACK_BOT_TOKEN}
+
+swagger:
+  gateway-url: ${SWAGGER_GATEWAY_URL}

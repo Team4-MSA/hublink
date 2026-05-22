@@ -2,6 +2,8 @@ package com.msa.user_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
+import com.msa.user_service.client.CompanyClient;
+import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.*;
 import com.msa.user_service.entity.*;
 import com.msa.user_service.global.UserErrorCode;
@@ -25,6 +27,8 @@ public class UserService {
     private final CompanyManagerRepository companyManagerRepository;
     private final DeliveryManagerRepository deliveryManagerRepository;
     private final PasswordEncoder passwordEncoder;
+    private final HubClient hubClient;
+    private final CompanyClient companyClient;
 
     @Transactional
     public UserResponse signUp(SignUpRequest request) {
@@ -92,19 +96,30 @@ public class UserService {
             user.approve();
 
             switch (user.getRole()) {
-                case HUB_MANAGER ->
-                        hubManagerRepository.save(HubManager.builder()
-                                .userId(userId)
-                                .hubId(user.getHubId())
-                                .build());
-                case COMPANY_MANAGER ->
-                        companyManagerRepository.save(CompanyManager.builder()
-                                .userId(userId)
-                                .companyId(user.getCompanyId())
-                                .build());
+                case HUB_MANAGER -> {
+                    if (!hubClient.checkHubExists(user.getHubId()).isExists()) {
+                        throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
+                    }
+                    hubManagerRepository.save(HubManager.builder()
+                            .userId(userId)
+                            .hubId(user.getHubId())
+                            .build());
+                }
+                case COMPANY_MANAGER -> {
+                    if (!companyClient.checkCompanyExists(user.getCompanyId()).isExists()) {
+                        throw new CustomException(UserErrorCode.COMPANY_NOT_FOUND);
+                    }
+                    companyManagerRepository.save(CompanyManager.builder()
+                            .userId(userId)
+                            .companyId(user.getCompanyId())
+                            .build());
+                }
                 case DELIVERY_MANAGER -> {
                     if (request.getDeliveryManagerType() == null) {
                         throw new CustomException(UserErrorCode.DELIVERY_TYPE_REQUIRED);
+                    }
+                    if (!hubClient.checkHubExists(user.getHubId()).isExists()) {
+                        throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
                     }
                     int nextSequence = deliveryManagerRepository
                             .findMaxDeliverySequenceByHubId(user.getHubId()).orElse(0) + 1;

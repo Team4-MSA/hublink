@@ -8,6 +8,7 @@ import com.msa.slack_service.entity.SlackMessageStatus;
 import com.msa.slack_service.service.SlackMessageService;
 import com.msa.slack_service.service.SlackService;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -27,6 +28,7 @@ public class SlackController {
             @RequestHeader("X-User-Role") String role,
             @RequestParam(required = false) SlackMessageStatus status,
             @RequestParam(required = false) MessageType messageType,
+            @ParameterObject
             @PageableDefault(size = 10, sort = "sentAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return slackMessageService.getSlackMessages(role, status, messageType, pageable);

@@ -12,7 +12,7 @@ spring:
     config:
       server:
         native:
-          search-locations: file:../config-repo
+          search-locations: file:./config-repo/
 
 eureka:
   client:

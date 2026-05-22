@@ -1,0 +1,12 @@
+spring:
+  datasource:
+    # H2를 메모리 모드로 사용하며, PostgreSQL 문법을 따르도록 설정
+    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop # 테스트 종료 시 DB 테이블 삭제
+    show-sql: true

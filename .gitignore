@@ -27,3 +27,4 @@ Thumbs.db
 
 # Test
 target/
+order-service/.env

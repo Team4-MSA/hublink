@@ -62,12 +62,12 @@ public class HubRouteEntity extends BaseEntity {
     }
 
     public void update(BigDecimal targetKm, Integer targetMin, RouteType targetType) {
-        this.estimatedDistanceKm=targetKm;
-        this.estimatedDurationMin=targetMin;
-        this.routeType=targetType;
+        this.estimatedDistanceKm = targetKm;
+        this.estimatedDurationMin = targetMin;
+        this.routeType = targetType;
     }
 
-    public void recalculateRouteInfo(){
+    public void recalculateRouteInfo() {
         RouteCalculationResult routeInfo = Util.RouteCalculator.calculate(departureHub, arrivalHub);
 
         this.estimatedDistanceKm = routeInfo.distanceKm();

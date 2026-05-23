@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 
-public record HubRequest (
+public record HubRequest(
         @NotNull(message = "허브 이름은 필수입니다.")
         String name,
 
@@ -14,4 +14,5 @@ public record HubRequest (
         BigDecimal latitude,
 
         BigDecimal longitude
-){}
+) {
+}

@@ -52,7 +52,7 @@ public class HubCoordinateRetryScheduler {
 
                 // 캐시 관리(갱신되었으로 삭제)
                 Cache cache = cacheManager.getCache("hub");
-                if (cache!=null){
+                if (cache != null) {
                     cache.evict(hub.getHubId());
                 }
 

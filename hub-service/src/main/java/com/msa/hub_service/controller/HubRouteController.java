@@ -13,6 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -29,19 +30,19 @@ public class HubRouteController {
 
     // 상세 조회
     @GetMapping("/{hubRouteId}")
-    public HubRouteResponse getHubRoute(@PathVariable UUID hubRouteId){
+    public HubRouteResponse getHubRoute(@PathVariable UUID hubRouteId) {
         return hubRouteService.getHubRoute(hubRouteId);
     }
 
     // 수정
     @PatchMapping("/{hubRouteId}")
-    public HubRouteResponse updateHubRoute(@PathVariable UUID hubRouteId, @Valid @RequestBody HubRouteUpdateRequest request){
-        return hubRouteService.updateHub(hubRouteId, request);
+    public HubRouteResponse updateHubRoute(@PathVariable UUID hubRouteId, @Valid @RequestBody HubRouteUpdateRequest request) {
+        return hubRouteService.updateHubRoute(hubRouteId, request);
     }
 
     // 삭제
     @DeleteMapping("/{hubRouteId}")
-    public HubRouteResponse deleteHubRoute(@PathVariable UUID hubRouteId){
+    public HubRouteResponse deleteHubRoute(@PathVariable UUID hubRouteId) {
         return hubRouteService.deleteHubRoute(hubRouteId);
     }
 
@@ -52,7 +53,15 @@ public class HubRouteController {
             @RequestParam(required = false) UUID arrivalHubId,
             @RequestParam(required = false) RouteType routeType,
             @PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
-    ){
+    ) {
         return hubRouteService.getHubRoutes(departureHubId, arrivalHubId, routeType, pageable);
+    }
+
+    @GetMapping("/path")
+    public List<HubRouteResponse> getHubPath(
+            @RequestParam UUID departureHubId,
+            @RequestParam UUID arrivalHubId
+    ) {
+        return hubRouteService.getHubPath(departureHubId, arrivalHubId);
     }
 }

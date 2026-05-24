@@ -58,7 +58,7 @@ public class HubService {
     }
 
     // Hub 상세 조회
-    @Cacheable(value = "hub", key="#hubId")
+    @Cacheable(value = "hub", key = "#hubId")
     public HubResponse getHub(UUID hubId) {
         HubEntity hub = hubRepository.findById(hubId)
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_NOT_FOUND));
@@ -88,17 +88,17 @@ public class HubService {
         BigDecimal targetLon = request.longitude();
 
         // 주소 값 변경되었을 때 대처 - 1. 보낸 위도/경도 2. 주소에 따른 api 호출
-        if(isAddressChanged){
+        if (isAddressChanged) {
             if (targetLat == null || targetLon == null) {
                 CoordinateDto coordinate = getCoordinate(request.address());
 
-                if (coordinate.latitude() == null || coordinate.longitude() == null){
+                if (coordinate.latitude() == null || coordinate.longitude() == null) {
                     throw new CustomException(HubErrorCode.GEOCODING_FAILED);
                 }
                 targetLat = coordinate.latitude();
                 targetLon = coordinate.longitude();
             }
-        }else {
+        } else {
             targetLat = (targetLat != null) ? targetLat : hub.getLatitude();
             targetLon = (targetLon != null) ? targetLon : hub.getLongitude();
         }
@@ -138,7 +138,7 @@ public class HubService {
     }
 
     // 허브 삭제
-    @CacheEvict(value = "hub", key="#hubId")
+    @CacheEvict(value = "hub", key = "#hubId")
     @Transactional
     public HubResponse deleteHub(UUID hubId) {
         HubEntity hub = hubRepository.findById(hubId)

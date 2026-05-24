@@ -11,7 +11,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -22,19 +21,19 @@ public class HubController {
 
     // 허브 생성
     @PostMapping
-    public HubResponse createHub(@Valid @RequestBody HubRequest request){
-        return hubService.createHub(request.name(),request.address());
+    public HubResponse createHub(@Valid @RequestBody HubRequest request) {
+        return hubService.createHub(request.name(), request.address());
     }
 
     //허브 상세 조회
     @GetMapping("{hubId}")
-    public HubResponse getHub(@PathVariable UUID hubId){
+    public HubResponse getHub(@PathVariable UUID hubId) {
         return hubService.getHub(hubId);
     }
 
     // 허브 수정
     @PatchMapping("/{hubId}")
-    public HubResponse updateHub(@PathVariable UUID hubId, @Valid @RequestBody HubRequest request){
+    public HubResponse updateHub(@PathVariable UUID hubId, @Valid @RequestBody HubRequest request) {
         return hubService.updateHub(hubId, request);
     }
 
@@ -43,7 +42,7 @@ public class HubController {
     public PageRes<HubResponse> getHubs(
             @RequestParam(required = false) String name,
             @PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
-    ){
+    ) {
         return hubService.getHubs(name, pageable);
     }
 
@@ -51,7 +50,7 @@ public class HubController {
     @DeleteMapping("/{hubId}")
     public HubResponse deleteHub(
             @PathVariable UUID hubId
-    ){
+    ) {
         return hubService.deleteHub(hubId);
     }
 }

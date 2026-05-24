@@ -2,6 +2,7 @@ package com.msa.product_service.service;
 
 import com.msa.product_service.client.CompanyClient;
 import com.msa.product_service.client.CompanyResponseDto;
+import com.msa.product_service.dto.ProductModifyDto;
 import com.msa.product_service.dto.ProductRequestDto;
 import com.msa.product_service.dto.ProductResponseDto;
 import com.msa.product_service.entity.Product;
@@ -19,6 +20,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductService {
 
     private final ProductRepository productRepository;
+
+    /**
+     * 상품 수정
+     * @param dto
+     * @return
+     */
+    @Transactional
+    public Product modifyProduct(ProductRequestDto dto,UUID id){
+        Product modifyProduct = productRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("상품이 존재하지 않습니다."));
+        return modifyProduct.modifyProduct(dto);
+    }
+
 
     /**
      * 상품 생성
@@ -69,5 +82,7 @@ public class ProductService {
         }
         return productResponseDtoList;
     }
+
+
 
 }

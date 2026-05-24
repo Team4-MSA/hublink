@@ -27,3 +27,7 @@ Thumbs.db
 
 # Test
 target/
+
+# 로컬 테스트용 설정 및 도커 파일 제외
+docker-compose-local.yml
+application-local.yml

@@ -25,6 +25,32 @@ public class ProductOrchestrator {
     private final UserClient userClient;
 
     /**
+     * 상품 삭제
+     * @param id
+     * @param username
+     * @param userRole
+     * @return
+     */
+    public Product deleteProduct(UUID id, String username, String userRole, UUID userId) {
+        Product product = productService.getProduct(id);
+
+        //권한 검사 먼저 진행
+        if(!userRole.equals("MASTER") &&  !userRole.equals("HUB_MANAGER")) {
+            throw new IllegalArgumentException("접근 권한이 없음.");
+        }
+        // 허브 관리자의 경우 본인 허브에 대해서만 삭제 권한이 존재함.
+        if (userRole.equals("HUB_MANAGER")) {
+            Map<String, Boolean> ishubManagerStr = userClient.isHubManager(userId, product.getHubId()).getData();
+            Boolean ishubManager = ishubManagerStr.get("verified");
+            if (ishubManager == null || !ishubManager) {
+                throw new IllegalArgumentException("해당 허브에 대한 관리 권한이 없음.");
+            }
+        }
+        Product deleteProdcut = productService.deleteProduct(id, username);
+        return deleteProdcut;
+    }
+
+    /**
      * 상품 수정. 수정 전 권한별 접근 확인
      *
      * @param dto
@@ -33,11 +59,12 @@ public class ProductOrchestrator {
      * @param username
      * @return
      */
-    public Product modifyProduct(ProductRequestDto dto,UUID id, String userRole, UUID userId,String username) {
+    public Product modifyProduct(ProductRequestDto dto, UUID id, String userRole, UUID userId,
+        String username) {
         //권한 검사
-        checkPermission(userRole,userId,username,dto.getHubId(),dto.getCompanyId());
+        checkPermission(userRole, userId, username, dto.getHubId(), dto.getCompanyId());
         //상품 수정
-        return productService.modifyProduct(dto,id);
+        return productService.modifyProduct(dto, id);
     }
 
     /**
@@ -47,9 +74,10 @@ public class ProductOrchestrator {
      * @param dto
      * @param userId
      */
-    public Product createProductFlow(String userRole, ProductRequestDto dto, UUID userId, String username) {
+    public Product createProductFlow(String userRole, ProductRequestDto dto, UUID userId,
+        String username) {
         //권한 검사
-        checkPermission(userRole,userId,username,dto.getHubId(),dto.getCompanyId());
+        checkPermission(userRole, userId, username, dto.getHubId(), dto.getCompanyId());
 
         //업체가 허브에 속해 있는지 확인.
         isCompanyInHub(dto.getCompanyId(), dto.getHubId());
@@ -90,15 +118,18 @@ public class ProductOrchestrator {
 
     /**
      * 권한 검사 하는 메서드 - 상품 생성 및 수정 할 때 사용
+     *
      * @param userRole
      * @param userId
      * @param username
      * @param hubId     : 상품의 hubId
      * @param companyId : 상품의 companyId
      */
-    private void checkPermission(String userRole, UUID userId, String username, UUID hubId, UUID companyId) {
+    private void checkPermission(String userRole, UUID userId, String username, UUID hubId,
+        UUID companyId) {
         //이 3가지 권한이 아닐 경우, 모두 접근 제한
-        if (!userRole.equals("MASTER") && !userRole.equals("HUB_MANAGER") && !userRole.equals("COMPANY_MANAGER")) {
+        if (!userRole.equals("MASTER") && !userRole.equals("HUB_MANAGER") && !userRole.equals(
+            "COMPANY_MANAGER")) {
             throw new IllegalArgumentException("접근 권한이 없습니다.");
         }
         //허브 관리자의 경우 본인 허브인지 확인.
@@ -112,7 +143,8 @@ public class ProductOrchestrator {
         }
         //업체 관리자의 경우, 본인 업체인지 확인
         if (userRole.equals("COMPANY_MANAGER")) {
-            Map<String, Boolean> isCompanyManagerStr = userClient.isCompanyManager(userId, companyId).getData();
+            Map<String, Boolean> isCompanyManagerStr = userClient.isCompanyManager(userId,
+                companyId).getData();
             Boolean isCompanyManager = isCompanyManagerStr.get("verified");
             if (isCompanyManager == null || !isCompanyManager) {
                 throw new IllegalArgumentException("해당 업체에 대한 권한이 업음.");

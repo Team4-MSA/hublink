@@ -11,6 +11,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -26,6 +27,15 @@ public class ProductController {
     private final ProductOrchestrator productOrchestrator;
     private final ProductService productService;
 
+
+    @PatchMapping("/{productId}")
+    public UUID deleteProduct(@PathVariable("productId") UUID id,
+                              @RequestHeader("X-User-Role") String userRole,
+                              @RequestHeader("X-User-username") String username,
+                              @RequestHeader("X-User-Id")UUID userId) {
+        Product deleteProduct = productOrchestrator.deleteProduct(id,username, userRole,userId);
+        return  deleteProduct.getId();
+    }
 
     /**
      * 상품 수정하기

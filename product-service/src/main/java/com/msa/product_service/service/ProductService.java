@@ -21,6 +21,11 @@ public class ProductService {
 
     private final ProductRepository productRepository;
 
+    public Product getProduct(UUID  productId) {
+        Product product = productRepository.findById(productId).orElseThrow(() -> new IllegalArgumentException("상품이 없음."));
+        return  product;
+    }
+
     /**
      * 상품 수정
      * @param dto
@@ -55,10 +60,11 @@ public class ProductService {
      * @param username
      */
     @Transactional
-    public void deleteProduct(UUID productId, String username) {
+    public Product deleteProduct(UUID productId, String username) {
         Product deletedProduct = productRepository.findById(productId)
             .orElseThrow(() -> new IllegalArgumentException("상품이 없음"));
         deletedProduct.delete(username);
+        return deletedProduct;
     }
 
     /**

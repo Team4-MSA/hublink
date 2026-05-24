@@ -15,6 +15,9 @@ import com.msa.hub_service.repository.HubRepository;
 import com.msa.hub_service.repository.HubRouteRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -79,6 +82,7 @@ public class HubRouteService {
     }
 
     // 단건 조회
+    @Cacheable(cacheNames = "hubRoute", key = "#hubRouteId.toString()")
     public HubRouteResponse getHubRoute(UUID hubRouteId) {
         HubRouteEntity hubRoute = hubRouteRepository.findById(hubRouteId)
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_ROUTE_NOT_FOUND));
@@ -87,7 +91,11 @@ public class HubRouteService {
 
     // 수정(km, min)
     @Transactional
-    public HubRouteResponse updateHub(UUID hubRouteId, HubRouteUpdateRequest request) {
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "hubRoute", key = "#hubRouteId.toString()"),
+            @CacheEvict(cacheNames = "hubPath", allEntries = true)
+    })
+    public HubRouteResponse updateHubRoute(UUID hubRouteId, HubRouteUpdateRequest request) {
         HubRouteEntity hubRoute = hubRouteRepository.findById(hubRouteId)
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_ROUTE_NOT_FOUND));
 
@@ -132,6 +140,10 @@ public class HubRouteService {
 
     // 삭제
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "hubRoute", key = "#hubRouteId.toString()"),
+            @CacheEvict(cacheNames = "hubPath", allEntries = true)
+    })
     public HubRouteResponse deleteHubRoute(UUID hubRouteId) {
         HubRouteEntity hubRoute = hubRouteRepository.findById(hubRouteId)
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_ROUTE_NOT_FOUND));
@@ -141,7 +153,7 @@ public class HubRouteService {
         return HubRouteResponse.from(hubRoute);
     }
 
-    // 출발/도착으로 검색
+    // 출발/도착/루트로 검색
     public PageRes<HubRouteResponse> getHubRoutes(UUID departureHubId, UUID arrivalHubId, RouteType routeType, Pageable pageable) {
 
         Page<HubRouteEntity> hubRoutePage = hubRouteRepository.searchHubRoutes(departureHubId, arrivalHubId, routeType, pageable);
@@ -149,10 +161,36 @@ public class HubRouteService {
         return new PageRes<>(hubRoutePage.map(HubRouteResponse::from));
     }
 
+    // 경로 검색
+    @Cacheable(cacheNames = "hubPath", key = "#departureHubId.toString() + '_' + #arrivalHubId.toString()")
+    public List<HubRouteResponse> getHubPath(UUID departureHubId, UUID arrivalHubId) {
+        HubRouteEntity directRoute = hubRouteRepository.findByDepartureHub_HubIdAndArrivalHub_HubId(departureHubId, arrivalHubId)
+                .orElseThrow(() -> new CustomException(HubErrorCode.HUB_ROUTE_NOT_FOUND));
+
+        BigDecimal directDistance = directRoute.getEstimatedDistanceKm();
+
+        // 거리 200 미만
+        if (directRoute.getRouteType() == RouteType.P2P) {
+            return List.of(convertToResponse(directRoute, 1));
+        }
+        // 거리 200 이상
+        List<HubRouteEntity> transitRoutes = hubRouteRepository.findOptimalTransitRoute(departureHubId, arrivalHubId, directDistance);
+        // 최적 경로 없을 때
+        if (transitRoutes.isEmpty()) {
+            return List.of(convertToResponse(directRoute, 1));
+        }
+        // 최적 경로 있을 때
+        return List.of(
+                convertToResponse(transitRoutes.get(0), 1),
+                convertToResponse(transitRoutes.get(1), 2)
+        );
+    }
+
     // 자동 생성
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @CacheEvict(cacheNames = {"hubRoute", "hubPath"}, allEntries = true)
     public void createRoutesForNewHub(HubCreatedEvent event) {
         HubEntity newHub = hubRepository.findById(event.hubId())
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_NOT_FOUND));
@@ -199,6 +237,7 @@ public class HubRouteService {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @CacheEvict(cacheNames = {"hubRoute", "hubPath"}, allEntries = true)
     public void updateRoutesForUpdatedHub(HubUpdatedEvent event) {
         List<HubRouteEntity> affectedRoutes = hubRouteRepository.findByInvolvedHubId(event.hubId());
 
@@ -219,6 +258,7 @@ public class HubRouteService {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @CacheEvict(cacheNames = {"hubRoute", "hubPath"}, allEntries = true)
     public void deleteRoutesForDeletedHub(HubDeletedEvent event) {
         List<HubRouteEntity> affectedRoutes = hubRouteRepository.findByInvolvedHubId(event.hubId());
 
@@ -231,5 +271,18 @@ public class HubRouteService {
         for (HubRouteEntity route : affectedRoutes) {
             route.delete(deletedBy);
         }
+    }
+
+    // 루트 순서 추가
+    private HubRouteResponse convertToResponse(HubRouteEntity entity, int sequence) {
+        return new HubRouteResponse(
+                entity.getHubRouteId(),
+                entity.getDepartureHub().getHubId(),
+                entity.getArrivalHub().getHubId(),
+                entity.getEstimatedDistanceKm(),
+                entity.getEstimatedDurationMin(),
+                entity.getRouteType(),
+                sequence
+        );
     }
 }

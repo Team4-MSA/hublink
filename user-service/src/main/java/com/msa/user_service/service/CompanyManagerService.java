@@ -23,7 +23,7 @@ public class CompanyManagerService {
     private final CompanyManagerRepository companyManagerRepository;
     private final CompanyClient companyClient;
 
-    private void validateCompanyExists(UUID companyId) {
+    public void validateCompanyExists(UUID companyId) {
         if (!companyClient.checkCompanyExists(companyId).isExists()) {
             throw new CustomException(UserErrorCode.COMPANY_NOT_FOUND);
         }
@@ -33,21 +33,19 @@ public class CompanyManagerService {
     public CompanyManagerResponse register(CompanyManagerRequest request) {
         validateCompanyExists(request.getCompanyId());
 
-        CompanyManager companyManager = CompanyManager.builder()
-                .userId(request.getUserId())
-                .companyId(request.getCompanyId())
-                .build();
-        return CompanyManagerResponse.from(companyManagerRepository.save(companyManager));
+        CompanyManager companyManager = saveCompanyManager(request.getUserId(), request.getCompanyId());
+        return CompanyManagerResponse.from(companyManager);
     }
 
     // 승인 흐름 전용
+    @Transactional
     public void createOnApproval(UUID userId, UUID companyId) {
         validateCompanyExists(companyId);
         saveCompanyManager(userId, companyId);
     }
 
-    private void saveCompanyManager(UUID userId, UUID companyId) {
-        companyManagerRepository.save(CompanyManager.builder()
+    private CompanyManager saveCompanyManager(UUID userId, UUID companyId) {
+        return companyManagerRepository.save(CompanyManager.builder()
                 .userId(userId)
                 .companyId(companyId)
                 .build());

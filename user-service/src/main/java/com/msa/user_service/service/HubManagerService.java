@@ -6,7 +6,6 @@ import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.HubManagerRequest;
 import com.msa.user_service.dto.HubManagerResponse;
 import com.msa.user_service.dto.InternalHubManagerResponse;
-import com.msa.user_service.entity.CompanyManager;
 import com.msa.user_service.entity.HubManager;
 import com.msa.user_service.entity.User;
 import com.msa.user_service.global.UserErrorCode;
@@ -28,7 +27,7 @@ public class HubManagerService {
     private final UserRepository userRepository;
     private final HubClient hubClient;
 
-    private void validateHubExists(UUID hubId) {
+    public void validateHubExists(UUID hubId) {
         if (!hubClient.checkHubExists(hubId).isExists()) {
             throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
         }
@@ -38,21 +37,18 @@ public class HubManagerService {
     public HubManagerResponse register(HubManagerRequest request) {
         validateHubExists(request.getHubId());
 
-        HubManager hubManager = HubManager.builder()
-                .userId(request.getUserId())
-                .hubId(request.getHubId())
-                .build();
-        return HubManagerResponse.from(hubManagerRepository.save(hubManager));
+        HubManager hubManager = saveHubManager(request.getUserId(), request.getHubId());
+        return HubManagerResponse.from(hubManager);
     }
 
     // 승인 흐름 전용
+    @Transactional
     public void createOnApproval(UUID userId, UUID hubId) {
-        validateHubExists(hubId);
         saveHubManager(userId, hubId);
     }
 
-    private void saveHubManager(UUID userId, UUID hubId) {
-        hubManagerRepository.save(HubManager.builder()
+    private HubManager saveHubManager(UUID userId, UUID hubId) {
+        return hubManagerRepository.save(HubManager.builder()
                 .userId(userId)
                 .hubId(hubId)
                 .build());

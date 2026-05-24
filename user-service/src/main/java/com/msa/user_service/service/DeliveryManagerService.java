@@ -31,7 +31,7 @@ public class DeliveryManagerService {
     private final UserRepository userRepository;
     private final HubClient hubClient;
 
-    private void validateHubExists(UUID hubId) {
+    public void validateHubExists(UUID hubId) {
         if (!hubClient.checkHubExists(hubId).isExists()) {
             throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
         }
@@ -65,20 +65,9 @@ public class DeliveryManagerService {
         User user = userRepository.findByUserIdAndDeletedAtIsNull(request.getUserId())
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
-        int nextSequence = deliveryManagerRepository
-                .findMaxDeliverySequenceByHubId(request.getHubId())
-                .map(max -> max + 1)
-                .orElse(1);
+        DeliveryManager deliveryManager = saveDeliveryManager(request.getUserId(), request.getHubId(), request.getType(), user.getSlackId());
 
-        DeliveryManager deliveryManager = DeliveryManager.builder()
-                .userId(request.getUserId())
-                .hubId(request.getHubId())
-                .type(request.getType())
-                .deliverySequence(nextSequence)
-                .slackId(user.getSlackId())
-                .build();
-        
-        return DeliveryManagerResponse.from(deliveryManagerRepository.save(deliveryManager));
+        return DeliveryManagerResponse.from(deliveryManager);
     }
 
     public PageRes<DeliveryManagerResponse> getList(UUID hubId, DeliveryManagerType type, Pageable pageable,
@@ -152,19 +141,19 @@ public class DeliveryManagerService {
     }
 
     // 승인 흐름 전용
+    @Transactional
     public void createOnApproval(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
         validateHubExists(hubId);
         saveDeliveryManager(userId, hubId, type, slackId);
     }
 
-    // 외부 API 호출 이후 DB 작업만 수행
-    private void saveDeliveryManager(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
+    private DeliveryManager saveDeliveryManager(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
         int nextSequence = deliveryManagerRepository
-                .findMaxDeliverySequenceByHubId(hubId)
+                .findMaxDeliverySequenceByHubIdForUpdate(hubId)
                 .map(max -> max + 1)
                 .orElse(1);
 
-        deliveryManagerRepository.save(DeliveryManager.builder()
+        return deliveryManagerRepository.save(DeliveryManager.builder()
                 .userId(userId)
                 .hubId(hubId)
                 .type(type)

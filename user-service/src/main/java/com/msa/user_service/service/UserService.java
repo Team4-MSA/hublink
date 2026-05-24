@@ -79,29 +79,40 @@ public class UserService {
         user.delete(deletedBy);
     }
 
-    @Transactional
     public void approveUser(UUID userId, ApproveUserRequest request, UUID processedBy) {
         User user = findActiveUser(userId);
-
         if (user.getStatus() != UserStatus.PENDING) {
             throw new CustomException(UserErrorCode.NOT_PENDING_STATUS);
         }
 
+        if (request.getStatus() == UserStatus.APPROVED) {
+            switch (user.getRole()) {
+                case HUB_MANAGER -> hubManagerService.validateHubExists(user.getHubId());
+                case COMPANY_MANAGER -> companyManagerService.validateCompanyExists(user.getCompanyId());
+                case DELIVERY_MANAGER -> {
+                    if (request.getDeliveryManagerType() == null) {
+                        throw new CustomException(UserErrorCode.DELIVERY_TYPE_REQUIRED);
+                    }
+                    deliveryManagerService.validateHubExists(user.getHubId());
+                }
+            }
+        }
+
+        executeApprovalTransaction(user, request, processedBy);
+    }
+
+    @Transactional
+    public void executeApprovalTransaction(User user, ApproveUserRequest request, UUID processedBy) {
         UserStatus previousStatus = user.getStatus();
 
         if (request.getStatus() == UserStatus.APPROVED) {
             user.approve();
 
             switch (user.getRole()) {
-                case HUB_MANAGER -> hubManagerService.createOnApproval(userId, user.getHubId());
-                case COMPANY_MANAGER -> companyManagerService.createOnApproval(userId, user.getCompanyId());
-                case DELIVERY_MANAGER -> {
-                    if (request.getDeliveryManagerType() == null) {
-                        throw new CustomException(UserErrorCode.DELIVERY_TYPE_REQUIRED);
-                    }
-                    deliveryManagerService.createOnApproval(userId, user.getHubId(),
+                case HUB_MANAGER -> hubManagerService.createOnApproval(user.getUserId(), user.getHubId());
+                case COMPANY_MANAGER -> companyManagerService.createOnApproval(user.getUserId(), user.getCompanyId());
+                case DELIVERY_MANAGER -> deliveryManagerService.createOnApproval(user.getUserId(), user.getHubId(),
                             request.getDeliveryManagerType(), user.getSlackId());
-                }
             }
         } else if (request.getStatus() == UserStatus.REJECTED) {
             user.reject();
@@ -110,7 +121,7 @@ public class UserService {
         }
 
         approvalHistoryRepository.save(UserApprovalHistory.builder()
-                .userId(userId)
+                .userId(user.getUserId())
                 .previousStatus(previousStatus)
                 .newStatus(request.getStatus())
                 .reason(request.getReason())

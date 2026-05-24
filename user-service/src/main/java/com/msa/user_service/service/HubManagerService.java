@@ -6,6 +6,7 @@ import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.HubManagerRequest;
 import com.msa.user_service.dto.HubManagerResponse;
 import com.msa.user_service.dto.InternalHubManagerResponse;
+import com.msa.user_service.entity.CompanyManager;
 import com.msa.user_service.entity.HubManager;
 import com.msa.user_service.entity.User;
 import com.msa.user_service.global.UserErrorCode;
@@ -45,9 +46,12 @@ public class HubManagerService {
     }
 
     // 승인 흐름 전용
-    @Transactional
     public void createOnApproval(UUID userId, UUID hubId) {
         validateHubExists(hubId);
+        saveHubManager(userId, hubId);
+    }
+
+    private void saveHubManager(UUID userId, UUID hubId) {
         hubManagerRepository.save(HubManager.builder()
                 .userId(userId)
                 .hubId(hubId)

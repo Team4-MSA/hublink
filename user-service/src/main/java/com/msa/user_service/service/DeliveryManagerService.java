@@ -152,10 +152,13 @@ public class DeliveryManagerService {
     }
 
     // 승인 흐름 전용
-    @Transactional
     public void createOnApproval(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
         validateHubExists(hubId);
+        saveDeliveryManager(userId, hubId, type, slackId);
+    }
 
+    // 외부 API 호출 이후 DB 작업만 수행
+    private void saveDeliveryManager(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
         int nextSequence = deliveryManagerRepository
                 .findMaxDeliverySequenceByHubId(hubId)
                 .map(max -> max + 1)

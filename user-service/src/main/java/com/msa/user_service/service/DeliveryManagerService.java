@@ -143,7 +143,6 @@ public class DeliveryManagerService {
     // 승인 흐름 전용
     @Transactional
     public void createOnApproval(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
-        validateHubExists(hubId);
         saveDeliveryManager(userId, hubId, type, slackId);
     }
 

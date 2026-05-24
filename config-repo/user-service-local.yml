@@ -72,6 +72,6 @@ management:
 message: local
 
 jwt:
-  secret: dGhpcy1pcy1hLXNlY3VyZS1hbmQtbG9uZy1lbm91Z2gtbXNhLXVzZXItc2VydmljZS1sb2NhbC1zZWNyZXQta2V5LWZvci1qd3QtdG9rZW4tc2lnbmluZw==
+  secret: ${JWT_SECRET}
   access-expiration: 3600000
   refresh-expiration: 86400000

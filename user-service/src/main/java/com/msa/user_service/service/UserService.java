@@ -2,16 +2,15 @@ package com.msa.user_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
-import com.msa.user_service.client.CompanyClient;
-import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.*;
 import com.msa.user_service.entity.*;
 import com.msa.user_service.global.UserErrorCode;
-import com.msa.user_service.repository.*;
+import com.msa.user_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -22,13 +21,11 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final UserApprovalHistoryRepository approvalHistoryRepository;
-    private final HubManagerRepository hubManagerRepository;
-    private final CompanyManagerRepository companyManagerRepository;
-    private final DeliveryManagerRepository deliveryManagerRepository;
+    private final UserApprovalService userApprovalService;
+    private final HubManagerService hubManagerService;
+    private final CompanyManagerService companyManagerService;
+    private final DeliveryManagerService deliveryManagerService;
     private final PasswordEncoder passwordEncoder;
-    private final HubClient hubClient;
-    private final CompanyClient companyClient;
 
     @Transactional
     public UserResponse signUp(SignUpRequest request) {
@@ -82,79 +79,37 @@ public class UserService {
         user.delete(deletedBy);
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void approveUser(UUID userId, ApproveUserRequest request, UUID processedBy) {
         User user = findActiveUser(userId);
-
         if (user.getStatus() != UserStatus.PENDING) {
             throw new CustomException(UserErrorCode.NOT_PENDING_STATUS);
         }
 
-        UserStatus previousStatus = user.getStatus();
-
         if (request.getStatus() == UserStatus.APPROVED) {
-            user.approve();
-
             switch (user.getRole()) {
-                case HUB_MANAGER -> {
-                    if (!hubClient.checkHubExists(user.getHubId()).isExists()) {
-                        throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
-                    }
-                    hubManagerRepository.save(HubManager.builder()
-                            .userId(userId)
-                            .hubId(user.getHubId())
-                            .build());
-                }
-                case COMPANY_MANAGER -> {
-                    if (!companyClient.checkCompanyExists(user.getCompanyId()).isExists()) {
-                        throw new CustomException(UserErrorCode.COMPANY_NOT_FOUND);
-                    }
-                    companyManagerRepository.save(CompanyManager.builder()
-                            .userId(userId)
-                            .companyId(user.getCompanyId())
-                            .build());
-                }
+                case HUB_MANAGER -> hubManagerService.validateHubExists(user.getHubId());
+                case COMPANY_MANAGER -> companyManagerService.validateCompanyExists(user.getCompanyId());
                 case DELIVERY_MANAGER -> {
                     if (request.getDeliveryManagerType() == null) {
                         throw new CustomException(UserErrorCode.DELIVERY_TYPE_REQUIRED);
                     }
-                    if (!hubClient.checkHubExists(user.getHubId()).isExists()) {
-                        throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
-                    }
-                    int nextSequence = deliveryManagerRepository
-                            .findMaxDeliverySequenceByHubId(user.getHubId()).orElse(0) + 1;
-                    deliveryManagerRepository.save(DeliveryManager.builder()
-                            .userId(userId)
-                            .hubId(user.getHubId())
-                            .type(request.getDeliveryManagerType())
-                            .deliverySequence(nextSequence)
-                            .slackId(user.getSlackId())
-                            .build());
+                    deliveryManagerService.validateHubExists(user.getHubId());
                 }
             }
-        } else if (request.getStatus() == UserStatus.REJECTED) {
-            user.reject();
-        } else if (request.getStatus() == UserStatus.INACTIVE) {
-            user.inactive();
         }
 
-        approvalHistoryRepository.save(UserApprovalHistory.builder()
-                .userId(userId)
-                .previousStatus(previousStatus)
-                .newStatus(request.getStatus())
-                .reason(request.getReason())
-                .processedBy(processedBy)
-                .build());
+        userApprovalService.executeApproval(userId, request, processedBy);
     }
 
     // Internal API용 - 허브 소속 여부 검증
     public boolean verifyHub(UUID userId, UUID hubId) {
-        return hubManagerRepository.existsByUserIdAndHubIdAndDeletedAtIsNull(userId, hubId);
+        return hubManagerService.existsByUserIdAndHubId(userId, hubId);
     }
 
     // Internal API용 - 업체 소속 여부 검증
     public boolean verifyCompany(UUID userId, UUID companyId) {
-        return companyManagerRepository.existsByUserIdAndCompanyIdAndDeletedAtIsNull(userId, companyId);
+        return companyManagerService.existsByUserIdAndCompanyId(userId, companyId);
     }
 
     // username으로 User 엔티티 조회

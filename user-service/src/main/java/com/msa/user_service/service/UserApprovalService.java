@@ -26,7 +26,7 @@ public class UserApprovalService {
 
     @Transactional
     public void executeApproval(UUID userId, ApproveUserRequest request, UUID processedBy) {
-        // 트랜잭션 내에서 User를 직접 조회해야 영속성 컨텍스트에서 관리됨
+
         User user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 

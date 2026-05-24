@@ -40,7 +40,6 @@ public class CompanyManagerService {
     // 승인 흐름 전용
     @Transactional
     public void createOnApproval(UUID userId, UUID companyId) {
-        validateCompanyExists(companyId);
         saveCompanyManager(userId, companyId);
     }
 

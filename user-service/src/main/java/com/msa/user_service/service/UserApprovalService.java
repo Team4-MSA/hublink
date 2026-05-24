@@ -30,6 +30,10 @@ public class UserApprovalService {
         User user = userRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
+        if (user.getStatus() != UserStatus.PENDING) {
+            throw new CustomException(UserErrorCode.NOT_PENDING_STATUS);
+        }
+
         UserStatus previousStatus = user.getStatus();
 
         if (request.getStatus() == UserStatus.APPROVED) {

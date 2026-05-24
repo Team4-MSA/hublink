@@ -148,7 +148,7 @@ public class DeliveryManagerService {
 
     private DeliveryManager saveDeliveryManager(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
         int nextSequence = deliveryManagerRepository
-                .findLatestActiveByHubId(hubId)
+                .findLatestByHubId(hubId)
                 .map(dm -> dm.getDeliverySequence() + 1)
                 .orElse(1);
 

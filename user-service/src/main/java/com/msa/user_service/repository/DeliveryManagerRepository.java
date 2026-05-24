@@ -38,6 +38,6 @@ public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager
     Page<DeliveryManager> findAllByHubIdInAndTypeAndDeletedAtIsNull(Collection<UUID> hubIds, DeliveryManagerType type, Pageable pageable);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT d FROM DeliveryManager d WHERE d.hubId = :hubId AND d.deletedAt IS NULL ORDER BY d.deliverySequence DESC LIMIT 1")
-    Optional<DeliveryManager> findLatestActiveByHubId(@Param("hubId") UUID hubId);
+    @Query("SELECT d FROM DeliveryManager d WHERE d.hubId = :hubId ORDER BY d.deliverySequence DESC LIMIT 1")
+    Optional<DeliveryManager> findLatestByHubId(@Param("hubId") UUID hubId);
 }

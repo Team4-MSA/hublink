@@ -2,9 +2,11 @@ package com.msa.user_service.repository;
 
 import com.msa.user_service.entity.DeliveryManager;
 import com.msa.user_service.entity.DeliveryManagerType;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -35,6 +37,7 @@ public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager
 
     Page<DeliveryManager> findAllByHubIdInAndTypeAndDeletedAtIsNull(Collection<UUID> hubIds, DeliveryManagerType type, Pageable pageable);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT MAX(d.deliverySequence) FROM DeliveryManager d WHERE d.hubId = :hubId")
-    Optional<Integer> findMaxDeliverySequenceByHubId(@Param("hubId") UUID hubId);
+    Optional<Integer> findMaxDeliverySequenceByHubIdForUpdate(@Param("hubId") UUID hubId);
 }

@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -78,6 +79,7 @@ public class UserService {
         user.delete(deletedBy);
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void approveUser(UUID userId, ApproveUserRequest request, UUID processedBy) {
         User user = findActiveUser(userId);
         if (user.getStatus() != UserStatus.PENDING) {

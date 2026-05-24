@@ -148,10 +148,11 @@ public class DeliveryManagerService {
     }
 
     private DeliveryManager saveDeliveryManager(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
-        int nextSequence = deliveryManagerRepository
-                .findMaxDeliverySequenceByHubIdForUpdate(hubId)
-                .map(max -> max + 1)
-                .orElse(1);
+        List<DeliveryManager> locked = deliveryManagerRepository.findAllByHubIdForUpdate(hubId);
+        int nextSequence = locked.stream()
+                .mapToInt(DeliveryManager::getDeliverySequence)
+                .max()
+                .orElse(0) + 1;
 
         return deliveryManagerRepository.save(DeliveryManager.builder()
                 .userId(userId)

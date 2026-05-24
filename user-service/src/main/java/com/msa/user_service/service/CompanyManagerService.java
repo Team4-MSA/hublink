@@ -40,6 +40,21 @@ public class CompanyManagerService {
         return CompanyManagerResponse.from(companyManagerRepository.save(companyManager));
     }
 
+    // 승인 흐름 전용
+    @Transactional
+    public void createOnApproval(UUID userId, UUID companyId) {
+        validateCompanyExists(companyId);
+        companyManagerRepository.save(CompanyManager.builder()
+                .userId(userId)
+                .companyId(companyId)
+                .build());
+    }
+
+    // UserService Internal API용 - 업체 소속 여부 확인
+    public boolean existsByUserIdAndCompanyId(UUID userId, UUID companyId) {
+        return companyManagerRepository.existsByUserIdAndCompanyIdAndDeletedAtIsNull(userId, companyId);
+    }
+
     public PageRes<CompanyManagerResponse> getList(UUID companyId, Pageable pageable) {
         if (companyId != null) {
             return new PageRes<>(companyManagerRepository.findAllByCompanyIdAndDeletedAtIsNull(companyId, pageable)

@@ -150,4 +150,23 @@ public class DeliveryManagerService {
 
         deliveryManager.delete(deletedBy);
     }
+
+    // 승인 흐름 전용
+    @Transactional
+    public void createOnApproval(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
+        validateHubExists(hubId);
+
+        int nextSequence = deliveryManagerRepository
+                .findMaxDeliverySequenceByHubId(hubId)
+                .map(max -> max + 1)
+                .orElse(1);
+
+        deliveryManagerRepository.save(DeliveryManager.builder()
+                .userId(userId)
+                .hubId(hubId)
+                .type(type)
+                .deliverySequence(nextSequence)
+                .slackId(slackId)
+                .build());
+    }
 }

@@ -44,6 +44,21 @@ public class HubManagerService {
         return HubManagerResponse.from(hubManagerRepository.save(hubManager));
     }
 
+    // 승인 흐름 전용
+    @Transactional
+    public void createOnApproval(UUID userId, UUID hubId) {
+        validateHubExists(hubId);
+        hubManagerRepository.save(HubManager.builder()
+                .userId(userId)
+                .hubId(hubId)
+                .build());
+    }
+
+    // UserService Internal API용 - 허브 소속 여부 확인
+    public boolean existsByUserIdAndHubId(UUID userId, UUID hubId) {
+        return hubManagerRepository.existsByUserIdAndHubIdAndDeletedAtIsNull(userId, hubId);
+    }
+
     public PageRes<HubManagerResponse> getList(UUID hubId, Pageable pageable) {
         if (hubId != null) {
             return new PageRes<>(hubManagerRepository.findAllByHubIdAndDeletedAtIsNull(hubId, pageable)

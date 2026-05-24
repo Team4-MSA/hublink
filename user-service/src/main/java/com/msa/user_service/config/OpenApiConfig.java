@@ -12,7 +12,7 @@ import java.util.List;
 @Configuration
 public class OpenApiConfig {
 
-    @Value("${swagger.gateway-url}")
+    @Value("${swagger.gateway-url:http://localhost:19091}")
     private String gatewayUrl;
 
     @Bean

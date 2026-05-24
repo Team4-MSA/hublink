@@ -5,7 +5,6 @@ import com.msa.core_common.response.paging.PageRes;
 import com.msa.user_service.dto.*;
 import com.msa.user_service.entity.*;
 import com.msa.user_service.global.UserErrorCode;
-import com.msa.user_service.repository.UserApprovalHistoryRepository;
 import com.msa.user_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -21,7 +20,7 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final UserApprovalHistoryRepository approvalHistoryRepository;
+    private final UserApprovalService userApprovalService;
     private final HubManagerService hubManagerService;
     private final CompanyManagerService companyManagerService;
     private final DeliveryManagerService deliveryManagerService;
@@ -98,35 +97,7 @@ public class UserService {
             }
         }
 
-        executeApprovalTransaction(user, request, processedBy);
-    }
-
-    @Transactional
-    public void executeApprovalTransaction(User user, ApproveUserRequest request, UUID processedBy) {
-        UserStatus previousStatus = user.getStatus();
-
-        if (request.getStatus() == UserStatus.APPROVED) {
-            user.approve();
-
-            switch (user.getRole()) {
-                case HUB_MANAGER -> hubManagerService.createOnApproval(user.getUserId(), user.getHubId());
-                case COMPANY_MANAGER -> companyManagerService.createOnApproval(user.getUserId(), user.getCompanyId());
-                case DELIVERY_MANAGER -> deliveryManagerService.createOnApproval(user.getUserId(), user.getHubId(),
-                            request.getDeliveryManagerType(), user.getSlackId());
-            }
-        } else if (request.getStatus() == UserStatus.REJECTED) {
-            user.reject();
-        } else if (request.getStatus() == UserStatus.INACTIVE) {
-            user.inactive();
-        }
-
-        approvalHistoryRepository.save(UserApprovalHistory.builder()
-                .userId(user.getUserId())
-                .previousStatus(previousStatus)
-                .newStatus(request.getStatus())
-                .reason(request.getReason())
-                .processedBy(processedBy)
-                .build());
+        userApprovalService.executeApproval(userId, request, processedBy);
     }
 
     // Internal API용 - 허브 소속 여부 검증

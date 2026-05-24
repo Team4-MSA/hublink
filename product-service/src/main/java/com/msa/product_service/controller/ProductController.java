@@ -1,16 +1,14 @@
 package com.msa.product_service.controller;
 
-import com.msa.product_service.dto.ProductModifyDto;
 import com.msa.product_service.dto.ProductRequestDto;
 import com.msa.product_service.dto.ProductResponseDto;
 import com.msa.product_service.entity.Product;
 import com.msa.product_service.service.ProductOrchestrator;
 import com.msa.product_service.service.ProductService;
+import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -43,7 +41,7 @@ public class ProductController {
      * @return
      */
     @PutMapping("/{productId}")
-    public UUID modifyProduct(@RequestBody ProductRequestDto dto,
+    public UUID modifyProduct(@Valid @RequestBody ProductRequestDto dto,
                               @PathVariable("productId") UUID id,
                               @RequestHeader("X-User-Role")String userRole,
                               @RequestHeader("X-User-Id") UUID userId,

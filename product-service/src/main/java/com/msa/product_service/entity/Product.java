@@ -1,7 +1,6 @@
 package com.msa.product_service.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
-import com.msa.product_service.dto.ProductModifyDto;
 import com.msa.product_service.dto.ProductRequestDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

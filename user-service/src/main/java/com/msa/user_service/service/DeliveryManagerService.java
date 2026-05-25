@@ -131,7 +131,13 @@ public class DeliveryManagerService {
                 .collect(Collectors.toMap(User::getUserId, u -> u));
 
         return deliveryManagers.stream()
-                .map(dm -> InternalDeliveryManagerResponse.of(dm, userMap.get(dm.getUserId())))
+                .map(dm -> {
+                    User user = userMap.get(dm.getUserId());
+                    if (user == null) {
+                        throw new CustomException(UserErrorCode.USER_NOT_FOUND);
+                    }
+                    return InternalDeliveryManagerResponse.of(dm, user);
+                })
                 .toList();
     }
 

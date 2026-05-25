@@ -1,18 +1,24 @@
 package com.msa.product_service.service;
 
+import com.msa.core_common.auth.UserRole;
 import com.msa.core_common.error.exception.CustomException;
+import com.msa.core_common.response.paging.PageRes;
 import com.msa.product_service.client.CompanyClient;
 import com.msa.product_service.client.CompanyResponseDto;
 import com.msa.product_service.client.StockClient;
 import com.msa.product_service.client.StockRequestDto;
 import com.msa.product_service.client.UserClient;
+import com.msa.product_service.client.UserResponseDto;
 import com.msa.product_service.dto.ProductRequestDto;
+import com.msa.product_service.dto.ProductResponseDto;
+import com.msa.product_service.dto.ProductSearchDto;
 import com.msa.product_service.entity.Product;
 import com.msa.product_service.global.ProductErrorCode;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -26,7 +32,27 @@ public class ProductOrchestrator {
     private final UserClient userClient;
 
     /**
+     * 상품 조회 모든 권한 접근 가능 허브 관리자의 경우, 본인 허브만 접근 가능
+     *
+     * @param page
+     * @param dto
+     * @return
+     */
+    public PageRes<ProductResponseDto> getProducts(Pageable page, ProductSearchDto dto, UUID userId,
+        String userRole) {
+        //사용자가 허브 관리자라면
+        if (UserRole.HUB_MANAGER.name().equals(userRole)) {
+            //외부 호출로 사용자의 정보를 가져오고
+            UserResponseDto userDto = userClient.getUser(userId);
+            //그 사용자의 hubId를 검색 조건에 할당한다.
+            dto.setHubId(userDto.getHubId());
+        }
+        return productService.getProducts(page,dto);
+    }
+
+    /**
      * 상품 삭제
+     *
      * @param id
      * @param username
      * @param userRole
@@ -36,15 +62,16 @@ public class ProductOrchestrator {
         Product product = productService.getProduct(id);
 
         //권한 검사 먼저 진행
-        if(!userRole.equals("MASTER") &&  !userRole.equals("HUB_MANAGER")) {
+        if (!userRole.equals("MASTER") && !userRole.equals("HUB_MANAGER")) {
             throw new CustomException(ProductErrorCode.ACCESS_DENIED);
         }
         // 허브 관리자의 경우 본인 허브에 대해서만 삭제 권한이 존재함.
         if (userRole.equals("HUB_MANAGER")) {
             //응답 body를 Map으로 변환
-            Map<String, Boolean> ishubManagerStr = userClient.isHubManager(userId, product.getHubId()).getData();
+            Map<String, Boolean> ishubManagerStr = userClient.isHubManager(userId,
+                product.getHubId()).getData();
             // 전달 받은 응답 body null 검사
-            if(ishubManagerStr == null){
+            if (ishubManagerStr == null) {
                 //null인 경우 접근 제한
                 throw new CustomException(ProductErrorCode.HUB_ACCESS_DENIED);
             }
@@ -139,7 +166,8 @@ public class ProductOrchestrator {
     private void checkPermission(String userRole, UUID userId, String username, UUID hubId,
         UUID companyId) {
         //이 3가지 권한이 아닐 경우, 모두 접근 제한
-        if (!userRole.equals("MASTER") && !userRole.equals("HUB_MANAGER") && !userRole.equals("COMPANY_MANAGER")) {
+        if (!userRole.equals("MASTER") && !userRole.equals("HUB_MANAGER") && !userRole.equals(
+            "COMPANY_MANAGER")) {
             throw new CustomException(ProductErrorCode.ACCESS_DENIED);
         }
         //허브 관리자의 경우 본인 허브인지 확인.
@@ -147,7 +175,7 @@ public class ProductOrchestrator {
             //전달 받은 데이터를 Map으로 변환
             Map<String, Boolean> ishubManagerStr = userClient.isHubManager(userId, hubId).getData();
             //전달 받은 데이터가 없으면
-            if(ishubManagerStr == null){
+            if (ishubManagerStr == null) {
                 //접근 제한
                 throw new CustomException(ProductErrorCode.HUB_ACCESS_DENIED);
             }
@@ -162,9 +190,10 @@ public class ProductOrchestrator {
         //업체 관리자의 경우, 본인 업체인지 확인
         if (userRole.equals("COMPANY_MANAGER")) {
             //전달 받은 데이터 Map으로 변환
-            Map<String, Boolean> isCompanyManagerStr = userClient.isCompanyManager(userId, companyId).getData();
+            Map<String, Boolean> isCompanyManagerStr = userClient.isCompanyManager(userId,
+                companyId).getData();
             //전달 받은 데이터가 비어 있으면
-            if(isCompanyManagerStr == null) {
+            if (isCompanyManagerStr == null) {
                 //접근 제한
                 throw new CustomException(ProductErrorCode.COMPANY_ACCESS_DENIED);
             }

@@ -1,8 +1,10 @@
 package com.msa.product_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
+import com.msa.core_common.response.paging.PageRes;
 import com.msa.product_service.dto.ProductRequestDto;
 import com.msa.product_service.dto.ProductResponseDto;
+import com.msa.product_service.dto.ProductSearchDto;
 import com.msa.product_service.entity.Product;
 import com.msa.product_service.global.ProductErrorCode;
 import com.msa.product_service.repository.ProductRepository;
@@ -10,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +22,20 @@ public class ProductService {
 
     private final ProductRepository productRepository;
 
+    /**
+     * 상품 리스트를 반환.
+     * @return
+     */
+    public PageRes<ProductResponseDto> getProducts(Pageable pageable, ProductSearchDto searchDto) {
+        //검색 조건 및 정렬 조건에 맞게 상품 리스트를 반환.
+        return productRepository.searchProduct(searchDto, pageable);
+    }
+
+    /**
+     * 특정 상품 1개를 조회.
+     * @param productId
+     * @return
+     */
     @Transactional(readOnly = true)
     public Product getProduct(UUID  productId) {
         Product product = productRepository.findById(productId).orElseThrow(() -> new CustomException(

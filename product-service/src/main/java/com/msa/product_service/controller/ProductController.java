@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Sort.Direction;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -33,11 +34,24 @@ public class ProductController {
     private final ProductService productService;
 
     /**
+     * 상품 상세 조회
+     * @return
+     */
+    @GetMapping("/{productId}")
+    public ProductResponseDto getProduct(@PathVariable UUID productId,
+                                         @RequestHeader("X-User-Id")UUID userId,
+                                         @RequestHeader("X-User-Role") String userRole){
+        productOrchestrator.getProduct(productId,userId, userRole);
+    }
+
+
+    /**
      * 상품 목록 조회
      * @param pageable
      * @param dto
      * @return
      */
+    @GetMapping
     public PageRes<ProductResponseDto> getProducts(@PageableDefault
                                                   (page = 0, size = 10, sort = "createdAt",
                                                   direction = Direction.DESC) Pageable pageable,

@@ -32,6 +32,30 @@ public class ProductOrchestrator {
     private final UserClient userClient;
 
     /**
+     * 상품 상세 조회
+     * @param productId
+     * @param userId
+     * @param userRole
+     * @return
+     */
+    public ProductResponseDto getProduct(UUID productId, UUID userId, String userRole){
+        //먼저 Product를 조회한다.
+        Product getProduct = productService.getProduct(productId);
+        //사용자의 권한이 허브 관리자인지 확인한다.
+        if(UserRole.HUB_MANAGER.name().equals(userRole)){
+            //외부 서비스를 호출하여 User 정보를 조회
+            UserResponseDto userDto = userClient.getUser(userId);
+            //그 유저의 hubId와 조회된 상품의 hubId가 일치하는지 비교
+            if(!userDto.getHubId().equals(getProduct.getHubId())){
+                //일치하지 않는다면, 이 유저가 관리할 수 있는 상품이 아니기 때문에, 접근 제한.
+                throw new CustomException(ProductErrorCode.ACCESS_DENIED);
+            }
+        }
+        //그 외의 사용자의 경우 조회된 상품을 ProductResponseDto로 변환하여 반환 
+        return ProductResponseDto.from(getProduct);
+    }
+
+    /**
      * 상품 조회 모든 권한 접근 가능 허브 관리자의 경우, 본인 허브만 접근 가능
      *
      * @param page

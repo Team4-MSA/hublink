@@ -17,7 +17,7 @@ public class CompanyClientFallbackFactory implements FallbackFactory<CompanyClie
     public CompanyClient create(Throwable cause) {
         return new CompanyClient() {
             @Override
-            public GlobalResponse<CompanyDto> getCompanyLocation(UUID companyId) {
+            public CompanyDto getCompanyLocation(UUID companyId) {
                 throw new CustomException(HubErrorCode.COMPANY_SERVICE_UNAVAILABLE);
             }
         };

@@ -11,5 +11,5 @@ import java.util.UUID;
 @FeignClient(name = "company-service", fallbackFactory = CompanyClientFallbackFactory.class)
 public interface CompanyClient {
     @GetMapping("/internal/companies/{companyId}/location")
-    GlobalResponse<CompanyDto> getCompanyLocation(@PathVariable UUID companyId);
+    CompanyDto getCompanyLocation(@PathVariable UUID companyId);
 }

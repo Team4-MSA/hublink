@@ -291,7 +291,7 @@ public class HubRouteService {
 
     private HubRouteResponse createLastMileRoute(HubEntity arrivalHub, UUID companyId, int sequence) {
 
-        CompanyDto company = companyClient.getCompanyLocation(companyId).getData();
+        CompanyDto company = companyClient.getCompanyLocation(companyId);
 
         BigDecimal targetLat = company.latitude();
         BigDecimal targetLon = company.longitude();
@@ -314,7 +314,6 @@ public class HubRouteService {
                 targetLon
         );
 
-        // 4. Response 반환
         return new HubRouteResponse(
                 null,
                 arrivalHub.getHubId(),

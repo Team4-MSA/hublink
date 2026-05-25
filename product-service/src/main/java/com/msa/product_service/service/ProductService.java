@@ -1,16 +1,15 @@
 package com.msa.product_service.service;
 
-import com.msa.product_service.client.CompanyClient;
-import com.msa.product_service.client.CompanyResponseDto;
+import com.msa.core_common.error.exception.CustomException;
 import com.msa.product_service.dto.ProductRequestDto;
 import com.msa.product_service.dto.ProductResponseDto;
 import com.msa.product_service.entity.Product;
+import com.msa.product_service.global.ProductErrorCode;
 import com.msa.product_service.repository.ProductRepository;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +18,25 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductService {
 
     private final ProductRepository productRepository;
+
+    @Transactional(readOnly = true)
+    public Product getProduct(UUID  productId) {
+        Product product = productRepository.findById(productId).orElseThrow(() -> new CustomException(
+            ProductErrorCode.PRODUCT_NOT_FOUND));
+        return  product;
+    }
+
+    /**
+     * 상품 수정
+     * @param dto
+     * @return
+     */
+    @Transactional
+    public Product modifyProduct(ProductRequestDto dto,UUID id){
+        Product modifyProduct = productRepository.findById(id).orElseThrow(() -> new CustomException(ProductErrorCode.PRODUCT_NOT_FOUND));
+        return modifyProduct.modifyProduct(dto);
+    }
+
 
     /**
      * 상품 생성
@@ -42,10 +60,11 @@ public class ProductService {
      * @param username
      */
     @Transactional
-    public void deleteProduct(UUID productId, String username) {
-        Product deletedProduct = productRepository.findById(productId)
-            .orElseThrow(() -> new IllegalArgumentException("상품이 없음"));
+    public Product deleteProduct(UUID productId, String username) {
+        Product deletedProduct = productRepository.findById(productId).orElseThrow(() -> new CustomException(ProductErrorCode.PRODUCT_NOT_FOUND));
+
         deletedProduct.delete(username);
+        return deletedProduct;
     }
 
     /**
@@ -69,5 +88,7 @@ public class ProductService {
         }
         return productResponseDtoList;
     }
+
+
 
 }

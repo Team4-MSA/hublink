@@ -108,9 +108,8 @@ public class DeliveryService {
                         delivery.getDeliveryId(),
                         userId
                 );
-                if (!assignedDelivery) {
-                    throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
-                }
+                if (!assignedDelivery) throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
+
                 yield DeliveryDetailResponse.of(delivery, routeHistories);
             }
             default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
@@ -263,6 +262,18 @@ public class DeliveryService {
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
         delivery.updateFinalDepartureDeadline(event.getFinalDepartureDeadline());
+    }
+
+    @Transactional
+    public void compensateDeliveryCreation(UUID orderId) {
+        deliveryRepository.findByOrderId(orderId)
+                .ifPresent(delivery -> {
+                    delivery.cancel();
+                    deliveryRouteHistoryRepository.findByDeliveryDeliveryIdOrderBySequenceAsc(delivery.getDeliveryId())
+                            .stream()
+                            .filter(routeHistory -> routeHistory.getStatus().canChangeTo(DeliveryRouteStatus.FAILED))
+                            .forEach(routeHistory -> routeHistory.updateStatus(DeliveryRouteStatus.FAILED));
+                });
     }
 
     // 배송 저장 시 중복 주문 예외 처리

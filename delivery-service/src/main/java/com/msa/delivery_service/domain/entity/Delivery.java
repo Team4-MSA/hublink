@@ -113,4 +113,9 @@ public class Delivery extends BaseEntity {
         updateStatus(DeliveryStatus.DELIVERED);
         this.deliveredAt = LocalDateTime.now();
     }
+
+    public void cancel() {
+        if (this.status == DeliveryStatus.CANCELLED) return;
+        updateStatus(DeliveryStatus.CANCELLED);
+    }
 }

@@ -2,15 +2,16 @@ package com.msa.company_service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.openfeign.EnableFeignClients;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.msa"})
 @EnableDiscoveryClient
+@EnableFeignClients
 public class CompanyServiceApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(CompanyServiceApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(CompanyServiceApplication.class, args);
+    }
 
 }

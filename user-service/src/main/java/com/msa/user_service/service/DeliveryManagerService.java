@@ -19,7 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -119,10 +121,21 @@ public class DeliveryManagerService {
 
     public List<InternalDeliveryManagerResponse> getDeliveryManagersByHubForInternal(UUID hubId) {
         List<DeliveryManager> deliveryManagers = deliveryManagerRepository.findAllByHubIdAndDeletedAtIsNull(hubId);
+
+        List<UUID> userIds = deliveryManagers.stream()
+                .map(DeliveryManager::getUserId)
+                .toList();
+
+        Map<UUID, User> userMap = userRepository.findAllByUserIdInAndDeletedAtIsNull(userIds)
+                .stream()
+                .collect(Collectors.toMap(User::getUserId, u -> u));
+
         return deliveryManagers.stream()
                 .map(dm -> {
-                    User user = userRepository.findByUserIdAndDeletedAtIsNull(dm.getUserId())
-                            .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+                    User user = userMap.get(dm.getUserId());
+                    if (user == null) {
+                        throw new CustomException(UserErrorCode.USER_NOT_FOUND);
+                    }
                     return InternalDeliveryManagerResponse.of(dm, user);
                 })
                 .toList();

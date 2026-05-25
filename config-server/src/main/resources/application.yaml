@@ -11,7 +11,6 @@ spring:
   cloud:
     config:
       server:
-        native:
           search-locations: file:./config-repo/
 
 eureka:

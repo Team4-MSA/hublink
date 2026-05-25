@@ -20,6 +20,12 @@ public enum HubErrorCode implements ErrorCode {
     SAME_HUB_NOT_ALLOWED("HUB-400-8", "출발 허브와 도착 허브는 같을 수 없습니다.", HttpStatus.BAD_REQUEST),
     GEOCODING_FAILED("HUB-400-9", "좌표 변환 외부 API 통신에 실패했거나 잘못된 주소입니다.", HttpStatus.BAD_REQUEST),
 
+    // 401 UNAUTHORIZED: 인증 실패 (로그인 안 됨, 헤더 누락 등)
+    UNAUTHORIZED("HUB-401-1", "인증 정보가 존재하지 않거나 유효하지 않습니다.", HttpStatus.UNAUTHORIZED),
+
+    // 403 FORBIDDEN: 인가 실패 (권한 부족)
+    FORBIDDEN("HUB-403-1", "해당 기능을 실행할 권한이 없습니다.", HttpStatus.FORBIDDEN),
+
     // 404 NOT_FOUND: 리소스를 찾을 수 없음
     HUB_NOT_FOUND("HUB-404-1", "존재하지 않는 허브입니다.", HttpStatus.NOT_FOUND),
     HUB_ROUTE_NOT_FOUND("HUB-404-2", "존재하지 않는 허브 루트입니다.", HttpStatus.NOT_FOUND),
@@ -31,6 +37,7 @@ public enum HubErrorCode implements ErrorCode {
 
     // 500 INTERNAL_SERVER_ERROR: 서버/외부 연동 에러
     COORDINATE_API_ERROR("HUB-500-1", "지도 API 호출 중 서버 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+    INTERNAL_SERVER_ERROR("HUB-500-2", "서버 내부 처리 중 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
 
     // 503 SERVICE_UNAVAILABLE: 외부 마이크로서비스 응답 불가
     COMPANY_SERVICE_UNAVAILABLE("HUB-503-1", "업체 서비스와의 통신이 원활하지 않아 라스트 마일 경로를 생성할 수 없습니다.", HttpStatus.SERVICE_UNAVAILABLE);

@@ -30,7 +30,10 @@ public enum HubErrorCode implements ErrorCode {
     HUB_ROUTE_DUPLICATED("HUB-409-3", "이미 존재하는 허브 간 경로입니다.", HttpStatus.CONFLICT),
 
     // 500 INTERNAL_SERVER_ERROR: 서버/외부 연동 에러
-    COORDINATE_API_ERROR("HUB-500-1", "지도 API 호출 중 서버 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
+    COORDINATE_API_ERROR("HUB-500-1", "지도 API 호출 중 서버 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+
+    // 503 SERVICE_UNAVAILABLE: 외부 마이크로서비스 응답 불가
+    COMPANY_SERVICE_UNAVAILABLE("HUB-503-1", "업체 서비스와의 통신이 원활하지 않아 라스트 마일 경로를 생성할 수 없습니다.", HttpStatus.SERVICE_UNAVAILABLE);
 
     private final String code;
     private final String message;

@@ -2,8 +2,9 @@ package com.msa.hub_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
-import com.msa.hub_service.dto.HubRouteResponse;
-import com.msa.hub_service.dto.HubRouteUpdateRequest;
+import com.msa.hub_service.client.AddressGeocodingPort;
+import com.msa.hub_service.client.CompanyClient;
+import com.msa.hub_service.dto.*;
 import com.msa.hub_service.entity.HubEntity;
 import com.msa.hub_service.entity.HubRouteEntity;
 import com.msa.hub_service.entity.RouteType;
@@ -35,8 +36,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static com.msa.hub_service.global.Util.RouteCalculator.calculateDuration;
-import static com.msa.hub_service.global.Util.RouteCalculator.determineRouteType;
+import static com.msa.hub_service.global.Util.RouteCalculator.*;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +47,8 @@ public class HubRouteService {
     private final HubRouteRepository hubRouteRepository;
     private final HubRepository hubRepository;
     private final AuditorAware<String> auditorAware;
+    private final CompanyClient companyClient;
+    private final AddressGeocodingPort geocodingPort;
 
     // 생성
     @Transactional
@@ -162,8 +164,12 @@ public class HubRouteService {
     }
 
     // 경로 검색
-    @Cacheable(cacheNames = "hubPath", key = "#departureHubId.toString() + '_' + #arrivalHubId.toString()")
-    public List<HubRouteResponse> getHubPath(UUID departureHubId, UUID arrivalHubId) {
+    @Cacheable(cacheNames = "hubPath",
+            key = "#departureHubId.toString() + '_' + #arrivalHubId.toString() + '_' + (#companyId != null ? #companyId.toString() : 'null')"
+    )
+    public List<HubRouteResponse> getHubPath(UUID departureHubId, UUID arrivalHubId, UUID companyId) {
+        List<HubRouteResponse> routeList = new ArrayList<>();
+
         HubRouteEntity directRoute = hubRouteRepository.findByDepartureHub_HubIdAndArrivalHub_HubId(departureHubId, arrivalHubId)
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_ROUTE_NOT_FOUND));
 
@@ -171,19 +177,29 @@ public class HubRouteService {
 
         // 거리 200 미만
         if (directRoute.getRouteType() == RouteType.P2P) {
-            return List.of(convertToResponse(directRoute, 1));
+            routeList.add(convertToResponse(directRoute, 1));
+        } else {
+            // 거리 200 이상
+            List<HubRouteEntity> transitRoutes = hubRouteRepository.findOptimalTransitRoute(departureHubId, arrivalHubId, directDistance);
+            // 최적 경로 없을 때
+            if (transitRoutes.isEmpty()) {
+                routeList.add(convertToResponse(directRoute, 1));
+            } else {
+                // 최적 경로 있을 때
+                routeList.add(convertToResponse(transitRoutes.get(0), 1));
+                routeList.add(convertToResponse(transitRoutes.get(1), 2));
+            }
         }
-        // 거리 200 이상
-        List<HubRouteEntity> transitRoutes = hubRouteRepository.findOptimalTransitRoute(departureHubId, arrivalHubId, directDistance);
-        // 최적 경로 없을 때
-        if (transitRoutes.isEmpty()) {
-            return List.of(convertToResponse(directRoute, 1));
+
+        if(companyId!=null){
+            int lastSequence = routeList.size()+1;
+            HubEntity arrivalHub = directRoute.getArrivalHub();
+
+            HubRouteResponse lastMileRoute = createLastMileRoute(arrivalHub, companyId, lastSequence);
+            routeList.add(lastMileRoute);
         }
-        // 최적 경로 있을 때
-        return List.of(
-                convertToResponse(transitRoutes.get(0), 1),
-                convertToResponse(transitRoutes.get(1), 2)
-        );
+
+        return routeList;
     }
 
     // 자동 생성
@@ -273,12 +289,51 @@ public class HubRouteService {
         }
     }
 
+    private HubRouteResponse createLastMileRoute(HubEntity arrivalHub, UUID companyId, int sequence) {
+
+        CompanyDto company = companyClient.getCompanyLocation(companyId).getData();
+
+        BigDecimal targetLat = company.latitude();
+        BigDecimal targetLon = company.longitude();
+
+        if (company.latitude() == null || company.longitude() == null) {
+            log.warn("Company(ID: {})의 좌표가 누락되어 주소({}) 기반으로 좌표를 재조회합니다.", companyId, company.address());
+            try {
+                CoordinateDto coordinate = geocodingPort.getCoordinate(company.address());
+                targetLat = coordinate.latitude();
+                targetLon = coordinate.longitude();
+            }catch (Exception e){
+                log.error("API 장애로 좌표를 복구하지 못했습니다. address: {}, exception: {}", company.address(), e.getMessage());
+            }
+        }
+
+        RouteCalculationResult calcResult = calculate(
+                arrivalHub.getLatitude(),
+                arrivalHub.getLongitude(),
+                targetLat,
+                targetLon
+        );
+
+        // 4. Response 반환
+        return new HubRouteResponse(
+                null,
+                arrivalHub.getHubId(),
+                null,
+                companyId,
+                calcResult.distanceKm(),
+                calcResult.durationMin(),
+                RouteType.P2P,
+                sequence
+        );
+    }
+
     // 루트 순서 추가
     private HubRouteResponse convertToResponse(HubRouteEntity entity, int sequence) {
         return new HubRouteResponse(
                 entity.getHubRouteId(),
                 entity.getDepartureHub().getHubId(),
                 entity.getArrivalHub().getHubId(),
+                null,
                 entity.getEstimatedDistanceKm(),
                 entity.getEstimatedDurationMin(),
                 entity.getRouteType(),

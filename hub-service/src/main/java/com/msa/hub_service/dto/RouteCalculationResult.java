@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 
 public record RouteCalculationResult(
         BigDecimal distanceKm,
-        int durationMinutes,
+        int durationMin,
         RouteType routeType
 ) {
 }

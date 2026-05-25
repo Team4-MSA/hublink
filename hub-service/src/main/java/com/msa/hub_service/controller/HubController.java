@@ -26,7 +26,7 @@ public class HubController {
     }
 
     //허브 상세 조회
-    @GetMapping("{hubId}")
+    @GetMapping("/{hubId}")
     public HubResponse getHub(@PathVariable UUID hubId) {
         return hubService.getHub(hubId);
     }

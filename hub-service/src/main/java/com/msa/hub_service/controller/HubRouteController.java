@@ -60,8 +60,9 @@ public class HubRouteController {
     @GetMapping("/path")
     public List<HubRouteResponse> getHubPath(
             @RequestParam UUID departureHubId,
-            @RequestParam UUID arrivalHubId
+            @RequestParam UUID arrivalHubId,
+            @RequestParam(required = false) UUID companyId
     ) {
-        return hubRouteService.getHubPath(departureHubId, arrivalHubId);
+        return hubRouteService.getHubPath(departureHubId, arrivalHubId, companyId);
     }
 }

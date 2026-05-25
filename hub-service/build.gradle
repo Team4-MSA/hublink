@@ -50,6 +50,7 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
     implementation 'io.github.resilience4j:resilience4j-spring-boot3'
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
 
     // 7. Observability & Docs (모니터링, 추적, 문서화)
     implementation 'org.springframework.boot:spring-boot-starter-actuator'

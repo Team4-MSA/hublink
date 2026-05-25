@@ -1,5 +1,6 @@
 package com.msa.api_gateway.filter;
 
+import com.msa.api_gateway.util.WebFluxResponseUtils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -17,7 +18,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
-import java.util.Base64;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 @Component
@@ -39,7 +40,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             @Value("${jwt.secret}") String secret,
             ReactiveRedisTemplate<String, String> redisTemplate
     ) {
-        this.secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
+        // Base64 디코딩 의존성 제거 → UTF-8 바이트로 직접 키 생성
+        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.redisTemplate = redisTemplate;
     }
 
@@ -48,24 +50,21 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getPath().value();
 
         if (path.startsWith(INTERNAL_PATH_PREFIX)) {
-            exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
-            return exchange.getResponse().setComplete();
+            return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.FORBIDDEN, "접근이 거부되었습니다.");
         }
 
-        if (PUBLIC_PATHS.stream().anyMatch(path::startsWith)) {
+        // startsWith → equals 로 변경하여 의도하지 않은 경로 허용 방지
+        if (PUBLIC_PATHS.stream().anyMatch(path::equals)) {
             return chain.filter(exchange);
         }
 
-        // Authorization 헤더 확인
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
+            return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "인증 토큰이 없습니다.");
         }
 
         String token = authHeader.substring(7);
 
-        // JWT 검증
         Claims claims;
         try {
             claims = Jwts.parser()
@@ -74,25 +73,26 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                     .parseSignedClaims(token)
                     .getPayload();
         } catch (ExpiredJwtException e) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
+            return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "토큰이 만료되었습니다.");
         } catch (JwtException e) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
+            return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다.");
         }
 
         String userId = claims.getSubject();
         String role = claims.get("role", String.class);
 
+        // 필수 Claim(userId, role) null 검증
+        if (userId == null || role == null) {
+            return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "토큰에 필수 정보가 누락되었습니다.");
+        }
+
         // Redis 블랙리스트 체크 (로그아웃된 AT 차단)
         return redisTemplate.hasKey(BL_PREFIX + token)
                 .flatMap(isBlacklisted -> {
                     if (isBlacklisted) {
-                        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                        return exchange.getResponse().setComplete();
+                        return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "로그아웃된 토큰입니다.");
                     }
 
-                    // 하위 서비스로 X-User-Id, X-User-Role 헤더 전달
                     ServerWebExchange mutatedExchange = exchange.mutate()
                             .request(exchange.getRequest().mutate()
                                     .header("X-User-Id", userId)

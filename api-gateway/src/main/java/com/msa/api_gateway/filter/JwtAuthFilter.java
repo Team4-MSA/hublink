@@ -1,5 +1,6 @@
 package com.msa.api_gateway.filter;
 
+import com.msa.api_gateway.exception.RedisUnavailableException;
 import com.msa.api_gateway.util.WebFluxResponseUtils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -86,8 +87,10 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }
 
         // Redis 블랙리스트 체크 (AT 블랙리스트 + 삭제된 유저 차단) - 병렬 조회
-        Mono<Boolean> tokenBlacklisted = redisTemplate.hasKey(BL_PREFIX + token);
-        Mono<Boolean> userBlocked = redisTemplate.hasKey(BL_USER_PREFIX + userId);
+        Mono<Boolean> tokenBlacklisted = redisTemplate.hasKey(BL_PREFIX + token)
+                .onErrorResume(e -> Mono.error(new RedisUnavailableException()));
+        Mono<Boolean> userBlocked = redisTemplate.hasKey(BL_USER_PREFIX + userId)
+                .onErrorResume(e -> Mono.error(new RedisUnavailableException()));
 
         return Mono.zip(tokenBlacklisted, userBlocked)
                 .flatMap(tuple -> {
@@ -103,7 +106,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                             .build();
 
                     return chain.filter(mutatedExchange);
-                });
+                })
+                .onErrorResume(RedisUnavailableException.class, e ->
+                        WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.SERVICE_UNAVAILABLE, "서비스가 일시적으로 불가합니다."));
     }
 
     @Override

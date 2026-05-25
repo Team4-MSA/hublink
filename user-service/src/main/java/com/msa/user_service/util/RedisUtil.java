@@ -1,25 +1,33 @@
 package com.msa.user_service.util;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.TimeUnit;
 
 @Component
-@RequiredArgsConstructor
 public class RedisUtil {
 
     private final RedisTemplate<String, String> redisTemplate;
+    private final long rtExpiration;
 
     private static final String RT_PREFIX = "RT:";
     private static final String BL_PREFIX = "BL:";
-    private static final long RT_EXPIRATION = 1209600000L;
+
+    public RedisUtil(
+            RedisTemplate<String, String> redisTemplate,
+            @Value("${jwt.refresh-expiration}") long rtExpiration
+    ) {
+        this.redisTemplate = redisTemplate;
+        this.rtExpiration = rtExpiration;
+    }
 
     // RT 저장
     public void saveRefreshToken(String userId, String refreshToken) {
         redisTemplate.opsForValue()
-                .set(RT_PREFIX + userId, refreshToken, RT_EXPIRATION, TimeUnit.MILLISECONDS);
+                .set(RT_PREFIX + userId, refreshToken, rtExpiration, TimeUnit.MILLISECONDS);
     }
 
     // RT 조회

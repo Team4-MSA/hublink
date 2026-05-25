@@ -71,7 +71,7 @@ public class AuthService {
 
     public LogInResponse refresh(String refreshToken) {
 
-        // 1. RT 서명/만료 검증 후 userId 추출 (클라이언트 값 신뢰하지 않음)
+        // 1. RT 서명/만료 검증 후 userId 추출
         jwtUtil.validateToken(refreshToken);
         String userId = jwtUtil.getUserId(refreshToken);
 

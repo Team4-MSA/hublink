@@ -2,15 +2,14 @@ package com.msa.delivery_service.presentation.dto;
 
 import com.msa.delivery_service.domain.enums.DeliveryRouteStatus;
 import jakarta.validation.constraints.NotNull;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.math.BigDecimal;
 
 @Getter
-@Setter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryRouteStatusUpdateRequest {
 
     @NotNull

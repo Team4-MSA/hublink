@@ -101,8 +101,11 @@ public class Delivery extends BaseEntity {
         this.status = status;
     }
 
-    public void updateDeliverySchedule(LocalDateTime estimatedArrivalAt, LocalDateTime finalDepartureDeadline) {
+    public void updateEstimatedArrival(LocalDateTime estimatedArrivalAt) {
         this.estimatedArrivalAt = estimatedArrivalAt;
+    }
+
+    public void updateFinalDepartureDeadline(LocalDateTime finalDepartureDeadline) {
         this.finalDepartureDeadline = finalDepartureDeadline;
     }
 

@@ -14,6 +14,7 @@ import com.msa.delivery_service.infrastructure.client.user.dto.DeliveryManagerRe
 import com.msa.delivery_service.infrastructure.client.user.dto.HubManagerResponse;
 import com.msa.delivery_service.infrastructure.repository.DeliveryRepository;
 import com.msa.delivery_service.infrastructure.repository.DeliveryRouteHistoryRepository;
+import com.msa.delivery_service.infrastructure.stream.DeadlineGeneratedEvent;
 import com.msa.delivery_service.infrastructure.stream.DeadlineRequestedEvent;
 import com.msa.delivery_service.infrastructure.stream.RedisStreamEventPublisher;
 import com.msa.delivery_service.presentation.dto.DeliveryDetailResponse;
@@ -253,6 +254,14 @@ public class DeliveryService {
         );
 
         return DeliveryResponse.from(savedDelivery);
+    }
+
+    @Transactional
+    public void updateFinalDepartureDeadline(DeadlineGeneratedEvent event) {
+        Delivery delivery = deliveryRepository.findById(event.getDeliveryId())
+                .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        delivery.updateFinalDepartureDeadline(event.getFinalDepartureDeadline());
     }
 
     // 배송 저장 시 중복 주문 예외 처리

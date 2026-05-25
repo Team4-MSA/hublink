@@ -41,7 +41,7 @@ public class ProductController {
     public ProductResponseDto getProduct(@PathVariable UUID productId,
                                          @RequestHeader("X-User-Id")UUID userId,
                                          @RequestHeader("X-User-Role") String userRole){
-        productOrchestrator.getProduct(productId,userId, userRole);
+        return productOrchestrator.getProduct(productId,userId, userRole);
     }
 
 

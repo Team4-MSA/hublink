@@ -26,6 +26,7 @@ public class ProductService {
      * 상품 리스트를 반환.
      * @return
      */
+    @Transactional(readOnly = true)
     public PageRes<ProductResponseDto> getProducts(Pageable pageable, ProductSearchDto searchDto) {
         //검색 조건 및 정렬 조건에 맞게 상품 리스트를 반환.
         return productRepository.searchProduct(searchDto, pageable);

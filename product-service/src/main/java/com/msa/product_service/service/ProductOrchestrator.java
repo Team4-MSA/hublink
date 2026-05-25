@@ -46,12 +46,12 @@ public class ProductOrchestrator {
             //외부 서비스를 호출하여 User 정보를 조회
             UserResponseDto userDto = userClient.getUser(userId);
             //그 유저의 hubId와 조회된 상품의 hubId가 일치하는지 비교
-            if(!userDto.getHubId().equals(getProduct.getHubId())){
+            if(userDto.getHubId() == null || !userDto.getHubId().equals(getProduct.getHubId())){
                 //일치하지 않는다면, 이 유저가 관리할 수 있는 상품이 아니기 때문에, 접근 제한.
                 throw new CustomException(ProductErrorCode.ACCESS_DENIED);
             }
         }
-        //그 외의 사용자의 경우 조회된 상품을 ProductResponseDto로 변환하여 반환 
+        //그 외의 사용자의 경우 조회된 상품을 ProductResponseDto로 변환하여 반환
         return ProductResponseDto.from(getProduct);
     }
 
@@ -86,11 +86,11 @@ public class ProductOrchestrator {
         Product product = productService.getProduct(id);
 
         //권한 검사 먼저 진행
-        if (!userRole.equals("MASTER") && !userRole.equals("HUB_MANAGER")) {
+        if (!UserRole.HUB_MANAGER.name().equals(userRole) && !UserRole.MASTER.name().equals(userRole)) {
             throw new CustomException(ProductErrorCode.ACCESS_DENIED);
         }
         // 허브 관리자의 경우 본인 허브에 대해서만 삭제 권한이 존재함.
-        if (userRole.equals("HUB_MANAGER")) {
+        if (UserRole.HUB_MANAGER.name().equals(userRole)) {
             //응답 body를 Map으로 변환
             Map<String, Boolean> ishubManagerStr = userClient.isHubManager(userId,
                 product.getHubId()).getData();
@@ -190,12 +190,11 @@ public class ProductOrchestrator {
     private void checkPermission(String userRole, UUID userId, String username, UUID hubId,
         UUID companyId) {
         //이 3가지 권한이 아닐 경우, 모두 접근 제한
-        if (!userRole.equals("MASTER") && !userRole.equals("HUB_MANAGER") && !userRole.equals(
-            "COMPANY_MANAGER")) {
+        if (!UserRole.MASTER.name().equals(userRole) && !UserRole.HUB_MANAGER.name().equals(userRole) && !UserRole.COMPANY_MANAGER.name().equals(userRole)) {
             throw new CustomException(ProductErrorCode.ACCESS_DENIED);
         }
         //허브 관리자의 경우 본인 허브인지 확인.
-        if (userRole.equals("HUB_MANAGER")) {
+        if (UserRole.HUB_MANAGER.name().equals(userRole)) {
             //전달 받은 데이터를 Map으로 변환
             Map<String, Boolean> ishubManagerStr = userClient.isHubManager(userId, hubId).getData();
             //전달 받은 데이터가 없으면
@@ -212,7 +211,7 @@ public class ProductOrchestrator {
             }
         }
         //업체 관리자의 경우, 본인 업체인지 확인
-        if (userRole.equals("COMPANY_MANAGER")) {
+        if (UserRole.COMPANY_MANAGER.name().equals(userRole)) {
             //전달 받은 데이터 Map으로 변환
             Map<String, Boolean> isCompanyManagerStr = userClient.isCompanyManager(userId,
                 companyId).getData();

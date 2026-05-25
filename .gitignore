@@ -12,6 +12,8 @@ build/
 *.jar
 *.war
 *.ear
+!gradle/wrapper/gradle-wrapper.jar
+!**/gradle/wrapper/gradle-wrapper.jar
 
 # Spring Boot
 logs/
@@ -27,4 +29,3 @@ Thumbs.db
 
 # Test
 target/
-order-service/.env

@@ -23,6 +23,7 @@ import com.msa.delivery_service.presentation.dto.DeliveryResponse;
 import com.msa.delivery_service.presentation.dto.DeliveryRouteHistoryResponse;
 import com.msa.delivery_service.presentation.dto.DeliveryRouteStatusUpdateRequest;
 import com.msa.delivery_service.presentation.dto.DeliveryStatusUpdateRequest;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -207,7 +208,7 @@ public class DeliveryService {
             throw new CustomException(DeliveryErrorCode.DUPLICATE_ORDER_DELIVERY);
         }
 
-        HubManagerResponse hubManager = userClient.getHubManager(request.getDepartureHubId());
+        HubManagerResponse hubManager = getHubManager(request.getDepartureHubId());
         List<HubRouteResponse> hubRoutes = getHubRoutes(request);
         List<DeliveryManagerResponse> deliveryManagers = getDeliveryManagers(request, hubRoutes);
 
@@ -273,6 +274,22 @@ public class DeliveryService {
         }
     }
 
+    private HubManagerResponse getHubManager(UUID departureHubId) {
+        try {
+            HubManagerResponse hubManager = userClient.getHubManager(departureHubId);
+
+            if (hubManager == null || hubManager.getHubManagerSlackId() == null) {
+                throw new CustomException(DeliveryErrorCode.NO_HUB_MANAGER);
+            }
+
+            return hubManager;
+        } catch (FeignException.NotFound e) {
+            throw new CustomException(DeliveryErrorCode.NO_HUB_MANAGER);
+        } catch (FeignException e) {
+            throw new CustomException(DeliveryErrorCode.USER_SERVICE_UNAVAILABLE);
+        }
+    }
+
     // 배송 경로에 필요한 허브들의 배송 담당자 목록 조회
     private List<DeliveryManagerResponse> getDeliveryManagers(
             DeliveryRequest request,
@@ -284,12 +301,17 @@ public class DeliveryService {
         }
         hubIds.add(request.getDestinationHubId());
 
-        List<DeliveryManagerResponse> deliveryManagers = userClient.getDeliveryManagers(new ArrayList<>(hubIds));
-        if (deliveryManagers == null || deliveryManagers.isEmpty()) {
+        try {
+            List<DeliveryManagerResponse> deliveryManagers = userClient.getDeliveryManagers(new ArrayList<>(hubIds));
+            if (deliveryManagers == null || deliveryManagers.isEmpty()) {
+                throw new CustomException(DeliveryErrorCode.NO_DELIVERY_MANAGER);
+            }
+            return deliveryManagers;
+        } catch (FeignException.NotFound e) {
             throw new CustomException(DeliveryErrorCode.NO_DELIVERY_MANAGER);
+        } catch (FeignException e) {
+            throw new CustomException(DeliveryErrorCode.USER_SERVICE_UNAVAILABLE);
         }
-
-        return deliveryManagers;
     }
 
     // 마지막 업체 배송을 담당할 배송 담당자 배정
@@ -382,16 +404,20 @@ public class DeliveryService {
 
     // 출발 허브와 도착 허브 기준으로 배송 경로 조회
     private List<HubRouteResponse> getHubRoutes(DeliveryRequest request) {
-        List<HubRouteResponse> hubRoutes = hubClient.getRoutes(
-                request.getDepartureHubId(),
-                request.getDestinationHubId()
-        );
-
-        if (hubRoutes == null || hubRoutes.isEmpty()) {
+        try {
+            List<HubRouteResponse> hubRoutes = hubClient.getRoutes(
+                    request.getDepartureHubId(),
+                    request.getDestinationHubId()
+            );
+            if (hubRoutes == null || hubRoutes.isEmpty()) {
+                throw new CustomException(DeliveryErrorCode.NO_HUB_ROUTE);
+            }
+            return hubRoutes;
+        } catch (FeignException.NotFound e) {
             throw new CustomException(DeliveryErrorCode.NO_HUB_ROUTE);
+        } catch (FeignException e) {
+            throw new CustomException(DeliveryErrorCode.HUB_SERVICE_UNAVAILABLE);
         }
-
-        return hubRoutes;
     }
 
 }

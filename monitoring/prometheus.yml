@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+# 배포 시 targets 수정
+scrape_configs:
+  - job_name: 'hublink-ai-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:19101'
+          # 배포 환경에서는 아래처럼 변경 예정
+          # - 'ai-service:19101'
+
+  - job_name: 'hublink-slack-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:19100'

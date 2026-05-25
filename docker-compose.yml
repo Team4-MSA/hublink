@@ -1,0 +1,26 @@
+services:
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: hublink-zipkin
+    ports:
+      - "9411:9411"
+
+  prometheus:
+    image: prom/prometheus
+    container_name: hublink-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - zipkin
+
+  grafana:
+    image: grafana/grafana
+    container_name: hublink-grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana-storage:/var/lib/grafana

@@ -35,13 +35,22 @@ public class CompanyService {
     @Transactional
     public CompanyResponse createCompany(CompanyRequest request) {
 
+
+        if (companyRepository.existsByHubIdAndNameAndTypeAndAddress(
+                request.hubId(),
+                request.name(),
+                request.type(),
+                request.address())) {
+            throw new CustomException(CompanyErrorCode.COMPANY_NAME_DUPLICATED);
+        }
+
         validateHubId(request.hubId());
 
         CoordinateDto coordinateDto;
         if (request.latitude() != null && request.longitude() != null) {
             coordinateDto = new CoordinateDto(request.latitude(), request.longitude());
         } else {
-            coordinateDto = hubClient.getCoordinates(request.address()).getData();
+            coordinateDto = hubClient.getCoordinates(request.address());
         }
 
         CompanyEntity company = CompanyEntity.create(request, coordinateDto);
@@ -89,7 +98,7 @@ public class CompanyService {
                 targetLat = request.latitude();
                 targetLon = request.longitude();
             } else {
-                CoordinateDto apiCoordinate = hubClient.getCoordinates(request.address()).getData();
+                CoordinateDto apiCoordinate = hubClient.getCoordinates(request.address());
                 targetLat = apiCoordinate.latitude();   // API 실패 시 null
                 targetLon = apiCoordinate.longitude();  // API 실패 시 null
             }
@@ -149,7 +158,7 @@ public class CompanyService {
 
     // 허브 아이디 확인
     private void validateHubId(UUID hubId) {
-        if (!hubClient.getHubExist(hubId).getData()) {
+        if (!hubClient.getHubExist(hubId)) {
             throw new CustomException(CompanyErrorCode.HUB_NOT_FOUND);
         }
     }

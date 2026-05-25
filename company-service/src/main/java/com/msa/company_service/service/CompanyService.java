@@ -6,6 +6,7 @@ import com.msa.company_service.entity.CompanyEntity;
 import com.msa.company_service.entity.CompanyType;
 import com.msa.company_service.global.CompanyErrorCode;
 import com.msa.company_service.repository.CompanyRepository;
+import com.msa.core_common.auth.UserRole;
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +34,14 @@ public class CompanyService {
 
     // 생성
     @Transactional
-    public CompanyResponse createCompany(CompanyRequest request) {
+    public CompanyResponse createCompany(CompanyRequest request, UserRole role, UUID userHubId) {
+
+        // 권한 검증
+        if (role == UserRole.HUB_MANAGER) {
+            if (userHubId == null || !userHubId.equals(request.hubId())) {
+                throw new CustomException(CompanyErrorCode.FORBIDDEN);
+            }
+        }
 
 
         if (companyRepository.existsByHubIdAndNameAndTypeAndAddress(
@@ -68,9 +76,12 @@ public class CompanyService {
 
     // 삭제
     @Transactional
-    public CompanyResponse deleteCompany(UUID companyId) {
+    public CompanyResponse deleteCompany(UUID companyId, UserRole role, UUID userHubId) {
         CompanyEntity company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new CustomException(CompanyErrorCode.COMPANY_NOT_FOUND));
+
+        verifyOwnership(company, null, role, userHubId);
+
         String deletedBy = auditorAware.getCurrentAuditor().orElse("SYSTEM");
         company.delete(deletedBy);
 
@@ -79,10 +90,12 @@ public class CompanyService {
 
     // 수정
     @Transactional
-    public CompanyResponse updateCompany(UUID companyId, CompanyUpdateRequest request) {
+    public CompanyResponse updateCompany(UUID companyId, CompanyUpdateRequest request, UUID userCompanyId, UserRole role, UUID userHubId) {
 
         CompanyEntity company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new CustomException(CompanyErrorCode.COMPANY_NOT_FOUND));
+
+        verifyOwnership(company, userCompanyId, role, userHubId);
 
         if (request.hubId() != null && !request.hubId().equals(company.getHubId())) {
             validateHubId(request.hubId());
@@ -161,5 +174,32 @@ public class CompanyService {
         if (!hubClient.getHubExist(hubId)) {
             throw new CustomException(CompanyErrorCode.HUB_NOT_FOUND);
         }
+    }
+
+    // 소유권 검증
+    private void verifyOwnership(CompanyEntity company, UUID userCompanyId, UserRole role, UUID userHubId) {
+
+        if (role == UserRole.MASTER) {
+            return;
+        }
+
+        // 담당 허브 업체 확인
+        if (role == UserRole.HUB_MANAGER) {
+            if (!company.getHubId().equals(userHubId)) {
+                throw new CustomException(CompanyErrorCode.FORBIDDEN);
+            }
+            return;
+        }
+
+        // 담당 업체 확인
+        if (role == UserRole.COMPANY_MANAGER) {
+            if (!company.getCompanyId().equals(userCompanyId)) {
+                throw new CustomException(CompanyErrorCode.FORBIDDEN);
+            }
+            return;
+        }
+
+        // 그 외의 경우 차단
+        throw new CustomException(CompanyErrorCode.FORBIDDEN);
     }
 }

@@ -5,11 +5,15 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ProductRequestDto {
     @NotNull(message = "등록할 업체를 지정하십시오.")
     private UUID companyId;
@@ -31,4 +35,5 @@ public class ProductRequestDto {
     @NotNull(message = "생산할 수량을 입력하시오.")
     @Min(value = 0, message = "수량은 0개 이상이어야 합니다.")
     private Integer quantity;
+
 }

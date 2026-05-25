@@ -126,7 +126,7 @@ public class ProductOrchestrator {
         //권한 검사
         checkPermission(userRole, userId, username, dto.getHubId(), dto.getCompanyId());
         //상품 수정
-        return productService.modifyProduct(dto, id);
+        return productService.modifyProduct(dto,id);
     }
 
     /**

@@ -21,26 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductService {
 
     private final ProductRepository productRepository;
-
-    @Transactional(readOnly = true)
-    public Product getProduct(UUID  productId) {
-        Product product = productRepository.findById(productId).orElseThrow(() -> new CustomException(
-            ProductErrorCode.PRODUCT_NOT_FOUND));
-        return  product;
-    }
-
-    /**
-     * 상품 수정
-     * @param dto
-     * @return
-     */
-    @Transactional
-    public Product modifyProduct(ProductRequestDto dto,UUID id){
-        Product modifyProduct = productRepository.findById(id).orElseThrow(() -> new CustomException(ProductErrorCode.PRODUCT_NOT_FOUND));
-        return modifyProduct.modifyProduct(dto);
-    }
-
-
     /**
      * 상품 리스트를 반환.
      * @return

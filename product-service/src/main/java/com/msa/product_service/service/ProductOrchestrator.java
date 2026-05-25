@@ -30,7 +30,6 @@ public class ProductOrchestrator {
     private final StockClient stockClient;
     private final CompanyClient companyClient;
     private final UserClient userClient;
-
     /**
      * 상품 상세 조회
      * @param productId
@@ -190,8 +189,7 @@ public class ProductOrchestrator {
     private void checkPermission(String userRole, UUID userId, String username, UUID hubId,
         UUID companyId) {
         //이 3가지 권한이 아닐 경우, 모두 접근 제한
-        if (!userRole.equals("MASTER") && !userRole.equals("HUB_MANAGER") && !userRole.equals(
-            "COMPANY_MANAGER")) {
+        if (!userRole.equals("MASTER") && !userRole.equals("HUB_MANAGER") && !userRole.equals("COMPANY_MANAGER")) {
             throw new CustomException(ProductErrorCode.ACCESS_DENIED);
         }
         //허브 관리자의 경우 본인 허브인지 확인.
@@ -199,7 +197,7 @@ public class ProductOrchestrator {
             //전달 받은 데이터를 Map으로 변환
             Map<String, Boolean> ishubManagerStr = userClient.isHubManager(userId, hubId).getData();
             //전달 받은 데이터가 없으면
-            if (ishubManagerStr == null) {
+            if(ishubManagerStr == null){
                 //접근 제한
                 throw new CustomException(ProductErrorCode.HUB_ACCESS_DENIED);
             }
@@ -214,10 +212,9 @@ public class ProductOrchestrator {
         //업체 관리자의 경우, 본인 업체인지 확인
         if (userRole.equals("COMPANY_MANAGER")) {
             //전달 받은 데이터 Map으로 변환
-            Map<String, Boolean> isCompanyManagerStr = userClient.isCompanyManager(userId,
-                companyId).getData();
+            Map<String, Boolean> isCompanyManagerStr = userClient.isCompanyManager(userId, companyId).getData();
             //전달 받은 데이터가 비어 있으면
-            if (isCompanyManagerStr == null) {
+            if(isCompanyManagerStr == null) {
                 //접근 제한
                 throw new CustomException(ProductErrorCode.COMPANY_ACCESS_DENIED);
             }

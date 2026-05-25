@@ -91,11 +91,17 @@ public class AuthService {
         // 4. 최신 유저 정보 조회
         User user = userService.findActiveUserById(UUID.fromString(userId));
 
-        // 5. 새 AT + RT 발급
+        // 5. 사용자 상태 확인 (INACTIVE/REJECTED 계정은 토큰 갱신 불가 → RT도 즉시 폐기)
+        if (user.getStatus() != UserStatus.APPROVED) {
+            redisUtil.deleteRefreshToken(userId);
+            throw new CustomException(UserErrorCode.NOT_APPROVED);
+        }
+
+        // 6. 새 AT + RT 발급
         String newAccessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getRole().name());
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
-        // 6. 기존 RT 폐기 + 새 RT 저장 (RTR)
+        // 7. 기존 RT 폐기 + 새 RT 저장 (RTR)
         redisUtil.saveRefreshToken(userId, newRefreshToken);
 
         return LogInResponse.builder()

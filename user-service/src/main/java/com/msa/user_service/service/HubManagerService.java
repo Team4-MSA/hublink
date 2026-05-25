@@ -27,7 +27,7 @@ public class HubManagerService {
     private final UserRepository userRepository;
     private final HubClient hubClient;
 
-    private void validateHubExists(UUID hubId) {
+    public void validateHubExists(UUID hubId) {
         if (!hubClient.checkHubExists(hubId).isExists()) {
             throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
         }
@@ -37,11 +37,26 @@ public class HubManagerService {
     public HubManagerResponse register(HubManagerRequest request) {
         validateHubExists(request.getHubId());
 
-        HubManager hubManager = HubManager.builder()
-                .userId(request.getUserId())
-                .hubId(request.getHubId())
-                .build();
-        return HubManagerResponse.from(hubManagerRepository.save(hubManager));
+        HubManager hubManager = saveHubManager(request.getUserId(), request.getHubId());
+        return HubManagerResponse.from(hubManager);
+    }
+
+    // 승인 흐름 전용
+    @Transactional
+    public void createOnApproval(UUID userId, UUID hubId) {
+        saveHubManager(userId, hubId);
+    }
+
+    private HubManager saveHubManager(UUID userId, UUID hubId) {
+        return hubManagerRepository.save(HubManager.builder()
+                .userId(userId)
+                .hubId(hubId)
+                .build());
+    }
+
+    // UserService Internal API용 - 허브 소속 여부 확인
+    public boolean existsByUserIdAndHubId(UUID userId, UUID hubId) {
+        return hubManagerRepository.existsByUserIdAndHubIdAndDeletedAtIsNull(userId, hubId);
     }
 
     public PageRes<HubManagerResponse> getList(UUID hubId, Pageable pageable) {

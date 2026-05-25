@@ -26,6 +26,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
     private static final String INTERNAL_PATH_PREFIX = "/internal/";
     private static final String BL_PREFIX = "BL:";
+    private static final String BL_USER_PREFIX = "BL:USER:";
 
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/v1/auth/signup",
@@ -40,7 +41,6 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             @Value("${jwt.secret}") String secret,
             ReactiveRedisTemplate<String, String> redisTemplate
     ) {
-        // Base64 디코딩 의존성 제거 → UTF-8 바이트로 직접 키 생성
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.redisTemplate = redisTemplate;
     }
@@ -53,7 +53,6 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.FORBIDDEN, "접근이 거부되었습니다.");
         }
 
-        // startsWith → equals 로 변경하여 의도하지 않은 경로 허용 방지
         if (PUBLIC_PATHS.stream().anyMatch(path::equals)) {
             return chain.filter(exchange);
         }
@@ -86,11 +85,14 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "토큰에 필수 정보가 누락되었습니다.");
         }
 
-        // Redis 블랙리스트 체크 (로그아웃된 AT 차단)
-        return redisTemplate.hasKey(BL_PREFIX + token)
-                .flatMap(isBlacklisted -> {
-                    if (isBlacklisted) {
-                        return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "로그아웃된 토큰입니다.");
+        // Redis 블랙리스트 체크 (AT 블랙리스트 + 삭제된 유저 차단) - 병렬 조회
+        Mono<Boolean> tokenBlacklisted = redisTemplate.hasKey(BL_PREFIX + token);
+        Mono<Boolean> userBlocked = redisTemplate.hasKey(BL_USER_PREFIX + userId);
+
+        return Mono.zip(tokenBlacklisted, userBlocked)
+                .flatMap(tuple -> {
+                    if (Boolean.TRUE.equals(tuple.getT1()) || Boolean.TRUE.equals(tuple.getT2())) {
+                        return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "인증이 만료되었습니다.");
                     }
 
                     ServerWebExchange mutatedExchange = exchange.mutate()

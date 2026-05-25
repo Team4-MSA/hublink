@@ -1,13 +1,15 @@
 services:
   zipkin:
-    image: openzipkin/zipkin
+    image: openzipkin/zipkin:3.6.1
     container_name: hublink-zipkin
     ports:
       - "9411:9411"
 
   prometheus:
-    image: prom/prometheus
+    image: prom/prometheus:v3.11.3
     container_name: hublink-prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "9090:9090"
     volumes:
@@ -16,7 +18,7 @@ services:
       - zipkin
 
   grafana:
-    image: grafana/grafana
+    image: grafana/grafana:13.0.1-security-01
     container_name: hublink-grafana
     ports:
       - "3000:3000"
@@ -24,3 +26,5 @@ services:
       - prometheus
     volumes:
       - grafana-storage:/var/lib/grafana
+volumes:
+  grafana-storage:

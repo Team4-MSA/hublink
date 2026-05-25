@@ -1,0 +1,14 @@
+spring:
+  cloud:
+    config:
+      enabled: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      username: ${REDIS_USERNAME:}
+      password: ${REDIS_PASSWORD:}
+
+eureka:
+  client:
+    enabled: false

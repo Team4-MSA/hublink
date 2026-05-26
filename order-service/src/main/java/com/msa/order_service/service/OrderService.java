@@ -2,17 +2,20 @@ package com.msa.order_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
+import com.msa.order_service.dto.req.MakeDeliveryReqDto;
 import com.msa.order_service.dto.req.OrderMakeReqDto;
 import com.msa.order_service.dto.res.*;
 import com.msa.order_service.entity.OrderItems;
 import com.msa.order_service.entity.Orders;
 import com.msa.order_service.error.OrderErrorCode;
+import com.msa.order_service.feign.circuit.DeliveryCircuitService;
 import com.msa.order_service.feign.circuit.ProductCircuitService;
 import com.msa.order_service.repository.OrderJpaRepository;
 import com.msa.order_service.feign.circuit.CompanyCircuitService;
 import com.msa.order_service.feign.circuit.UserCircuitService;
 import com.msa.order_service.type.Status;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -30,12 +33,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderService {
 
     private final OrderJpaRepository orderJpaRepository;
     private final UserCircuitService userCircuitService;
     private final CompanyCircuitService companyCircuitService;
     private final ProductCircuitService productCircuitService;
+    private final DeliveryCircuitService deliveryCircuitService;
     private final RedisTemplate<String, String> redisTemplate;
 
     public PageRes<UserOrderResDto> getOrders(UUID loginUserId, Status status, Pageable pageable) {
@@ -87,81 +92,122 @@ public class OrderService {
     public MakeOrderDetailResDto makeOrders(OrderMakeReqDto orderMakeReqDto, UUID userId, UUID orderKey) {
 
         String redisKey = "order:make" + orderKey;
-
         Boolean b = redisTemplate.opsForValue().setIfAbsent(redisKey, "PROCESSING", Duration.ofMinutes(1));
 
         if(b.equals(Boolean.FALSE)) {
             throw new CustomException(OrderErrorCode.ALREADY_EXIST_ORDER);
         }
 
-        List<UUID> companyIds = List.of(orderMakeReqDto.getSupplierCompanyId());
+        // 1. 단순 조회성 외부 호출 (실패해도 원상복구 필요 없음)
+        List<UsernameResDto> ordererInfoList = userCircuitService.getUserNames(List.of(userId));
+        UsernameResDto orderer = ordererInfoList.isEmpty() ?
+                new UsernameResDto(userId, "알 수 없는 유저", null, "unknown@email.com") : ordererInfoList.get(0);
+
+        CompanyAddressResDto addressRes = companyCircuitService.companyAddress(orderMakeReqDto.getReceiverCompanyId());
+        String deliveryAddress = (addressRes != null) ? addressRes.getAddress() : "조회실패";
+
+        List<UUID> companyIds = List.of(orderMakeReqDto.getSupplierCompanyId(), orderMakeReqDto.getReceiverCompanyId());
         List<OrderMakeReqDto.Items> items = orderMakeReqDto.getItems();
-        //feign으로 조회
+
+        // 2. [상태 변경 시작] 외부 재고 차감 실행
         List<ProductNPAResDto> nameAndPriceAndHubId = productCircuitService.decreaseProductStock(items);
-        String companyName = companyCircuitService.getCompanyNames(companyIds).get(0).name();
-        Map<UUID, ProductNPAResDto> productMap = nameAndPriceAndHubId.stream()
-                .collect(Collectors.toMap(ProductNPAResDto::productId, Function.identity()));
 
-        Orders initOrder = Orders.createInitOrder(orderMakeReqDto, userId);
+        // 재고 차감이 성공했음을 알리는 플래그 세팅
+        boolean isStockDecreased = true;
 
-        for(OrderMakeReqDto.Items item : items) {
-            ProductNPAResDto productNPAResDto = productMap.get(item.getProductId());
+        try { //재고는 깎였는데 이후 내 로직이나 DB 저장 중 터지는 경우 방어
 
-            OrderItems orderItem;
+            // 회사 이름 및 상품 맵 조립
+            List<CompanyNameResDto> companyNameResDtos = companyCircuitService.getCompanyNames(companyIds);
+            Map<UUID, String> companyNameMap = companyNameResDtos.stream()
+                    .collect(Collectors.toMap(CompanyNameResDto::id, CompanyNameResDto::name));
 
-            // Feign 응답 맵에 존재 여부 확인
-            if (productNPAResDto != null) {
+            String supplierCompanyName = companyNameMap.getOrDefault(orderMakeReqDto.getSupplierCompanyId(), "알 수 없는 공급사");
+            String receiverCompanyName = companyNameMap.getOrDefault(orderMakeReqDto.getReceiverCompanyId(), "알 수 없는 수령사");
 
-                orderItem = OrderItems.createOrderItem(
-                        item.getQuantity(),
-                        orderMakeReqDto.getSupplierCompanyId(),
-                        companyName,
-                        productNPAResDto
-                );
-            } else {
-                // 맵에 없다 재고 차감 실패 품목이므로 FAILED 엔티티 생성
-                orderItem = OrderItems.createFailedOrderItem(
-                        item.getProductId(),
-                        item.getQuantity(),
-                        orderMakeReqDto.getSupplierCompanyId(),
-                        companyName
-                );
+            Map<UUID, ProductNPAResDto> productMap = nameAndPriceAndHubId.stream()
+                    .collect(Collectors.toMap(ProductNPAResDto::productId, Function.identity()));
+
+            Orders initOrder = Orders.createInitOrder(orderMakeReqDto, userId);
+
+            for(OrderMakeReqDto.Items item : items) {
+                ProductNPAResDto productNPAResDto = productMap.get(item.getProductId());
+                OrderItems orderItem;
+
+                if (productNPAResDto != null) {
+                    orderItem = OrderItems.createOrderItem(
+                            item.getQuantity(),
+                            orderMakeReqDto.getSupplierCompanyId(),
+                            supplierCompanyName,
+                            productNPAResDto
+                    );
+                } else {
+                    orderItem = OrderItems.createFailedOrderItem(
+                            item.getProductId(),
+                            item.getQuantity(),
+                            orderMakeReqDto.getSupplierCompanyId(),
+                            supplierCompanyName
+                    );
+                }
+                initOrder.addOrderItem(orderItem);
             }
 
-            initOrder.addOrderItem(orderItem);
+            initOrder.updateTotalPrice();
+
+            // 내 주문 DB에 선반영 (Id 발급 목적)
+            Orders savedOrder = orderJpaRepository.saveAndFlush(initOrder);
+
+            // 배송 생성 요청 DTO 조립
+            MakeDeliveryReqDto deliveryReqDto = MakeDeliveryReqDto.from(savedOrder, orderer, deliveryAddress, receiverCompanyName);
+
+            // 3. 정상 상품이 존재할 때만 배송 서비스 호출
+            if (!deliveryReqDto.getProducts().isEmpty()) {
+                try { //내 DB 저장도 끝났는데 오직 배송 API만 터진 경우 방어
+                    deliveryCircuitService.makeDelivery(deliveryReqDto);
+                } catch (Exception e) {
+                    log.error("[배송 실패 보상 로직] 배송 서비스 호출 실패로 인해 재고를 복구합니다. 원인: {}", e.getMessage());
+                    rollbackStock(items);
+                    throw new CustomException(OrderErrorCode.FAIL_DELIVERY); // 내 주문 DB도 롤백되도록 예외 토스
+                }
+            }
+
+            // 4. 최종 결과 DTO 반환부 (대박 성공 시나리오)
+            List<MakeOrderDetailResDto.OrderItemDto> itemDtos = savedOrder.getOrderItems().stream()
+                    .map(item -> new MakeOrderDetailResDto.OrderItemDto(
+                            item.getId(), item.getProductId(), item.getProductName(),
+                            item.getSupplierCompanyId(), item.getSupplierCompanyName(),
+                            item.getHubId(), item.getQuantity(), item.getUnitPrice(),
+                            item.getTotalPrice(), item.getStatus()
+                    )).toList();
+
+            return new MakeOrderDetailResDto(
+                    savedOrder.getId(), savedOrder.getSupplierCompanyId(), savedOrder.getReceiverCompanyId(),
+                    savedOrder.getOrderedByUserId(), savedOrder.getStatus(), savedOrder.getTotalPrice(),
+                    savedOrder.getRequestMemo(), savedOrder.getRequestedDeliveryDeadline(), itemDtos, savedOrder.getCreatedAt()
+            );
+
+        } catch (CustomException ce) {
+            // 배송 쪽에서 의도적으로 던진 CustomException은 그대로 통과시켜 상위 트랜잭션 롤백 유도
+            throw ce;
+        } catch (Exception e) {
+            // [주문 내부 로직 실패 방어] 맵 조립 에러나 saveAndFlush 등 주문 도중 터지면 재고 원상복구
+            log.error("[주문 내부 실패 보상 로직] 주문 처리 중 시스템 예외가 발생하여 재고를 복구합니다. 원인: {}", e.getMessage());
+            if (isStockDecreased) {
+                rollbackStock(items);
+            }
+            throw e; // 주문 DB 롤백 유도
         }
+    }
 
-        initOrder.updateTotalPrice();
 
-        Orders savedOrder = orderJpaRepository.saveAndFlush(initOrder);
-
-        // DTO 변환 및 반환부
-        List<MakeOrderDetailResDto.OrderItemDto> itemDtos = savedOrder.getOrderItems().stream()
-                .map(item -> new MakeOrderDetailResDto.OrderItemDto(
-                        item.getId(),
-                        item.getProductId(),
-                        item.getProductName(),
-                        item.getSupplierCompanyId(),
-                        item.getSupplierCompanyName(),
-                        item.getHubId(),
-                        item.getQuantity(),
-                        item.getUnitPrice(),
-                        item.getTotalPrice(),
-                        item.getStatus()
-                )).toList();
-
-        return new MakeOrderDetailResDto(
-                savedOrder.getId(),
-                savedOrder.getSupplierCompanyId(),
-                savedOrder.getReceiverCompanyId(),
-                savedOrder.getOrderedByUserId(),
-                savedOrder.getStatus(),
-                savedOrder.getTotalPrice(),
-                savedOrder.getRequestMemo(),
-                savedOrder.getRequestedDeliveryDeadline(),
-                itemDtos,
-                savedOrder.getCreatedAt()
-        );
+    //재고 복구 전용 헬퍼 메서드
+    private void rollbackStock(List<OrderMakeReqDto.Items> items) {
+        try {
+            productCircuitService.increaseProductStock(items);
+            log.info("[보상 로직 완료] 차감되었던 상품 재고가 정상적으로 롤백되었습니다.");
+        } catch (Exception re) {
+            log.error("보상 로직인 재고 복구 API 실패하였습니다. 즉시 수동 데이터 보정이 필요합니다. 원인: {}", re.getMessage());
+        }
     }
 
     public PageRes<UserOrderResDto> getReceivedOrders(UUID loginUserId, Status status, Pageable pageable) {

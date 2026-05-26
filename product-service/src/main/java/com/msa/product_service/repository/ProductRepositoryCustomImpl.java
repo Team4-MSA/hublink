@@ -37,7 +37,8 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
                 productNameContains(dto.getProductName()),
                 hubIdEq(dto.getHubId()),
                 priceGoe(dto.getMinPrice()),
-                priceLoe(dto.getMaxPrice())
+                priceLoe(dto.getMaxPrice()),
+                isDeleted()
             )
             .orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]))
             .offset(pageable.getOffset())
@@ -75,6 +76,10 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
     // 최대 가격 이하 (price <= maxPrice)
     private BooleanExpression priceLoe(Integer maxPrice) {
         return maxPrice != null ? product.price.loe(maxPrice) : null;
+    }
+
+    private BooleanExpression isDeleted() {
+        return product.deletedAt.isNull();
     }
 
     /**

@@ -1,85 +1,58 @@
 global:
   scrape_interval: 30s
   evaluation_interval: 30s
-# 배포 시 targets 수정
-# 로컬 개발 환경:
-# - Prometheus는 Docker 컨테이너에서 실행
-# - Spring Boot 서비스는 로컬 IDE에서 실행
-# - 따라서 host.docker.internal:{port} 형태로 접근
-#
-# 배포 환경:
-# - 모든 서비스가 Docker Compose 동일 네트워크에서 실행될 경우
-# - host.docker.internal 대신 {service-name}:{port} 형태로 변경
+
 scrape_configs:
-  # User Service
   - job_name: 'hublink-user-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets:
-          - 'host.docker.internal:19093'
-          # 배포 환경에서는 아래처럼 변경 예정
-          # - 'user-service:19093'
+          - 'user-service:19093'
 
-  # Order Service
   - job_name: 'hublink-order-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets:
-          - 'host.docker.internal:19094'
-          # - 'order-service:19094'
+          - 'order-service:19094'
 
-  # Hub Service
   - job_name: 'hublink-hub-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets:
-          - 'host.docker.internal:19095'
-          # - 'hub-service:19095'
+          - 'hub-service:19095'
 
-  # Company Service
   - job_name: 'hublink-company-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets:
-          - 'host.docker.internal:19096'
-          # - 'company-service:19096'
+          - 'company-service:19096'
 
-  # Product Service
   - job_name: 'hublink-product-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets:
-          - 'host.docker.internal:19097'
-          # - 'product-service:19097'
+          - 'product-service:19097'
 
-  # Stock Service
   - job_name: 'hublink-stock-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets:
-          - 'host.docker.internal:19098'
-          # - 'stock-service:19098'
+          - 'stock-service:19098'
 
-  # Delivery Service
   - job_name: 'hublink-delivery-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets:
-          - 'host.docker.internal:19099'
-          # - 'delivery-service:19099'
+          - 'delivery-service:19099'
 
-  # Slack Service
   - job_name: 'hublink-slack-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets:
-          - 'host.docker.internal:19100'
-          # - 'slack-service:19100'
+          - 'slack-service:19100'
 
-  # AI Service
   - job_name: 'hublink-ai-service'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets:
-          - 'host.docker.internal:19101'
-          # - 'ai-service:19101'
+          - 'ai-service:19101'

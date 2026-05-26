@@ -16,9 +16,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,7 @@ public class OrderService {
     private final UserCircuitService userCircuitService;
     private final CompanyCircuitService companyCircuitService;
     private final ProductCircuitService productCircuitService;
+    private final RedisTemplate<String, String> redisTemplate;
 
     public PageRes<UserOrderResDto> getOrders(UUID loginUserId, Status status, Pageable pageable) {
 
@@ -81,7 +84,15 @@ public class OrderService {
     }
 
     @Transactional
-    public MakeOrderDetailResDto makeOrders(OrderMakeReqDto orderMakeReqDto, UUID userId) {
+    public MakeOrderDetailResDto makeOrders(OrderMakeReqDto orderMakeReqDto, UUID userId, UUID orderKey) {
+
+        String redisKey = "order:make" + orderKey;
+
+        Boolean b = redisTemplate.opsForValue().setIfAbsent(redisKey, "PROCESSING", Duration.ofMinutes(1));
+
+        if(b.equals(Boolean.FALSE)) {
+            throw new CustomException(OrderErrorCode.ALREADY_EXIST_ORDER);
+        }
 
         List<UUID> companyIds = List.of(orderMakeReqDto.getSupplierCompanyId());
         List<OrderMakeReqDto.Items> items = orderMakeReqDto.getItems();

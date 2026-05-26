@@ -35,7 +35,7 @@ public class OrderController {
     @Operation(summary = "주문 생성", description = "수령업체가 공급업체의 상품을 주문")
     @PostMapping
     public MakeOrderDetailResDto makeOrders(@RequestBody @Valid OrderMakeReqDto orderMakeReqDto, @RequestHeader("X-User-Id") UUID userId, @RequestHeader("X-Order-Key") UUID orderKey) {
-        return orderService.makeOrders(orderMakeReqDto, userId);
+        return orderService.makeOrders(orderMakeReqDto, userId, orderKey);
     }
 
     @Operation(summary = "주문 목록 조회(업체)", description = "로그인 사용자가 속한 공급업체가 받은 주문 목록 조회")

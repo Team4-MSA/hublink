@@ -98,6 +98,17 @@ public class StockHistory extends BaseEntity {
             reason(StockChangeReason.ORDER_CANCELED).
             build();
     }
+    public static StockHistory adjust(Stock stock, Integer beforeQuantity){
+        Integer afterQuantity = stock.getQuantity(); // 변경된 최종 수량
+        return StockHistory.builder()
+            .stockId(stock.getId())
+            .productId(stock.getProductId())
+            .hubId(stock.getHubId())
+            .reason(StockChangeReason.ADJUSTED)
+            .changeQuantity(afterQuantity - beforeQuantity)
+            .beforeQuantity(beforeQuantity)
+            .afterQuantity(afterQuantity)
+            .build();
 
-
+    }
 }

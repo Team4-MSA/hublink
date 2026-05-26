@@ -1,5 +1,6 @@
 package com.msa.stock_service.dto;
 
+import com.msa.stock_service.entity.StockChangeReason;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -19,4 +20,6 @@ public class StockRequestDto {
     @NotNull(message = "수량을 입력하시오.")
     @Min(value = 0,message = "최소 0개 이상 등록 해야합니다.")
     private Integer quantity;
+
+    private StockChangeReason  reason;
 }

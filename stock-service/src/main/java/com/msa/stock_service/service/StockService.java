@@ -2,17 +2,16 @@ package com.msa.stock_service.service;
 
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.stock_service.dto.StockDecreaRequestDto;
+import com.msa.stock_service.dto.StockHistoryModifyDto;
 import com.msa.stock_service.dto.StockHistoryResponseDto;
 import com.msa.stock_service.dto.StockHistorySearchResponseDto;
 import com.msa.stock_service.dto.StockRequestDto;
 import com.msa.stock_service.dto.StockResponseDto;
 import com.msa.stock_service.entity.Stock;
-import com.msa.stock_service.entity.StockChangeReason;
 import com.msa.stock_service.entity.StockHistory;
 import com.msa.stock_service.repository.StockHistoryRepository;
 import com.msa.stock_service.repository.StockRepository;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -27,6 +26,31 @@ import org.springframework.transaction.annotation.Transactional;
 public class StockService {
     private final StockRepository stockRepository;
     private final StockHistoryRepository stockHistoryRepository;
+    @Transactional
+    public StockHistoryModifyDto modifyStock(StockRequestDto dto){
+        //상품아이디로 재고를 조회한다.
+        Stock modifyStock = stockRepository.findByProductId(dto.getProductId());
+
+        if(modifyStock == null) {
+            throw new IllegalArgumentException("조회된 재고 없음");
+        }
+        //전달받은 허브 아이디와 조회한 재고의 허브 아이디를 비교하여 둘이 같은지 판단한다.
+        if(!dto.getHubId().equals(modifyStock.getHubId())) {
+            throw new IllegalArgumentException("해당 허브에 관리되는 재고가 아님.");
+        }
+
+        //조회된 재고에서 수량을 미리 뺀다.
+        Integer beforeQuantity = modifyStock.getQuantity();
+
+        //재고를 변경한다.
+        modifyStock.modifyQuantity(dto.getQuantity());
+
+        //이에 대한 재고 이력을 생성한다.
+        StockHistory newHistory = StockHistory.adjust(modifyStock, beforeQuantity);
+
+        //재고를 반환한다.
+        return StockHistoryModifyDto.from(newHistory);
+    }
 
      //재고 이력 조회
     @Transactional(readOnly = true)

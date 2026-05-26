@@ -2,6 +2,7 @@ package com.msa.stock_service.controller;
 
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.stock_service.dto.StockDecreaRequestDto;
+import com.msa.stock_service.dto.StockHistoryModifyDto;
 import com.msa.stock_service.dto.StockHistoryResponseDto;
 import com.msa.stock_service.dto.StockHistorySearchResponseDto;
 import com.msa.stock_service.dto.StockRequestDto;
@@ -10,6 +11,7 @@ import com.msa.stock_service.entity.Stock;
 import com.msa.stock_service.entity.StockHistory;
 import com.msa.stock_service.service.StockOrchestrator;
 import com.msa.stock_service.service.StockService;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.PATCH;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +36,16 @@ public class StockController {
     private final StockOrchestrator stockOrchestrator;
 
     /**
+     * 특정 상품에 대한 재고
+     * @param dto
+     * @return
+     */
+    @PatchMapping("/modify")
+    public StockHistoryModifyDto modifyStock(@Valid @RequestBody StockRequestDto dto){
+       return  stockService.modifyStock(dto);
+    }
+
+    /**
      * 상품에 대한 재고 이력을 조회
      * @param productId
      * @param pageable
@@ -41,7 +53,7 @@ public class StockController {
      */
     @GetMapping("/history")
     public PageRes<StockHistorySearchResponseDto> getStocks(@RequestParam(value = "productId",required = true)UUID productId,
-                                               @PageableDefault(size = 10,page = 0,sort = "createdAt",
+                                                            @PageableDefault(size = 10,page = 0,sort = "createdAt",
                                                                 direction = Direction.DESC)Pageable pageable){
         return stockService.getStockhistories(productId, pageable);
     }

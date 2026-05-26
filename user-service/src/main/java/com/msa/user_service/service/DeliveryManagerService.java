@@ -19,7 +19,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +33,7 @@ public class DeliveryManagerService {
     private final UserRepository userRepository;
     private final HubClient hubClient;
 
-    private void validateHubExists(UUID hubId) {
+    public void validateHubExists(UUID hubId) {
         if (!hubClient.checkHubExists(hubId).isExists()) {
             throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
         }
@@ -65,20 +67,9 @@ public class DeliveryManagerService {
         User user = userRepository.findByUserIdAndDeletedAtIsNull(request.getUserId())
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
 
-        int nextSequence = deliveryManagerRepository
-                .findMaxDeliverySequenceByHubId(request.getHubId())
-                .map(max -> max + 1)
-                .orElse(1);
+        DeliveryManager deliveryManager = saveDeliveryManager(request.getUserId(), request.getHubId(), request.getType(), user.getSlackId());
 
-        DeliveryManager deliveryManager = DeliveryManager.builder()
-                .userId(request.getUserId())
-                .hubId(request.getHubId())
-                .type(request.getType())
-                .deliverySequence(nextSequence)
-                .slackId(user.getSlackId())
-                .build();
-        
-        return DeliveryManagerResponse.from(deliveryManagerRepository.save(deliveryManager));
+        return DeliveryManagerResponse.from(deliveryManager);
     }
 
     public PageRes<DeliveryManagerResponse> getList(UUID hubId, DeliveryManagerType type, Pageable pageable,
@@ -130,10 +121,21 @@ public class DeliveryManagerService {
 
     public List<InternalDeliveryManagerResponse> getDeliveryManagersByHubForInternal(UUID hubId) {
         List<DeliveryManager> deliveryManagers = deliveryManagerRepository.findAllByHubIdAndDeletedAtIsNull(hubId);
+
+        List<UUID> userIds = deliveryManagers.stream()
+                .map(DeliveryManager::getUserId)
+                .toList();
+
+        Map<UUID, User> userMap = userRepository.findAllByUserIdInAndDeletedAtIsNull(userIds)
+                .stream()
+                .collect(Collectors.toMap(User::getUserId, u -> u));
+
         return deliveryManagers.stream()
                 .map(dm -> {
-                    User user = userRepository.findByUserIdAndDeletedAtIsNull(dm.getUserId())
-                            .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+                    User user = userMap.get(dm.getUserId());
+                    if (user == null) {
+                        throw new CustomException(UserErrorCode.USER_NOT_FOUND);
+                    }
                     return InternalDeliveryManagerResponse.of(dm, user);
                 })
                 .toList();
@@ -149,5 +151,26 @@ public class DeliveryManagerService {
         }
 
         deliveryManager.delete(deletedBy);
+    }
+
+    // 승인 흐름 전용
+    @Transactional
+    public void createOnApproval(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
+        saveDeliveryManager(userId, hubId, type, slackId);
+    }
+
+    private DeliveryManager saveDeliveryManager(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
+        int nextSequence = deliveryManagerRepository
+                .findLatestByHubId(hubId)
+                .map(dm -> dm.getDeliverySequence() + 1)
+                .orElse(1);
+
+        return deliveryManagerRepository.save(DeliveryManager.builder()
+                .userId(userId)
+                .hubId(hubId)
+                .type(type)
+                .deliverySequence(nextSequence)
+                .slackId(slackId)
+                .build());
     }
 }

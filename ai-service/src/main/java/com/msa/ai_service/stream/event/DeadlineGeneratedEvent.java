@@ -16,6 +16,9 @@ public class DeadlineGeneratedEvent {
     @NotNull(message = "이벤트 ID는 필수입니다.")
     private UUID eventId;
 
+    @NotNull(message = "배송 ID는 필수입니다.")
+    private UUID deliveryId;
+
     @NotNull(message = "AI 메시지 ID는 필수입니다.")
     private UUID aiMessageId;
 

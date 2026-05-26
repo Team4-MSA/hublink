@@ -150,13 +150,18 @@ public class HubService {
     }
 
     // api로 위도와 경도 구하기
-    private CoordinateDto getCoordinate(String address) {
+    public CoordinateDto getCoordinate(String address) {
         try {
             return geocodingPort.getCoordinate(address);
         } catch (Exception e) {
             log.warn("외부 API 장애로 인해 좌표 없이 허브를 저장합니다. address: {}, exception: {}", address, e.toString());
             return new CoordinateDto(null, null);
         }
+    }
+
+    //  허브 존재 확인
+    public boolean getHubExist(UUID hubId) {
+        return hubRepository.existsById(hubId);
     }
 
     // 중복 hub 등록 방지

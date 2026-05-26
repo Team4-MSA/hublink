@@ -15,8 +15,6 @@ import com.msa.delivery_service.infrastructure.client.user.dto.HubManagerRespons
 import com.msa.delivery_service.infrastructure.repository.DeliveryRepository;
 import com.msa.delivery_service.infrastructure.repository.DeliveryRouteHistoryRepository;
 import com.msa.delivery_service.infrastructure.stream.DeadlineGeneratedEvent;
-import com.msa.delivery_service.infrastructure.stream.DeadlineRequestedEvent;
-import com.msa.delivery_service.infrastructure.stream.RedisStreamEventPublisher;
 import com.msa.delivery_service.presentation.dto.DeliveryDetailResponse;
 import com.msa.delivery_service.presentation.dto.DeliveryRequest;
 import com.msa.delivery_service.presentation.dto.DeliveryResponse;
@@ -25,7 +23,6 @@ import com.msa.delivery_service.presentation.dto.DeliveryRouteStatusUpdateReques
 import com.msa.delivery_service.presentation.dto.DeliveryStatusUpdateRequest;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -63,7 +60,7 @@ public class DeliveryService {
     private final DeliveryRouteHistoryRepository deliveryRouteHistoryRepository;
     private final HubClient hubClient;
     private final UserClient userClient;
-    private final RedisStreamEventPublisher redisStreamEventPublisher;
+    private final DeliveryCreationTransactionalService deliveryCreationTransactionalService;
 
     @Transactional(readOnly = true)
     public PageRes<DeliveryResponse> getDeliveries(String role, Pageable pageable) {
@@ -201,7 +198,6 @@ public class DeliveryService {
         내부 호출 API
     */
 
-    @Transactional
     public DeliveryResponse createDelivery(DeliveryRequest request) {
         if (deliveryRepository.existsByOrderId(request.getOrderId())) {
             throw new CustomException(DeliveryErrorCode.DUPLICATE_ORDER_DELIVERY);
@@ -219,41 +215,15 @@ public class DeliveryService {
         // 배송 경로 테이블에 들어갈 허브 배송 담당자들 배정
         Map<UUID, UUID> hubDeliveryManagerIds = assignHubDeliveryManagers(hubRoutes, deliveryManagers);
 
-        Delivery delivery = Delivery.create(
-                request.getOrderId(),
-                request.getDepartureHubId(),
-                request.getDestinationHubId(),
-                request.getReceiverCompanyId(),
-                companyDeliveryManager.getDeliveryManagerId(),
-                request.getDeliveryAddress(),
-                request.getReceiverName(),
-                hubManager.getHubManagerSlackId()
-        );
-        Delivery savedDelivery = saveDelivery(delivery);
-
-        List<DeliveryRouteHistory> routeHistories = HubRouteResponse.toDeliveryRouteHistories(
-                savedDelivery,
-                companyDeliveryManager.getDeliveryManagerId(),
+        return deliveryCreationTransactionalService.createDelivery(
+                request,
+                hubManager,
+                companyDeliveryManager,
                 hubRoutes,
-                hubDeliveryManagerIds
+                hubDeliveryManagerIds,
+                WORK_START_TIME,
+                WORK_END_TIME
         );
-        deliveryRouteHistoryRepository.saveAll(routeHistories);
-
-        // 커밋이 완료되면 콜백으로 이벤트 발행
-        redisStreamEventPublisher.publishAfterCommit(
-                RedisStreamEventPublisher.DEADLINE_REQUESTED_STREAM,
-                DeadlineRequestedEvent.of(
-                        savedDelivery,
-                        request,
-                        hubManager,
-                        companyDeliveryManager,
-                        hubRoutes,
-                        WORK_START_TIME,
-                        WORK_END_TIME
-                )
-        );
-
-        return DeliveryResponse.from(savedDelivery);
     }
 
     @Transactional
@@ -274,15 +244,6 @@ public class DeliveryService {
                             .filter(routeHistory -> routeHistory.getStatus().canChangeTo(DeliveryRouteStatus.FAILED))
                             .forEach(routeHistory -> routeHistory.updateStatus(DeliveryRouteStatus.FAILED));
                 });
-    }
-
-    // 배송 저장 시 중복 주문 예외 처리
-    private Delivery saveDelivery(Delivery delivery) {
-        try {
-            return deliveryRepository.saveAndFlush(delivery);
-        } catch (DataIntegrityViolationException e) {
-            throw new CustomException(DeliveryErrorCode.DUPLICATE_ORDER_DELIVERY);
-        }
     }
 
     private HubManagerResponse getHubManager(UUID departureHubId) {
@@ -430,5 +391,4 @@ public class DeliveryService {
             throw new CustomException(DeliveryErrorCode.HUB_SERVICE_UNAVAILABLE);
         }
     }
-
 }

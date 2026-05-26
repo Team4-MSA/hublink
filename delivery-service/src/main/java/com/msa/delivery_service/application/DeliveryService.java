@@ -155,6 +155,8 @@ public class DeliveryService {
             delivery.updateStatus(request.getStatus());
         }
 
+        deliveryRepository.flush();
+
         return DeliveryResponse.from(delivery);
     }
 
@@ -190,6 +192,8 @@ public class DeliveryService {
         if (request.getStatusMessage() != null) {
             routeHistory.updateStatusMessage(request.getStatusMessage());
         }
+
+        deliveryRouteHistoryRepository.flush();
 
         return DeliveryRouteHistoryResponse.from(routeHistory);
     }
@@ -231,6 +235,7 @@ public class DeliveryService {
         Delivery delivery = deliveryRepository.findById(event.getDeliveryId())
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
         delivery.updateFinalDepartureDeadline(event.getFinalDepartureDeadline());
+        deliveryRepository.flush();
     }
 
     @Transactional
@@ -240,12 +245,14 @@ public class DeliveryService {
                     delivery.cancel();
                     delivery.delete("SYSTEM");
                     deliveryRouteHistoryRepository.findByDeliveryDeliveryIdOrderBySequenceAsc(delivery.getDeliveryId())
-                            .forEach(routeHistory -> {
-                                if (routeHistory.getStatus().canChangeTo(DeliveryRouteStatus.FAILED)) {
-                                    routeHistory.updateStatus(DeliveryRouteStatus.FAILED);
-                                }
-                                routeHistory.delete("SYSTEM");
-                            });
+                        .forEach(routeHistory -> {
+                            if (routeHistory.getStatus().canChangeTo(DeliveryRouteStatus.FAILED)) {
+                                routeHistory.updateStatus(DeliveryRouteStatus.FAILED);
+                            }
+                            routeHistory.delete("SYSTEM");
+                        });
+                    deliveryRouteHistoryRepository.flush();
+                    deliveryRepository.flush();
                 });
     }
 

@@ -12,6 +12,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -35,6 +36,10 @@ public class Delivery extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "delivery_id", nullable = false)
     private UUID deliveryId;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     @Column(name = "order_id", nullable = false, unique = true)
     private UUID orderId;

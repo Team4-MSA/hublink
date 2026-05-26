@@ -30,6 +30,8 @@ public class DeadlineGeneratedStreamGroupInitializer {
                     DeadlineStreamConstants.DELIVERY_SERVICE_GROUP
             );
         } catch (RedisSystemException e) {
+            // 이미 그룹이 존재 시 "BUSYGROUP" 이라는 문자열을 포함한 예외 발생 -> 로그 출력 처리
+            // "BUSYGROUP" 문자열이 예외 메세지가 아닌 cause 내부에 존재 -> cause와 최상위 예외 전부 체크
             Throwable cause = e.getCause();
             if ((e.getMessage() != null && e.getMessage().contains("BUSYGROUP"))
                     || (cause != null && cause.getMessage() != null && cause.getMessage().contains("BUSYGROUP"))) {

@@ -9,6 +9,7 @@ import com.msa.hub_service.entity.HubEntity;
 import com.msa.hub_service.entity.HubRouteEntity;
 import com.msa.hub_service.entity.RouteType;
 import com.msa.hub_service.global.HubErrorCode;
+import com.msa.hub_service.global.Util;
 import com.msa.hub_service.message.HubCreatedEvent;
 import com.msa.hub_service.message.HubDeletedEvent;
 import com.msa.hub_service.message.HubUpdatedEvent;
@@ -319,10 +320,10 @@ public class HubRouteService {
         for (HubEntity hub : hubs) {
             if (hub.getLatitude() == null || hub.getLongitude() == null) continue;
 
-            double distance = calculate(
+            double distance = Util.DistanceCalculator.getDistance(
                     hub.getLatitude(), hub.getLongitude(),
                     targetLat, targetLon
-            ).distanceKm().doubleValue();
+            );
 
             if (distance < minDistance) {
                 minDistance = distance;

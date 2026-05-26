@@ -35,4 +35,8 @@ public class DeliveryManager extends BaseEntity {
 
     @Column(name = "slack_id", length = 100)
     private String slackId;
+
+    public void updateSlackId(String slackId) {
+        this.slackId = slackId;
+    }
 }

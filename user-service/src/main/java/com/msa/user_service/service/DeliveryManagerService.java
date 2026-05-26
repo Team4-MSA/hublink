@@ -159,6 +159,12 @@ public class DeliveryManagerService {
         saveDeliveryManager(userId, hubId, type, slackId);
     }
 
+    @Transactional
+    public void updateSlackId(UUID userId, String slackId) {
+        deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(userId)
+                .ifPresent(dm -> dm.updateSlackId(slackId));
+    }
+
     private DeliveryManager saveDeliveryManager(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
         int nextSequence = deliveryManagerRepository
                 .findLatestByHubId(hubId)

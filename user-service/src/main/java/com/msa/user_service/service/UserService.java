@@ -79,6 +79,11 @@ public class UserService {
     public UserResponse updateUser(UUID userId, UpdateUserRequest request) {
         User user = findActiveUser(userId);
         user.update(request.getName(), request.getEmail(), request.getSlackId());
+
+        if (user.getRole() == UserRole.DELIVERY_MANAGER && request.getSlackId() != null) {
+            deliveryManagerService.updateSlackId(userId, request.getSlackId());
+        }
+
         return UserResponse.from(user);
     }
 

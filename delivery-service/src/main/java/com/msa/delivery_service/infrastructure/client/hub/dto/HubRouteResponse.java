@@ -38,35 +38,35 @@ public class HubRouteResponse {
         for (HubRouteResponse hubRoute : hubRoutes) {
             routeHistories.add(hubRoute.toDeliveryRouteHistory(
                     delivery,
+                    companyDeliveryManagerId,
                     hubDeliveryManagerIds.get(hubRoute.getHubRouteId())
             ));
         }
 
-        routeHistories.add(DeliveryRouteHistory.create(
-                delivery,
-                companyDeliveryManagerId,
-                routeHistories.size() + 1,
-                DeliveryRouteType.HUB_TO_COMPANY,
-                DeliveryLocationType.HUB,
-                delivery.getDestinationHubId(),
-                DeliveryLocationType.COMPANY,
-                delivery.getReceiverCompanyId(),
-                null,
-                null
-        ));
-
         return routeHistories;
     }
 
-    public DeliveryRouteHistory toDeliveryRouteHistory(Delivery delivery, UUID hubDeliveryManagerId) {
+    public DeliveryRouteHistory toDeliveryRouteHistory(
+            Delivery delivery,
+            UUID companyDeliveryManagerId,
+            UUID hubDeliveryManagerId
+    ) {
+        DeliveryRouteType deliveryRouteType = DeliveryRouteType.valueOf(routeType);
+        UUID deliveryManagerId = deliveryRouteType == DeliveryRouteType.HUB_TO_COMPANY
+                ? companyDeliveryManagerId
+                : hubDeliveryManagerId;
+        DeliveryLocationType arrivalLocationType = deliveryRouteType == DeliveryRouteType.HUB_TO_COMPANY
+                ? DeliveryLocationType.COMPANY
+                : DeliveryLocationType.HUB;
+
         return DeliveryRouteHistory.create(
                 delivery,
-                hubDeliveryManagerId,
+                deliveryManagerId,
                 sequence,
-                DeliveryRouteType.HUB_TO_HUB,
+                deliveryRouteType,
                 DeliveryLocationType.HUB,
                 departureHubId,
-                DeliveryLocationType.HUB,
+                arrivalLocationType,
                 arrivalHubId,
                 estimatedDistanceKm,
                 estimatedDurationMin

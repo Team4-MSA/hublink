@@ -27,6 +27,7 @@ public class DeliveryRequest {
     @NotNull
     private LocalDateTime orderedAt;
 
+    @NotBlank
     private String requestMessage;
 
     @Valid
@@ -34,10 +35,7 @@ public class DeliveryRequest {
     private List<Product> products;
 
     @NotNull
-    private UUID departureHubId;
-
-    @NotNull
-    private UUID destinationHubId;
+    private UUID supplyCompanyId;
 
     @NotNull
     private UUID receiverCompanyId;

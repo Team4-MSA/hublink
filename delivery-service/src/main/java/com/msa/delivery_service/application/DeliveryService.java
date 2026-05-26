@@ -203,14 +203,14 @@ public class DeliveryService {
             throw new CustomException(DeliveryErrorCode.DUPLICATE_ORDER_DELIVERY);
         }
 
-        HubManagerResponse hubManager = getHubManager(request.getDepartureHubId());
         List<HubRouteResponse> hubRoutes = getHubRoutes(request);
-        List<DeliveryManagerResponse> deliveryManagers = getDeliveryManagers(request, hubRoutes);
+        HubManagerResponse hubManager = getHubManager(getDepartureHubId(hubRoutes));
+        List<DeliveryManagerResponse> deliveryManagers = getDeliveryManagers(hubRoutes);
 
         // 배송 테이블에 들어갈 업체 배송 담당자 배정
         DeliveryManagerResponse companyDeliveryManager = assignCompanyDeliveryManager(
                 deliveryManagers,
-                request.getDestinationHubId()
+                getDestinationHubId(hubRoutes)
         );
         // 배송 경로 테이블에 들어갈 허브 배송 담당자들 배정
         Map<UUID, UUID> hubDeliveryManagerIds = assignHubDeliveryManagers(hubRoutes, deliveryManagers);
@@ -266,15 +266,11 @@ public class DeliveryService {
     }
 
     // 배송 경로에 필요한 허브들의 배송 담당자 목록 조회
-    private List<DeliveryManagerResponse> getDeliveryManagers(
-            DeliveryRequest request,
-            List<HubRouteResponse> hubRoutes
-    ) {
+    private List<DeliveryManagerResponse> getDeliveryManagers(List<HubRouteResponse> hubRoutes) {
         Set<UUID> hubIds = new LinkedHashSet<>();
         for (HubRouteResponse hubRoute : hubRoutes) {
             hubIds.add(hubRoute.getDepartureHubId());
         }
-        hubIds.add(request.getDestinationHubId());
 
         try {
             List<DeliveryManagerResponse> deliveryManagers = userClient.getDeliveryManagers(new ArrayList<>(hubIds));
@@ -345,6 +341,9 @@ public class DeliveryService {
         );
 
         for (HubRouteResponse hubRoute : hubRoutes) {
+            if (!isHubToHubRoute(hubRoute)) {
+                continue;
+            }
             DeliveryManagerResponse hubDeliveryManager = selectHubDeliveryManager(
                     deliveryManagers,
                     hubRoute.getDepartureHubId(),
@@ -389,8 +388,8 @@ public class DeliveryService {
     private List<HubRouteResponse> getHubRoutes(DeliveryRequest request) {
         try {
             List<HubRouteResponse> hubRoutes = hubClient.getRoutes(
-                    request.getDepartureHubId(),
-                    request.getDestinationHubId()
+                    request.getSupplyCompanyId(),
+                    request.getReceiverCompanyId()
             );
             if (hubRoutes == null || hubRoutes.isEmpty()) {
                 throw new CustomException(DeliveryErrorCode.NO_HUB_ROUTE);
@@ -401,5 +400,24 @@ public class DeliveryService {
         } catch (FeignException e) {
             throw new CustomException(DeliveryErrorCode.HUB_SERVICE_UNAVAILABLE);
         }
+    }
+
+    private UUID getDepartureHubId(List<HubRouteResponse> hubRoutes) {
+        return hubRoutes.get(0).getDepartureHubId();
+    }
+
+    // Hub-Hub 경로가 아닌 원소의 경우 Hub-Company이므로 해당 경로의 출발 hub가 마지막 hub
+    private UUID getDestinationHubId(List<HubRouteResponse> hubRoutes) {
+        for (int i = hubRoutes.size() - 1; i >= 0; i--) {
+            HubRouteResponse hubRoute = hubRoutes.get(i);
+            if (!isHubToHubRoute(hubRoute)) {
+                return hubRoute.getDepartureHubId();
+            }
+        }
+        return hubRoutes.get(hubRoutes.size() - 1).getArrivalHubId();
+    }
+
+    private boolean isHubToHubRoute(HubRouteResponse hubRoute) {
+        return "HUB_TO_HUB".equals(hubRoute.getRouteType());
     }
 }

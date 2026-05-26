@@ -70,6 +70,7 @@ public class UserController {
         if (!role.equals("MASTER")) {
             throw new CustomException(UserErrorCode.ACCESS_DENIED);
         }
+        userService.validateUpdateResources(request);
         return ResponseEntity.ok(userService.updateUser(userId, request));
     }
 

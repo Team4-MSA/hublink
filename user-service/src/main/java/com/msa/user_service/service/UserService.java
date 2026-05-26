@@ -77,20 +77,18 @@ public class UserService {
                 .map(UserResponse::from));
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void validateUpdateResources(UpdateUserRequest request) {
+        if (request.getHubId() != null && !hubClient.checkHubExists(request.getHubId()).isExists()) {
+            throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
+        }
+        if (request.getCompanyId() != null && !companyClient.checkCompanyExists(request.getCompanyId()).isExists()) {
+            throw new CustomException(UserErrorCode.COMPANY_NOT_FOUND);
+        }
+    }
+
     @Transactional
     public UserResponse updateUser(UUID userId, UpdateUserRequest request) {
-        // hubId, companyId 변경 시 존재 여부 사전 검증
-        if (request.getHubId() != null) {
-            if (!hubClient.checkHubExists(request.getHubId()).isExists()) {
-                throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
-            }
-        }
-        if (request.getCompanyId() != null) {
-            if (!companyClient.checkCompanyExists(request.getCompanyId()).isExists()) {
-                throw new CustomException(UserErrorCode.COMPANY_NOT_FOUND);
-            }
-        }
-
         User user = findActiveUser(userId);
         user.update(request.getName(), request.getEmail(), request.getSlackId(),
                 request.getHubId(), request.getCompanyId());
@@ -151,6 +149,14 @@ public class UserService {
         }
 
         userApprovalService.executeApproval(userId, request, processedBy);
+    }
+
+    // Internal API용 - 허브 담당 HUB_MANAGER 조회
+    public InternalHubManagerResponse getHubManagerByHubId(UUID hubId) {
+        return userRepository.findByHubIdAndDeletedAtIsNull(hubId)
+                .filter(user -> user.getRole() == UserRole.HUB_MANAGER)
+                .map(InternalHubManagerResponse::of)
+                .orElseThrow(() -> new CustomException(UserErrorCode.HUB_MANAGER_NOT_FOUND));
     }
 
     // Internal API용 - 허브 소속 여부 검증

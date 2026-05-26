@@ -152,6 +152,10 @@ public class UserService {
 
     // Internal API용 - 복수 userId로 이름 + 소속 업체 조회
     public List<UserNameAndCompanyResponse> getUserNamesAndCompanies(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+
         return userRepository.findAllByUserIdInAndDeletedAtIsNull(userIds)
                 .stream()
                 .map(UserNameAndCompanyResponse::from)

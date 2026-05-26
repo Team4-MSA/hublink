@@ -1,6 +1,7 @@
 package com.msa.hub_service.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.List;
 
 public record KakaoAddressResponse(
@@ -9,5 +10,6 @@ public record KakaoAddressResponse(
     public record Document(
             @JsonProperty("x") String longitude,
             @JsonProperty("y") String latitude
-    ){}
+    ) {
+    }
 }

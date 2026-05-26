@@ -1,6 +1,7 @@
 package com.msa.stock_service.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
+import com.msa.stock_service.dto.StockRequestDto;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -35,12 +36,31 @@ public class Stock extends BaseEntity {
     @Column(nullable = false)
     private Integer quantity;
 
+    @Builder.Default
     @Column(name = "reserved_quantity", nullable = false)
-    private Integer reservedQuantity;
+    private Integer reservedQuantity = 0;
 
+    //재고 감소 기능은 빈번하게 발생되는 동시성 문제이기 때문에
     @Version
     private Integer version;
 
+    public static Stock create(StockRequestDto dto){
+        return com.msa.stock_service.entity.Stock.builder()
+            .productId(dto.getProductId())
+            .hubId(dto.getHubId())
+            .quantity(dto.getQuantity())
+            .build();
+    }
 
+    // 재고 감소.
+    public void decreaseStock(Integer quantity){
+        this.quantity -= quantity;
+        this.reservedQuantity += quantity;
+    }
+
+    public void restore(Integer orderQuantity){
+        this.quantity += orderQuantity;
+        this.reservedQuantity -= orderQuantity;
+    }
 
 }

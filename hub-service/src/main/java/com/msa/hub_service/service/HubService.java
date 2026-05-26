@@ -4,6 +4,7 @@ import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.hub_service.client.AddressGeocodingPort;
 import com.msa.hub_service.dto.CoordinateDto;
+import com.msa.hub_service.dto.HubRequest;
 import com.msa.hub_service.dto.HubResponse;
 import com.msa.hub_service.entity.HubEntity;
 import com.msa.hub_service.global.HubErrorCode;
@@ -25,6 +26,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -56,7 +58,7 @@ public class HubService {
     }
 
     // Hub 상세 조회
-    @Cacheable(value = "hub", key="#hubId")
+    @Cacheable(value = "hub", key = "#hubId")
     public HubResponse getHub(UUID hubId) {
         HubEntity hub = hubRepository.findById(hubId)
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_NOT_FOUND));
@@ -66,36 +68,56 @@ public class HubService {
     // Hub 이름/주소 변경
     @CachePut(value = "hub", key = "#hubId")
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public HubResponse updateHub(UUID hubId, String name, String address) {
+    public HubResponse updateHub(UUID hubId, HubRequest request) {
 
         HubEntity hub = hubRepository.findById(hubId)
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_NOT_FOUND));
 
-        boolean isAddressChanged = !hub.getAddress().equals(address);
+        boolean isAddressChanged = !hub.getAddress().equals(request.address());
 
         // 바뀐 이름/주소 이미 등록되어 있는지 확인
-        if (!hub.getName().equals(name) && hubRepository.existsByName(name)) {
+        if (!hub.getName().equals(request.name()) && hubRepository.existsByName(request.name())) {
             throw new CustomException(HubErrorCode.HUB_NAME_DUPLICATED);
         }
-        if (!hub.getAddress().equals(address) && hubRepository.existsByAddress(address)) {
+        if (isAddressChanged && hubRepository.existsByAddress(request.address())) {
             throw new CustomException(HubErrorCode.HUB_ADDRESS_DUPLICATED);
         }
 
-        CoordinateDto coordinate;
-        if(isAddressChanged){
-            coordinate = getCoordinate(address);
+        // 수정하려고 보낸 위도/경도
+        BigDecimal targetLat = request.latitude();
+        BigDecimal targetLon = request.longitude();
 
-            if (coordinate.latitude() == null || coordinate.longitude() == null){
-                throw new CustomException(HubErrorCode.GEOCODING_FAILED);
+        // 주소 값 변경되었을 때 대처 - 1. 보낸 위도/경도 2. 주소에 따른 api 호출
+        if (isAddressChanged) {
+            if (targetLat == null || targetLon == null) {
+                CoordinateDto coordinate = getCoordinate(request.address());
+
+                if (coordinate.latitude() == null || coordinate.longitude() == null) {
+                    throw new CustomException(HubErrorCode.GEOCODING_FAILED);
+                }
+                targetLat = coordinate.latitude();
+                targetLon = coordinate.longitude();
             }
-        }else {
-            coordinate = new CoordinateDto(hub.getLatitude(), hub.getLongitude());
+        } else {
+            targetLat = (targetLat != null) ? targetLat : hub.getLatitude();
+            targetLon = (targetLon != null) ? targetLon : hub.getLongitude();
         }
 
-        hub.updateHub(name, address, coordinate.latitude(), coordinate.longitude());
+        // 위도 경도 변경 확인 - route 변경하기 위함
+        boolean isCoordinateChanged = false;
+        if (targetLat != null && targetLon != null) {
+            if (hub.getLatitude() == null || hub.getLongitude() == null) {
+                isCoordinateChanged = true;
+            } else {
+                isCoordinateChanged = (targetLat.compareTo(hub.getLatitude()) != 0) ||
+                        (targetLon.compareTo(hub.getLongitude()) != 0);
+            }
+        }
+
+        hub.updateHub(request.name(), request.address(), targetLat, targetLon);
         hubRepository.save(hub);
 
-        if (isAddressChanged) {
+        if (isCoordinateChanged) {
             eventPublisher.publishEvent(new HubUpdatedEvent(hub.getHubId()));
         }
 
@@ -116,7 +138,7 @@ public class HubService {
     }
 
     // 허브 삭제
-    @CacheEvict(value = "hub", key="#hubId")
+    @CacheEvict(value = "hub", key = "#hubId")
     @Transactional
     public HubResponse deleteHub(UUID hubId) {
         HubEntity hub = hubRepository.findById(hubId)
@@ -128,13 +150,18 @@ public class HubService {
     }
 
     // api로 위도와 경도 구하기
-    private CoordinateDto getCoordinate(String address) {
+    public CoordinateDto getCoordinate(String address) {
         try {
             return geocodingPort.getCoordinate(address);
         } catch (Exception e) {
             log.warn("외부 API 장애로 인해 좌표 없이 허브를 저장합니다. address: {}, exception: {}", address, e.toString());
             return new CoordinateDto(null, null);
         }
+    }
+
+    //  허브 존재 확인
+    public boolean getHubExist(UUID hubId) {
+        return hubRepository.existsById(hubId);
     }
 
     // 중복 hub 등록 방지

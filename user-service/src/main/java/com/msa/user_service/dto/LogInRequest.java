@@ -1,0 +1,16 @@
+package com.msa.user_service.dto;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Getter
+@NoArgsConstructor
+public class LogInRequest {
+
+    @NotBlank
+    private String username;
+
+    @NotBlank
+    private String password;
+}

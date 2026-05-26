@@ -1,8 +1,10 @@
 package com.msa.hub_service.controller;
 
+import com.msa.core_common.auth.UserRole;
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.hub_service.dto.HubRequest;
 import com.msa.hub_service.dto.HubResponse;
+import com.msa.hub_service.global.RequireRole;
 import com.msa.hub_service.service.HubService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +13,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -21,21 +22,23 @@ public class HubController {
     private final HubService hubService;
 
     // 허브 생성
+    @RequireRole(UserRole.MASTER)
     @PostMapping
-    public HubResponse createHub(@Valid @RequestBody HubRequest request){
-        return hubService.createHub(request.name(),request.address());
+    public HubResponse createHub(@Valid @RequestBody HubRequest request) {
+        return hubService.createHub(request.name(), request.address());
     }
 
     //허브 상세 조회
-    @GetMapping("{hubId}")
-    public HubResponse getHub(@PathVariable UUID hubId){
+    @GetMapping("/{hubId}")
+    public HubResponse getHub(@PathVariable UUID hubId) {
         return hubService.getHub(hubId);
     }
 
     // 허브 수정
+    @RequireRole(UserRole.MASTER)
     @PatchMapping("/{hubId}")
-    public HubResponse updateHub(@PathVariable UUID hubId, @Valid @RequestBody HubRequest request){
-        return hubService.updateHub(hubId, request.name(), request.address());
+    public HubResponse updateHub(@PathVariable UUID hubId, @Valid @RequestBody HubRequest request) {
+        return hubService.updateHub(hubId, request);
     }
 
     // 허브 검색
@@ -43,15 +46,16 @@ public class HubController {
     public PageRes<HubResponse> getHubs(
             @RequestParam(required = false) String name,
             @PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
-    ){
+    ) {
         return hubService.getHubs(name, pageable);
     }
 
     // 허브 삭제
+    @RequireRole(UserRole.MASTER)
     @DeleteMapping("/{hubId}")
     public HubResponse deleteHub(
             @PathVariable UUID hubId
-    ){
+    ) {
         return hubService.deleteHub(hubId);
     }
 }

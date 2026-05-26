@@ -4,8 +4,18 @@ server:
 spring:
   application:
     name: hub-service
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
 
 management:
+  tracing:
+      sampling:
+        probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
   endpoints:
     web:
       exposure:
@@ -47,3 +57,6 @@ resilience4j:
         failureRateThreshold: 50
         permittedNumberOfCallsInHalfOpenState: 3
         waitDurationInOpenState: 20s
+    instances:
+      company-service:
+        baseConfig: default

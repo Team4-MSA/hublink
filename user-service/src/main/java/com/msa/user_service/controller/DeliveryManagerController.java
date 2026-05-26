@@ -33,6 +33,7 @@ public class DeliveryManagerController {
         if (!role.equals("MASTER") && !role.equals("HUB_MANAGER")) {
             throw new CustomException(UserErrorCode.ACCESS_DENIED);
         }
+        deliveryManagerService.validateHubExists(request.getHubId());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(deliveryManagerService.register(request, role, UUID.fromString(userId)));
     }
@@ -72,6 +73,9 @@ public class DeliveryManagerController {
     ) {
         if (!role.equals("MASTER") && !role.equals("HUB_MANAGER")) {
             throw new CustomException(UserErrorCode.ACCESS_DENIED);
+        }
+        if (request.getHubId() != null) {
+            deliveryManagerService.validateHubExists(request.getHubId());
         }
         return ResponseEntity.ok(deliveryManagerService.update(targetUserId, request, role, UUID.fromString(userId)));
     }

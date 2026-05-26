@@ -17,6 +17,7 @@ import com.msa.user_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class DeliveryManagerService {
     private final UserRepository userRepository;
     private final HubClient hubClient;
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void validateHubExists(UUID hubId) {
         if (!hubClient.checkHubExists(hubId).isExists()) {
             throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
@@ -61,8 +63,6 @@ public class DeliveryManagerService {
         if (role.equals("HUB_MANAGER")) {
             validateHubAccess(requestUserId, request.getHubId());
         }
-
-        validateHubExists(request.getHubId());
 
         User user = userRepository.findByUserIdAndDeletedAtIsNull(request.getUserId())
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
@@ -160,7 +160,6 @@ public class DeliveryManagerService {
             if (role.equals("HUB_MANAGER")) {
                 throw new CustomException(UserErrorCode.HUB_ACCESS_DENIED);
             }
-            validateHubExists(request.getHubId());
             int newSequence = deliveryManagerRepository.findLatestByHubId(request.getHubId())
                     .map(latest -> latest.getDeliverySequence() + 1)
                     .orElse(1);

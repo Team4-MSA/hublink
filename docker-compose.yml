@@ -1,4 +1,183 @@
 services:
+  redis:
+    image: redis:7.2
+    container_name: hublink-redis
+    ports:
+      - "6379:6379"
+
+  eureka-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: eureka-server
+    container_name: hublink-eureka-server
+    ports:
+      - "19090:19090"
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: api-gateway
+    container_name: hublink-api-gateway
+    ports:
+      - "19091:19091"
+    depends_on:
+      - eureka-server
+      - config-server
+
+  config-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: config-server
+    container_name: hublink-config-server
+    ports:
+      - "19092:19092"
+    depends_on:
+      - eureka-server
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: user-service
+    container_name: hublink-user-service
+    expose:
+      - "19093"
+    env_file:
+      - .env
+    depends_on:
+      - eureka-server
+      - config-server
+
+  order-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: order-service
+    container_name: hublink-order-service
+    expose:
+      - "19094"
+    env_file:
+      - .env
+    depends_on:
+      - eureka-server
+      - config-server
+
+  hub-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: hub-service
+    container_name: hublink-hub-service
+    expose:
+      - "19095"
+    env_file:
+      - .env
+    depends_on:
+      - eureka-server
+      - config-server
+
+  company-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: company-service
+    container_name: hublink-company-service
+    expose:
+      - "19096"
+    env_file:
+      - .env
+    depends_on:
+      - eureka-server
+      - config-server
+
+  product-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: product-service
+    container_name: hublink-product-service
+    expose:
+      - "19097"
+    env_file:
+      - .env
+    depends_on:
+      - eureka-server
+      - config-server
+
+  stock-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: stock-service
+    container_name: hublink-stock-service
+    expose:
+      - "19098"
+    env_file:
+      - .env
+    depends_on:
+      - eureka-server
+      - config-server
+
+  delivery-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: delivery-service
+    container_name: hublink-delivery-service
+    expose:
+      - "19099"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - eureka-server
+      - config-server
+
+  slack-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: slack-service
+    container_name: hublink-slack-service
+    expose:
+      - "19100"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - eureka-server
+      - config-server
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE_NAME: ai-service
+    container_name: hublink-ai-service
+    expose:
+      - "19101"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - eureka-server
+      - config-server
+
   zipkin:
     image: openzipkin/zipkin:3.6.1
     container_name: hublink-zipkin
@@ -15,6 +194,15 @@ services:
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     depends_on:
+      - user-service
+      - order-service
+      - hub-service
+      - company-service
+      - product-service
+      - stock-service
+      - delivery-service
+      - slack-service
+      - ai-service
       - zipkin
 
   grafana:

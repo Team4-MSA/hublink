@@ -14,16 +14,15 @@ import com.msa.delivery_service.infrastructure.client.user.dto.DeliveryManagerRe
 import com.msa.delivery_service.infrastructure.client.user.dto.HubManagerResponse;
 import com.msa.delivery_service.infrastructure.repository.DeliveryRepository;
 import com.msa.delivery_service.infrastructure.repository.DeliveryRouteHistoryRepository;
-import com.msa.delivery_service.infrastructure.stream.DeadlineRequestedEvent;
-import com.msa.delivery_service.infrastructure.stream.RedisStreamEventPublisher;
+import com.msa.delivery_service.infrastructure.stream.DeadlineGeneratedEvent;
 import com.msa.delivery_service.presentation.dto.DeliveryDetailResponse;
 import com.msa.delivery_service.presentation.dto.DeliveryRequest;
 import com.msa.delivery_service.presentation.dto.DeliveryResponse;
 import com.msa.delivery_service.presentation.dto.DeliveryRouteHistoryResponse;
 import com.msa.delivery_service.presentation.dto.DeliveryRouteStatusUpdateRequest;
 import com.msa.delivery_service.presentation.dto.DeliveryStatusUpdateRequest;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -61,7 +60,7 @@ public class DeliveryService {
     private final DeliveryRouteHistoryRepository deliveryRouteHistoryRepository;
     private final HubClient hubClient;
     private final UserClient userClient;
-    private final RedisStreamEventPublisher redisStreamEventPublisher;
+    private final DeliveryCreationTransactionalService deliveryCreationTransactionalService;
 
     @Transactional(readOnly = true)
     public PageRes<DeliveryResponse> getDeliveries(String role, Pageable pageable) {
@@ -106,9 +105,8 @@ public class DeliveryService {
                         delivery.getDeliveryId(),
                         userId
                 );
-                if (!assignedDelivery) {
-                    throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
-                }
+                if (!assignedDelivery) throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
+
                 yield DeliveryDetailResponse.of(delivery, routeHistories);
             }
             default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
@@ -200,13 +198,12 @@ public class DeliveryService {
         내부 호출 API
     */
 
-    @Transactional
     public DeliveryResponse createDelivery(DeliveryRequest request) {
         if (deliveryRepository.existsByOrderId(request.getOrderId())) {
             throw new CustomException(DeliveryErrorCode.DUPLICATE_ORDER_DELIVERY);
         }
 
-        HubManagerResponse hubManager = userClient.getHubManager(request.getDepartureHubId());
+        HubManagerResponse hubManager = getHubManager(request.getDepartureHubId());
         List<HubRouteResponse> hubRoutes = getHubRoutes(request);
         List<DeliveryManagerResponse> deliveryManagers = getDeliveryManagers(request, hubRoutes);
 
@@ -218,49 +215,50 @@ public class DeliveryService {
         // 배송 경로 테이블에 들어갈 허브 배송 담당자들 배정
         Map<UUID, UUID> hubDeliveryManagerIds = assignHubDeliveryManagers(hubRoutes, deliveryManagers);
 
-        Delivery delivery = Delivery.create(
-                request.getOrderId(),
-                request.getDepartureHubId(),
-                request.getDestinationHubId(),
-                request.getReceiverCompanyId(),
-                companyDeliveryManager.getDeliveryManagerId(),
-                request.getDeliveryAddress(),
-                request.getReceiverName(),
-                hubManager.getHubManagerSlackId()
-        );
-        Delivery savedDelivery = saveDelivery(delivery);
-
-        List<DeliveryRouteHistory> routeHistories = HubRouteResponse.toDeliveryRouteHistories(
-                savedDelivery,
-                companyDeliveryManager.getDeliveryManagerId(),
+        return deliveryCreationTransactionalService.createDelivery(
+                request,
+                hubManager,
+                companyDeliveryManager,
                 hubRoutes,
-                hubDeliveryManagerIds
+                hubDeliveryManagerIds,
+                WORK_START_TIME,
+                WORK_END_TIME
         );
-        deliveryRouteHistoryRepository.saveAll(routeHistories);
-
-        // 커밋이 완료되면 콜백으로 이벤트 발행
-        redisStreamEventPublisher.publishAfterCommit(
-                RedisStreamEventPublisher.DEADLINE_REQUESTED_STREAM,
-                DeadlineRequestedEvent.of(
-                        savedDelivery,
-                        request,
-                        hubManager,
-                        companyDeliveryManager,
-                        hubRoutes,
-                        WORK_START_TIME,
-                        WORK_END_TIME
-                )
-        );
-
-        return DeliveryResponse.from(savedDelivery);
     }
 
-    // 배송 저장 시 중복 주문 예외 처리
-    private Delivery saveDelivery(Delivery delivery) {
+    @Transactional
+    public void updateFinalDepartureDeadline(DeadlineGeneratedEvent event) {
+        Delivery delivery = deliveryRepository.findById(event.getDeliveryId())
+                .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        delivery.updateFinalDepartureDeadline(event.getFinalDepartureDeadline());
+    }
+
+    @Transactional
+    public void compensateDeliveryCreation(UUID orderId) {
+        deliveryRepository.findByOrderId(orderId)
+                .ifPresent(delivery -> {
+                    delivery.cancel();
+                    deliveryRouteHistoryRepository.findByDeliveryDeliveryIdOrderBySequenceAsc(delivery.getDeliveryId())
+                            .stream()
+                            .filter(routeHistory -> routeHistory.getStatus().canChangeTo(DeliveryRouteStatus.FAILED))
+                            .forEach(routeHistory -> routeHistory.updateStatus(DeliveryRouteStatus.FAILED));
+                });
+    }
+
+    private HubManagerResponse getHubManager(UUID departureHubId) {
         try {
-            return deliveryRepository.saveAndFlush(delivery);
-        } catch (DataIntegrityViolationException e) {
-            throw new CustomException(DeliveryErrorCode.DUPLICATE_ORDER_DELIVERY);
+            HubManagerResponse hubManager = userClient.getHubManager(departureHubId);
+
+            if (hubManager == null || hubManager.getHubManagerSlackId() == null) {
+                throw new CustomException(DeliveryErrorCode.NO_HUB_MANAGER);
+            }
+
+            return hubManager;
+        } catch (FeignException.NotFound e) {
+            throw new CustomException(DeliveryErrorCode.NO_HUB_MANAGER);
+        } catch (FeignException e) {
+            throw new CustomException(DeliveryErrorCode.USER_SERVICE_UNAVAILABLE);
         }
     }
 
@@ -275,12 +273,17 @@ public class DeliveryService {
         }
         hubIds.add(request.getDestinationHubId());
 
-        List<DeliveryManagerResponse> deliveryManagers = userClient.getDeliveryManagers(new ArrayList<>(hubIds));
-        if (deliveryManagers == null || deliveryManagers.isEmpty()) {
+        try {
+            List<DeliveryManagerResponse> deliveryManagers = userClient.getDeliveryManagers(new ArrayList<>(hubIds));
+            if (deliveryManagers == null || deliveryManagers.isEmpty()) {
+                throw new CustomException(DeliveryErrorCode.NO_DELIVERY_MANAGER);
+            }
+            return deliveryManagers;
+        } catch (FeignException.NotFound e) {
             throw new CustomException(DeliveryErrorCode.NO_DELIVERY_MANAGER);
+        } catch (FeignException e) {
+            throw new CustomException(DeliveryErrorCode.USER_SERVICE_UNAVAILABLE);
         }
-
-        return deliveryManagers;
     }
 
     // 마지막 업체 배송을 담당할 배송 담당자 배정
@@ -373,16 +376,19 @@ public class DeliveryService {
 
     // 출발 허브와 도착 허브 기준으로 배송 경로 조회
     private List<HubRouteResponse> getHubRoutes(DeliveryRequest request) {
-        List<HubRouteResponse> hubRoutes = hubClient.getRoutes(
-                request.getDepartureHubId(),
-                request.getDestinationHubId()
-        );
-
-        if (hubRoutes == null || hubRoutes.isEmpty()) {
+        try {
+            List<HubRouteResponse> hubRoutes = hubClient.getRoutes(
+                    request.getDepartureHubId(),
+                    request.getDestinationHubId()
+            );
+            if (hubRoutes == null || hubRoutes.isEmpty()) {
+                throw new CustomException(DeliveryErrorCode.NO_HUB_ROUTE);
+            }
+            return hubRoutes;
+        } catch (FeignException.NotFound e) {
             throw new CustomException(DeliveryErrorCode.NO_HUB_ROUTE);
+        } catch (FeignException e) {
+            throw new CustomException(DeliveryErrorCode.HUB_SERVICE_UNAVAILABLE);
         }
-
-        return hubRoutes;
     }
-
 }

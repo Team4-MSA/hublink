@@ -27,6 +27,7 @@ public class DeadlineRequestedEvent {
     private String receiverSlackId;
     private List<DeliveryRequest.Product> products;
     private LocalDateTime requestedArrivalAt;
+    private String departureHubName;
     private String destinationAddress;
     private String deliveryManagerName;
     private String deliveryManagerEmail;
@@ -55,6 +56,7 @@ public class DeadlineRequestedEvent {
                 .receiverSlackId(hubManager.getHubManagerSlackId())
                 .products(request.getProducts())
                 .requestedArrivalAt(request.getRequestedArrivalAt())
+                .departureHubName(hubRoutes.get(0).getDepartureHubName())
                 .destinationAddress(delivery.getDeliveryAddress())
                 .deliveryManagerName(deliveryManager.getDeliveryManagerName())
                 .deliveryManagerEmail(deliveryManager.getDeliveryManagerEmail())

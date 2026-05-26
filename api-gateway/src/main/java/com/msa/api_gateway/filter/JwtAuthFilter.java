@@ -88,9 +88,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
         // Redis 블랙리스트 체크 (AT 블랙리스트 + 삭제된 유저 차단) - 병렬 조회
         Mono<Boolean> tokenBlacklisted = redisTemplate.hasKey(BL_PREFIX + token)
-                .onErrorResume(e -> Mono.error(new RedisUnavailableException()));
+                .onErrorMap(e -> new RedisUnavailableException());
         Mono<Boolean> userBlocked = redisTemplate.hasKey(BL_USER_PREFIX + userId)
-                .onErrorResume(e -> Mono.error(new RedisUnavailableException()));
+                .onErrorMap(e -> new RedisUnavailableException());
 
         return Mono.zip(tokenBlacklisted, userBlocked)
                 .flatMap(tuple -> {

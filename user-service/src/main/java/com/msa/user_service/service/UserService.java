@@ -14,6 +14,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.UUID;
 
@@ -83,7 +85,12 @@ public class UserService {
     public void deleteUser(UUID userId, String deletedBy) {
         User user = findActiveUser(userId);
         user.delete(deletedBy);
-        redisUtil.invalidateUser(userId.toString(), accessExpiration);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                redisUtil.invalidateUser(userId.toString(), accessExpiration);
+            }
+        });
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)

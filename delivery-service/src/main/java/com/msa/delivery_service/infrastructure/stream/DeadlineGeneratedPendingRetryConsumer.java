@@ -66,7 +66,11 @@ public class DeadlineGeneratedPendingRetryConsumer {
             PendingMessage pendingMessage
     ) {
         MapRecord<String, Object, Object> targetRecord = findRecord(streamOps, pendingMessage.getId());
-        if (targetRecord == null) return;
+        // PEL에는 남아있으나 메인 스트림에 없는 경우
+        if (targetRecord == null) {
+            acknowledge(streamOps, pendingMessage.getId());
+            return;
+        }
 
         try {
             streamConsumer.process(targetRecord);
@@ -82,7 +86,11 @@ public class DeadlineGeneratedPendingRetryConsumer {
             PendingMessage pendingMessage
     ) {
         MapRecord<String, Object, Object> targetRecord = findRecord(streamOps, pendingMessage.getId());
-        if (targetRecord == null) return;
+        // PEL에는 남아있으나 메인 스트림에 없는 경우
+        if (targetRecord == null) {
+            acknowledge(streamOps, pendingMessage.getId());
+            return;
+        }
 
         streamOps.add(
                 DeadlineStreamConstants.DEADLINE_GENERATED_DELIVERY_DLQ_STREAM,

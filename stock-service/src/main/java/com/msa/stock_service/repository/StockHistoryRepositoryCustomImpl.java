@@ -3,7 +3,6 @@ package com.msa.stock_service.repository;
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.stock_service.dto.StockHistorySearchResponseDto;
 import com.msa.stock_service.entity.StockHistory;
-import com.querydsl.core.Query;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
@@ -21,7 +20,7 @@ import org.springframework.data.domain.Sort;
 
 import static com.msa.stock_service.entity.QStockHistory.stockHistory;
 @RequiredArgsConstructor
-public class StockHistoryRepositoryCustomImpl implements StockHistoryRespositoryCustom{
+public class StockHistoryRepositoryCustomImpl implements StockHistoryRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override

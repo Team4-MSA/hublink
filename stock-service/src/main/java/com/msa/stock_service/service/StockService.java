@@ -29,6 +29,7 @@ public class StockService {
     private final StockHistoryRepository stockHistoryRepository;
 
      //재고 이력 조회
+    @Transactional(readOnly = true)
     public PageRes<StockHistorySearchResponseDto> getStockhistories(UUID productId, Pageable pageable) {
         return stockHistoryRepository.searchHistoriesByproductId(productId, pageable);
     }

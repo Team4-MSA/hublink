@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface StockHistoryRepository extends JpaRepository<StockHistory, UUID>,StockHistoryRespositoryCustom {
+public interface StockHistoryRepository extends JpaRepository<StockHistory, UUID>,StockHistoryRepositoryCustom {
     StockHistory findByProductId(UUID productId);
 
     List<StockHistory> findAllByStockIdIn(List<UUID> stockIds);

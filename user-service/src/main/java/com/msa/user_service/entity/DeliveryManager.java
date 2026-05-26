@@ -15,12 +15,9 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 public class DeliveryManager extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "delivery_manager_id", columnDefinition = "uuid")
-    private UUID deliveryManagerId;
 
-    @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
+    @Id
+    @Column(name = "user_id", columnDefinition = "uuid")
     private UUID userId;
 
     @Column(name = "hub_id", columnDefinition = "uuid")

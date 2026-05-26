@@ -2,6 +2,8 @@ package com.msa.user_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
+import com.msa.user_service.client.CompanyClient;
+import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.*;
 import com.msa.user_service.entity.*;
 import java.util.List;
@@ -27,9 +29,9 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserApprovalService userApprovalService;
-    private final HubManagerService hubManagerService;
-    private final CompanyManagerService companyManagerService;
     private final DeliveryManagerService deliveryManagerService;
+    private final HubClient hubClient;
+    private final CompanyClient companyClient;
     private final PasswordEncoder passwordEncoder;
     private final RedisUtil redisUtil;
 
@@ -108,13 +110,23 @@ public class UserService {
 
         if (request.getStatus() == UserStatus.APPROVED) {
             switch (user.getRole()) {
-                case HUB_MANAGER -> hubManagerService.validateHubExists(user.getHubId());
-                case COMPANY_MANAGER -> companyManagerService.validateCompanyExists(user.getCompanyId());
+                case HUB_MANAGER -> {
+                    if (!hubClient.checkHubExists(user.getHubId()).isExists()) {
+                        throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
+                    }
+                }
+                case COMPANY_MANAGER -> {
+                    if (!companyClient.checkCompanyExists(user.getCompanyId()).isExists()) {
+                        throw new CustomException(UserErrorCode.COMPANY_NOT_FOUND);
+                    }
+                }
                 case DELIVERY_MANAGER -> {
                     if (request.getDeliveryManagerType() == null) {
                         throw new CustomException(UserErrorCode.DELIVERY_TYPE_REQUIRED);
                     }
-                    deliveryManagerService.validateHubExists(user.getHubId());
+                    if (!hubClient.checkHubExists(user.getHubId()).isExists()) {
+                        throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
+                    }
                 }
             }
         }
@@ -124,12 +136,14 @@ public class UserService {
 
     // Internal API용 - 허브 소속 여부 검증
     public boolean verifyHub(UUID userId, UUID hubId) {
-        return hubManagerService.existsByUserIdAndHubId(userId, hubId);
+        User user = findActiveUser(userId);
+        return hubId.equals(user.getHubId());
     }
 
     // Internal API용 - 업체 소속 여부 검증
     public boolean verifyCompany(UUID userId, UUID companyId) {
-        return companyManagerService.existsByUserIdAndCompanyId(userId, companyId);
+        User user = findActiveUser(userId);
+        return companyId.equals(user.getCompanyId());
     }
 
     // username으로 User 엔티티 조회

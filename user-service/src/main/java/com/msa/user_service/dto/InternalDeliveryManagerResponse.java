@@ -21,7 +21,7 @@ public class InternalDeliveryManagerResponse {
 
     public static InternalDeliveryManagerResponse of(DeliveryManager deliveryManager, User user) {
         return InternalDeliveryManagerResponse.builder()
-                .deliveryManagerId(deliveryManager.getDeliveryManagerId())
+                .deliveryManagerId(deliveryManager.getUserId())  // userId == deliveryManagerId (1:1)
                 .hubId(deliveryManager.getHubId())
                 .deliveryManagerName(user.getName())
                 .deliveryManagerEmail(user.getEmail())

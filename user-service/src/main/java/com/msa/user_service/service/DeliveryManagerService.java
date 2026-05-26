@@ -9,9 +9,9 @@ import com.msa.user_service.dto.InternalDeliveryManagerResponse;
 import com.msa.user_service.entity.DeliveryManager;
 import com.msa.user_service.entity.DeliveryManagerType;
 import com.msa.user_service.entity.User;
+import com.msa.user_service.entity.UserRole;
 import com.msa.user_service.global.UserErrorCode;
 import com.msa.user_service.repository.DeliveryManagerRepository;
-import com.msa.user_service.repository.HubManagerRepository;
 import com.msa.user_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -29,7 +29,6 @@ import java.util.stream.Collectors;
 public class DeliveryManagerService {
 
     private final DeliveryManagerRepository deliveryManagerRepository;
-    private final HubManagerRepository hubManagerRepository;
     private final UserRepository userRepository;
     private final HubClient hubClient;
 
@@ -40,20 +39,20 @@ public class DeliveryManagerService {
     }
 
     private void validateHubAccess(UUID requestUserId, UUID hubId) {
-        if (!hubManagerRepository.existsByUserIdAndHubIdAndDeletedAtIsNull(requestUserId, hubId)) {
+        User user = userRepository.findByUserIdAndDeletedAtIsNull(requestUserId)
+                .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+        if (user.getRole() != UserRole.HUB_MANAGER || !hubId.equals(user.getHubId())) {
             throw new CustomException(UserErrorCode.HUB_ACCESS_DENIED);
         }
     }
 
-    private List<UUID> getMyHubIds(UUID requestUserId) {
-        List<UUID> hubIds = hubManagerRepository.findAllByUserIdAndDeletedAtIsNull(requestUserId)
-                .stream()
-                .map(hm -> hm.getHubId())
-                .toList();
-        if (hubIds.isEmpty()) {
+    private UUID getMyHubId(UUID requestUserId) {
+        User user = userRepository.findByUserIdAndDeletedAtIsNull(requestUserId)
+                .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+        if (user.getHubId() == null) {
             throw new CustomException(UserErrorCode.NO_ASSIGNED_HUB);
         }
-        return hubIds;
+        return user.getHubId();
     }
 
     @Transactional
@@ -75,10 +74,10 @@ public class DeliveryManagerService {
     public PageRes<DeliveryManagerResponse> getList(UUID hubId, DeliveryManagerType type, Pageable pageable,
                                                      String role, UUID requestUserId) {
         if (role.equals("HUB_MANAGER")) {
-            List<UUID> myHubIds = getMyHubIds(requestUserId);
+            UUID myHubId = getMyHubId(requestUserId);
 
             if (hubId != null) {
-                if (!myHubIds.contains(hubId)) {
+                if (!myHubId.equals(hubId)) {
                     throw new CustomException(UserErrorCode.HUB_ACCESS_DENIED);
                 }
                 return type != null
@@ -87,8 +86,8 @@ public class DeliveryManagerService {
             }
 
             return type != null
-                    ? new PageRes<>(deliveryManagerRepository.findAllByHubIdInAndTypeAndDeletedAtIsNull(myHubIds, type, pageable).map(DeliveryManagerResponse::from))
-                    : new PageRes<>(deliveryManagerRepository.findAllByHubIdInAndDeletedAtIsNull(myHubIds, pageable).map(DeliveryManagerResponse::from));
+                    ? new PageRes<>(deliveryManagerRepository.findAllByHubIdAndTypeAndDeletedAtIsNull(myHubId, type, pageable).map(DeliveryManagerResponse::from))
+                    : new PageRes<>(deliveryManagerRepository.findAllByHubIdAndDeletedAtIsNull(myHubId, pageable).map(DeliveryManagerResponse::from));
         }
 
         if (hubId != null && type != null) {
@@ -103,8 +102,8 @@ public class DeliveryManagerService {
         return new PageRes<>(deliveryManagerRepository.findAllByDeletedAtIsNull(pageable).map(DeliveryManagerResponse::from));
     }
 
-    public DeliveryManagerResponse getOne(UUID deliveryManagerId, String role, UUID requestUserId) {
-        DeliveryManager deliveryManager = deliveryManagerRepository.findByDeliveryManagerIdAndDeletedAtIsNull(deliveryManagerId)
+    public DeliveryManagerResponse getOne(UUID userId, String role, UUID requestUserId) {
+        DeliveryManager deliveryManager = deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.DELIVERY_MANAGER_NOT_FOUND));
 
         if (role.equals("HUB_MANAGER")) {
@@ -119,8 +118,8 @@ public class DeliveryManagerService {
         return DeliveryManagerResponse.from(deliveryManager);
     }
 
-    public List<InternalDeliveryManagerResponse> getDeliveryManagersByHubForInternal(UUID hubId) {
-        List<DeliveryManager> deliveryManagers = deliveryManagerRepository.findAllByHubIdAndDeletedAtIsNull(hubId);
+    public List<InternalDeliveryManagerResponse> getDeliveryManagersByHubsForInternal(List<UUID> hubIds) {
+        List<DeliveryManager> deliveryManagers = deliveryManagerRepository.findAllByHubIdInAndDeletedAtIsNull(hubIds);
 
         List<UUID> userIds = deliveryManagers.stream()
                 .map(DeliveryManager::getUserId)
@@ -142,8 +141,8 @@ public class DeliveryManagerService {
     }
 
     @Transactional
-    public void delete(UUID deliveryManagerId, String deletedBy, String role, UUID requestUserId) {
-        DeliveryManager deliveryManager = deliveryManagerRepository.findByDeliveryManagerIdAndDeletedAtIsNull(deliveryManagerId)
+    public void delete(UUID userId, String deletedBy, String role, UUID requestUserId) {
+        DeliveryManager deliveryManager = deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.DELIVERY_MANAGER_NOT_FOUND));
 
         if (role.equals("HUB_MANAGER")) {

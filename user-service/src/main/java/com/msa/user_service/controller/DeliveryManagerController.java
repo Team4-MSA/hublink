@@ -50,28 +50,28 @@ public class DeliveryManagerController {
         return ResponseEntity.ok(deliveryManagerService.getList(hubId, type, pageable, role, UUID.fromString(userId)));
     }
 
-    @GetMapping("/{deliveryManagerId}")
+    @GetMapping("/{targetUserId}")
     public ResponseEntity<DeliveryManagerResponse> getOne(
-            @PathVariable UUID deliveryManagerId,
+            @PathVariable UUID targetUserId,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String role
     ) {
         if (!role.equals("MASTER") && !role.equals("HUB_MANAGER") && !role.equals("DELIVERY_MANAGER")) {
             throw new CustomException(UserErrorCode.ACCESS_DENIED);
         }
-        return ResponseEntity.ok(deliveryManagerService.getOne(deliveryManagerId, role, UUID.fromString(userId)));
+        return ResponseEntity.ok(deliveryManagerService.getOne(targetUserId, role, UUID.fromString(userId)));
     }
 
-    @DeleteMapping("/{deliveryManagerId}")
+    @DeleteMapping("/{targetUserId}")
     public ResponseEntity<Void> delete(
-            @PathVariable UUID deliveryManagerId,
+            @PathVariable UUID targetUserId,
             @RequestHeader("X-User-Id") String userId,
             @RequestHeader("X-User-Role") String role
     ) {
         if (!role.equals("MASTER") && !role.equals("HUB_MANAGER")) {
             throw new CustomException(UserErrorCode.ACCESS_DENIED);
         }
-        deliveryManagerService.delete(deliveryManagerId, userId, role, UUID.fromString(userId));
+        deliveryManagerService.delete(targetUserId, userId, role, UUID.fromString(userId));
         return ResponseEntity.noContent().build();
     }
 }

@@ -12,15 +12,16 @@ public class UserNameAndCompanyResponse {
 
     private UUID id;
     private String name;
-    private String email;
     private UUID companyId;
+    private String email;
+
 
     public static UserNameAndCompanyResponse from(User user) {
         return UserNameAndCompanyResponse.builder()
                 .id(user.getUserId())
                 .name(user.getName())
-                .email(user.getEmail())
                 .companyId(user.getCompanyId())
+                .email(user.getEmail())
                 .build();
     }
 }

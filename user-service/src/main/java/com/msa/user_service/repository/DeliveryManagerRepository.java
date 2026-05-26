@@ -17,8 +17,6 @@ import java.util.UUID;
 
 public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager, UUID> {
 
-    Optional<DeliveryManager> findByDeliveryManagerIdAndDeletedAtIsNull(UUID deliveryManagerId);
-
     Optional<DeliveryManager> findByUserIdAndDeletedAtIsNull(UUID userId);
 
     Page<DeliveryManager> findAllByDeletedAtIsNull(Pageable pageable);
@@ -30,6 +28,8 @@ public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager
     Page<DeliveryManager> findAllByHubIdAndTypeAndDeletedAtIsNull(UUID hubId, DeliveryManagerType type, Pageable pageable);
 
     List<DeliveryManager> findAllByHubIdAndDeletedAtIsNull(UUID hubId);
+
+    List<DeliveryManager> findAllByHubIdInAndDeletedAtIsNull(Collection<UUID> hubIds);
 
     boolean existsByUserIdAndDeletedAtIsNull(UUID userId);
 

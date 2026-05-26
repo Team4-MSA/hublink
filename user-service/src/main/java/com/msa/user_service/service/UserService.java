@@ -153,8 +153,7 @@ public class UserService {
 
     // Internal API용 - 허브 담당 HUB_MANAGER 조회
     public InternalHubManagerResponse getHubManagerByHubId(UUID hubId) {
-        return userRepository.findByHubIdAndDeletedAtIsNull(hubId)
-                .filter(user -> user.getRole() == UserRole.HUB_MANAGER)
+        return userRepository.findByHubIdAndRoleAndDeletedAtIsNull(hubId, UserRole.HUB_MANAGER)
                 .map(InternalHubManagerResponse::of)
                 .orElseThrow(() -> new CustomException(UserErrorCode.HUB_MANAGER_NOT_FOUND));
     }

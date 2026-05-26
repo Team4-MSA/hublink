@@ -1,6 +1,7 @@
 package com.msa.user_service.repository;
 
 import com.msa.user_service.entity.User;
+import com.msa.user_service.entity.UserRole;
 import com.msa.user_service.entity.UserStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,5 +27,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     List<User> findAllByUserIdInAndDeletedAtIsNull(Collection<UUID> userIds);
 
-    Optional<User> findByHubIdAndDeletedAtIsNull(UUID hubId);
+    Optional<User> findByHubIdAndRoleAndDeletedAtIsNull(UUID hubId, UserRole role);
 }

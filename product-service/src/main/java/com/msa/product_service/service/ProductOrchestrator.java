@@ -62,8 +62,7 @@ public class ProductOrchestrator {
      * @param dto
      * @return
      */
-    public PageRes<ProductResponseDto> getProducts(Pageable page, ProductSearchDto dto, UUID userId,
-        String userRole) {
+    public PageRes<ProductResponseDto> getProducts(Pageable page, ProductSearchDto dto, UUID userId, String userRole) {
         //사용자가 허브 관리자라면
         if (UserRole.HUB_MANAGER.name().equals(userRole)) {
             //외부 호출로 사용자의 정보를 가져오고
@@ -78,37 +77,36 @@ public class ProductOrchestrator {
      * 상품 삭제
      *
      * @param id
-     * @param username
      * @param userRole
      * @return
      */
-    public Product deleteProduct(UUID id, String username, String userRole, UUID userId) {
+    public Product deleteProduct(UUID id, String userRole, UUID userId) {
         Product product = productService.getProduct(id);
 
-        //권한 검사 먼저 진행
+        //허브 관리자, 관리자 아니면 삭제 권한이 없다.
         if (!UserRole.HUB_MANAGER.name().equals(userRole) && !UserRole.MASTER.name().equals(userRole)) {
             throw new CustomException(ProductErrorCode.ACCESS_DENIED);
         }
         // 허브 관리자의 경우 본인 허브에 대해서만 삭제 권한이 존재함.
         if (UserRole.HUB_MANAGER.name().equals(userRole)) {
-            //응답 body를 Map으로 변환
+            //유저의 hubId와 삭제하려는 상품의 hubId가 동일한지 비교하여 데이터를 Map에 저장
             Map<String, Boolean> ishubManagerStr = userClient.isHubManager(userId,
                 product.getHubId()).getData();
-            // 전달 받은 응답 body null 검사
+            //데이터에 대한 null 처리
             if (ishubManagerStr == null) {
                 //null인 경우 접근 제한
                 throw new CustomException(ProductErrorCode.HUB_ACCESS_DENIED);
             }
-            //응답 body에서 우리가 원하는 데이터 추출.
+            //null이 아니라면, 비교값을 추출하여
             Boolean ishubManager = ishubManagerStr.get("verified");
-            //추출한 데이터에 대한 null 검사 및 false인 경우
+            //Null인지 false인지 확인.
             if (ishubManager == null || !ishubManager) {
                 // 접근 제한
                 throw new CustomException(ProductErrorCode.HUB_ACCESS_DENIED);
             }
         }
         //상품을 삭제
-        Product deleteProdcut = productService.deleteProduct(id, username);
+        Product deleteProdcut = productService.deleteProduct(id, userId);
         return deleteProdcut;
     }
 
@@ -118,13 +116,11 @@ public class ProductOrchestrator {
      * @param dto
      * @param userRole
      * @param userId
-     * @param username
      * @return
      */
-    public Product modifyProduct(ProductRequestDto dto, UUID id, String userRole, UUID userId,
-        String username) {
+    public Product modifyProduct(ProductRequestDto dto, UUID id, String userRole, UUID userId) {
         //권한 검사
-        checkPermission(userRole, userId, username, dto.getHubId(), dto.getCompanyId());
+        checkPermission(userRole, userId, dto.getHubId(), dto.getCompanyId());
         //상품 수정
         return productService.modifyProduct(dto,id);
     }
@@ -136,10 +132,14 @@ public class ProductOrchestrator {
      * @param dto
      * @param userId
      */
-    public Product createProductFlow(String userRole, ProductRequestDto dto, UUID userId,
-        String username) {
+    public Product createProductFlow(String userRole, ProductRequestDto dto, UUID userId) {
+        //상품에 업체 아이디가 있는지 혹은 hubID가 있는지 확인.
+        if(dto.getHubId() == null && dto.getCompanyId() == null){
+            throw new CustomException(ProductErrorCode.ACCESS_DENIED);
+        }
+
         //권한 검사
-        checkPermission(userRole, userId, username, dto.getHubId(), dto.getCompanyId());
+        checkPermission(userRole, userId, dto.getHubId(), dto.getCompanyId());
 
         //업체가 허브에 속해 있는지 확인.
         isCompanyInHub(dto.getCompanyId(), dto.getHubId());
@@ -159,7 +159,7 @@ public class ProductOrchestrator {
             stockClient.createStock(stockRequestDto);
         } catch (Exception e) {
             //재고 서비스에 문제가 발생 시, DB에 저장된 상품을 삭제.
-            productService.deleteProduct(newProduct.getId(), username);
+            productService.deleteProduct(newProduct.getId(), userId);
             throw new CustomException(ProductErrorCode.STOCK_SERVICE_FAILED);
         }
         return newProduct;
@@ -183,11 +183,10 @@ public class ProductOrchestrator {
      *
      * @param userRole
      * @param userId
-     * @param username
      * @param hubId     : 상품의 hubId
      * @param companyId : 상품의 companyId
      */
-    private void checkPermission(String userRole, UUID userId, String username, UUID hubId,
+    private void checkPermission(String userRole, UUID userId, UUID hubId,
         UUID companyId) {
         //이 3가지 권한이 아닐 경우, 모두 접근 제한
         if (!UserRole.MASTER.name().equals(userRole) && !UserRole.HUB_MANAGER.name().equals(userRole) && !UserRole.COMPANY_MANAGER.name().equals(userRole)) {

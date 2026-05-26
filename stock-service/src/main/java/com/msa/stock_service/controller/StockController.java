@@ -41,7 +41,7 @@ public class StockController {
      */
     @GetMapping("/history")
     public PageRes<StockHistorySearchResponseDto> getStocks(@RequestParam(value = "productId",required = true)UUID productId,
-                                               @PageableDefault(size = 10,page = 0,sort = "createdAt",
+                                                            @PageableDefault(size = 10,page = 0,sort = "createdAt",
                                                                 direction = Direction.DESC)Pageable pageable){
         return stockService.getStockhistories(productId, pageable);
     }

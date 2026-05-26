@@ -28,7 +28,7 @@ public class StockHistoryRepositoryCustomImpl implements StockHistoryRepositoryC
         List<OrderSpecifier<?>> orders = getAllOrderSpecifiers(pageable);
         QueryResults<StockHistory> result = queryFactory
             .selectFrom(stockHistory)
-            .where(productIdEq(productId))
+            .where(productIdEq(productId), isDeleted())
             .orderBy(orders.toArray(new OrderSpecifier[0]))
             .offset(pageable.getOffset())
             .limit(pageable.getPageSize())
@@ -46,6 +46,10 @@ public class StockHistoryRepositoryCustomImpl implements StockHistoryRepositoryC
     //productId는 반드시 필요.
     private BooleanExpression productIdEq(UUID  productId) {
         return stockHistory.productId.eq(productId);
+    }
+
+    private BooleanExpression isDeleted() {
+        return stockHistory.deletedAt.isNotNull();
     }
 
     private List<OrderSpecifier<?>> getAllOrderSpecifiers(Pageable pageable) {

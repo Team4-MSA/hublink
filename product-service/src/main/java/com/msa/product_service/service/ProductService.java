@@ -74,13 +74,12 @@ public class ProductService {
      * 상품 삭제
      *
      * @param productId
-     * @param username
      */
     @Transactional
-    public Product deleteProduct(UUID productId, String username) {
+    public Product deleteProduct(UUID productId, UUID userId) {
         Product deletedProduct = productRepository.findById(productId).orElseThrow(() -> new CustomException(ProductErrorCode.PRODUCT_NOT_FOUND));
 
-        deletedProduct.delete(username);
+        deletedProduct.delete(String.valueOf(userId));
         return deletedProduct;
     }
 

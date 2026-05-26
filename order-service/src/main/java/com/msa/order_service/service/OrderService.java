@@ -94,7 +94,7 @@ public class OrderService {
         String redisKey = "order:make" + orderKey;
         Boolean b = redisTemplate.opsForValue().setIfAbsent(redisKey, "PROCESSING", Duration.ofMinutes(1));
 
-        if(b.equals(Boolean.FALSE)) {
+        if (Boolean.FALSE.equals(b)) {
             throw new CustomException(OrderErrorCode.ALREADY_EXIST_ORDER);
         }
 

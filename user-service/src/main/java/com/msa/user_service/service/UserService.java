@@ -79,11 +79,30 @@ public class UserService {
 
     @Transactional
     public UserResponse updateUser(UUID userId, UpdateUserRequest request) {
-        User user = findActiveUser(userId);
-        user.update(request.getName(), request.getEmail(), request.getSlackId());
+        // hubId, companyId 변경 시 존재 여부 사전 검증
+        if (request.getHubId() != null) {
+            if (!hubClient.checkHubExists(request.getHubId()).isExists()) {
+                throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
+            }
+        }
+        if (request.getCompanyId() != null) {
+            if (!companyClient.checkCompanyExists(request.getCompanyId()).isExists()) {
+                throw new CustomException(UserErrorCode.COMPANY_NOT_FOUND);
+            }
+        }
 
-        if (user.getRole() == UserRole.DELIVERY_MANAGER && request.getSlackId() != null) {
-            deliveryManagerService.updateSlackId(userId, request.getSlackId());
+        User user = findActiveUser(userId);
+        user.update(request.getName(), request.getEmail(), request.getSlackId(),
+                request.getHubId(), request.getCompanyId());
+
+        // DELIVERY_MANAGER: slackId, hubId 변경 시 DeliveryManager에도 전파
+        if (user.getRole() == UserRole.DELIVERY_MANAGER) {
+            if (request.getSlackId() != null) {
+                deliveryManagerService.updateSlackId(userId, request.getSlackId());
+            }
+            if (request.getHubId() != null) {
+                deliveryManagerService.syncHubId(userId, request.getHubId());
+            }
         }
 
         return UserResponse.from(user);

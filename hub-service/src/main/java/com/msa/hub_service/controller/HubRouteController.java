@@ -1,10 +1,12 @@
 package com.msa.hub_service.controller;
 
+import com.msa.core_common.auth.UserRole;
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.hub_service.dto.HubRouteRequest;
 import com.msa.hub_service.dto.HubRouteResponse;
 import com.msa.hub_service.dto.HubRouteUpdateRequest;
 import com.msa.hub_service.entity.RouteType;
+import com.msa.hub_service.global.RequireRole;
 import com.msa.hub_service.service.HubRouteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class HubRouteController {
     private final HubRouteService hubRouteService;
 
     // 루트 등록
+    @RequireRole(UserRole.MASTER)
     @PostMapping
     public HubRouteResponse createHubRoute(@Valid @RequestBody HubRouteRequest request) {
         return hubRouteService.createHubRoute(request.departureHub(), request.arrivalHub());
@@ -35,12 +38,14 @@ public class HubRouteController {
     }
 
     // 수정
+    @RequireRole(UserRole.MASTER)
     @PatchMapping("/{hubRouteId}")
     public HubRouteResponse updateHubRoute(@PathVariable UUID hubRouteId, @Valid @RequestBody HubRouteUpdateRequest request) {
         return hubRouteService.updateHubRoute(hubRouteId, request);
     }
 
     // 삭제
+    @RequireRole(UserRole.MASTER)
     @DeleteMapping("/{hubRouteId}")
     public HubRouteResponse deleteHubRoute(@PathVariable UUID hubRouteId) {
         return hubRouteService.deleteHubRoute(hubRouteId);
@@ -60,8 +65,9 @@ public class HubRouteController {
     @GetMapping("/path")
     public List<HubRouteResponse> getHubPath(
             @RequestParam UUID departureHubId,
-            @RequestParam UUID arrivalHubId
+            @RequestParam UUID arrivalHubId,
+            @RequestParam(required = false) UUID companyId
     ) {
-        return hubRouteService.getHubPath(departureHubId, arrivalHubId);
+        return hubRouteService.getHubPath(departureHubId, arrivalHubId, companyId);
     }
 }

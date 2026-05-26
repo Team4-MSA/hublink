@@ -14,6 +14,7 @@ import org.springframework.core.Ordered;
 import org.springframework.data.redis.core.ReactiveRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
@@ -33,6 +34,13 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             "/api/v1/auth/signup",
             "/api/v1/auth/login",
             "/api/v1/auth/refresh"
+    );
+
+    private static final List<String> PUBLIC_PREFIXES = List.of(
+            "/swagger-ui",
+            "/v3/api-docs",
+            "/swagger-resources",
+            "/webjars"
     );
 
     private final SecretKey secretKey;
@@ -58,6 +66,10 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
+         if (PUBLIC_PREFIXES.stream().anyMatch(path::startsWith) || path.contains("/v3/api-docs")) {
+            return chain.filter(exchange);
+        }
+
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "인증 토큰이 없습니다.");
@@ -80,6 +92,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
         String userId = claims.getSubject();
         String role = claims.get("role", String.class);
+        String hubId = claims.get("hubId", String.class);
+        String companyId = claims.get("companyId", String.class);
 
         // 필수 Claim(userId, role) null 검증
         if (userId == null || role == null) {
@@ -98,11 +112,23 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                         return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "인증이 만료되었습니다.");
                     }
 
+                    // 헤더 스푸핑 방지: 클라이언트가 임의로 삽입한 헤더를 먼저 제거 후 JWT 기반 값으로 덮어씀
+                    ServerHttpRequest.Builder requestMutator = exchange.getRequest().mutate()
+                            .headers(headers -> {
+                                headers.remove("X-User-Id");
+                                headers.remove("X-User-Role");
+                                headers.remove("X-Hub-Id");
+                                headers.remove("X-Company-Id");
+                            })
+                            .header("X-User-Id", userId)
+                            .header("X-User-Role", role);
+
+                    // null인 경우 헤더 미포함 (MASTER는 X-Hub-Id, X-Company-Id 없음)
+                    if (hubId != null) requestMutator.header("X-Hub-Id", hubId);
+                    if (companyId != null) requestMutator.header("X-Company-Id", companyId);
+
                     ServerWebExchange mutatedExchange = exchange.mutate()
-                            .request(exchange.getRequest().mutate()
-                                    .header("X-User-Id", userId)
-                                    .header("X-User-Role", role)
-                                    .build())
+                            .request(requestMutator.build())
                             .build();
 
                     return chain.filter(mutatedExchange);

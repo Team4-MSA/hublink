@@ -40,7 +40,7 @@ public class DeliveryRouteHistory extends BaseEntity {
     @JoinColumn(name = "delivery_id", nullable = false)
     private Delivery delivery;
 
-    @Column(name = "delivery_manager_id")
+    @Column(name = "delivery_manager_id", nullable = false)
     private UUID deliveryManagerId;
 
     @Column(name = "sequence", nullable = false)

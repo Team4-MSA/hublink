@@ -4,6 +4,7 @@ import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.user_service.dto.*;
 import com.msa.user_service.entity.*;
+import java.util.List;
 import com.msa.user_service.global.UserErrorCode;
 import com.msa.user_service.repository.UserRepository;
 import com.msa.user_service.util.RedisUtil;
@@ -147,6 +148,18 @@ public class UserService {
     // Internal API용 - 다른 서비스에서 유저 정보 조회
     public UserAuthResponse getUserById(UUID userId) {
         return UserAuthResponse.from(findActiveUser(userId));
+    }
+
+    // Internal API용 - 복수 userId로 이름 + 소속 업체 조회
+    public List<UserNameAndCompanyResponse> getUserNamesAndCompanies(List<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+
+        return userRepository.findAllByUserIdInAndDeletedAtIsNull(userIds)
+                .stream()
+                .map(UserNameAndCompanyResponse::from)
+                .toList();
     }
 
     private User findActiveUser(UUID userId) {

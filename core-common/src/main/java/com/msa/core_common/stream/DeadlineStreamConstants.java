@@ -4,15 +4,18 @@ public final class DeadlineStreamConstants {
     private DeadlineStreamConstants() {
     }
 
-    // 스트림
+    // Stream
     public static final String DEADLINE_REQUESTED_STREAM = "deadline:requested:stream";
     public static final String DEADLINE_GENERATED_STREAM = "deadline:generated:stream";
+    public static final String DEADLINE_GENERATED_DELIVERY_DLQ_STREAM = "deadline:generated:delivery:dlq:stream";
 
-    // 서비스 그룹
+    // Consumer group
     public static final String AI_SERVICE_GROUP = "ai-service-group";
     public static final String SLACK_SERVICE_GROUP = "slack-service-group";
+    public static final String DELIVERY_SERVICE_GROUP = "delivery-service-group";
 
-    // 소비자
+    // Consumer
     public static final String AI_SERVICE_CONSUMER = "ai-service";
     public static final String SLACK_SERVICE_CONSUMER = "slack-service";
+    public static final String DELIVERY_SERVICE_CONSUMER = "delivery-service";
 }

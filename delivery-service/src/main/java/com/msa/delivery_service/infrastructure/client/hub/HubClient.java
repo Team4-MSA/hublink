@@ -10,13 +10,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import java.util.List;
 import java.util.UUID;
 
-@FeignClient(name = "hub-service", path = "/internal")
+@FeignClient(name = "hub-service")
 public interface HubClient {
 
-    @GetMapping("/hubs/{hubId}")
+    @GetMapping("/internal/hubs/{hubId}")
     HubResponse getHub(@PathVariable UUID hubId);
 
-    @GetMapping("/hub-routes/path")
+    @GetMapping("/api/v1/hub-routes/hub-routes/path")
     List<HubRouteResponse> getRoutes(
             @RequestParam UUID departureHubId,
             @RequestParam UUID destinationHubId

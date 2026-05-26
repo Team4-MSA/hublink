@@ -6,11 +6,14 @@ import com.msa.delivery_service.presentation.dto.DeliveryResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,5 +27,11 @@ public class DeliveryInternalController {
     @ResponseStatus(HttpStatus.CREATED)
     public DeliveryResponse createDelivery(@Valid @RequestBody DeliveryRequest request) {
         return deliveryService.createDelivery(request);
+    }
+    // 보상 트랜잭션 API
+    @PostMapping("/orders/{orderId}/compensate")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void compensateDeliveryCreation(@PathVariable UUID orderId) {
+        deliveryService.compensateDeliveryCreation(orderId);
     }
 }

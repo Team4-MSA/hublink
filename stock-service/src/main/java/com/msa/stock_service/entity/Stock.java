@@ -44,6 +44,7 @@ public class Stock extends BaseEntity {
     @Version
     private Integer version;
 
+    //재고 생성
     public static Stock create(StockRequestDto dto){
         return com.msa.stock_service.entity.Stock.builder()
             .productId(dto.getProductId())
@@ -58,9 +59,19 @@ public class Stock extends BaseEntity {
         this.reservedQuantity += quantity;
     }
 
+    //재고 복원
     public void restore(Integer orderQuantity){
         this.quantity += orderQuantity;
         this.reservedQuantity -= orderQuantity;
     }
-
+    public Stock modifyQuantity(Integer newQuantity){
+        if(newQuantity == null || newQuantity < 0){
+            throw new IllegalArgumentException("재고 수량은 0 이상이어야함.");
+        }
+        if(newQuantity < this.reservedQuantity) {
+            throw new IllegalArgumentException("예약 재고 보다는 많아야 함");
+        }
+        this.quantity = newQuantity;
+        return this;
+    }
 }

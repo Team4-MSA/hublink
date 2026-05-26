@@ -39,6 +39,8 @@ services:
       - "19092:19092"
     depends_on:
       - eureka-server
+    volumes:
+      - ./config-repo:/config-repo
 
   user-service:
     build:

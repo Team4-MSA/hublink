@@ -37,8 +37,12 @@ services:
     container_name: hublink-config-server
     ports:
       - "19092:19092"
+    environment:
+      - .env
     depends_on:
       - eureka-server
+    volumes:
+      - ./config-repo:/config-repo
 
   user-service:
     build:

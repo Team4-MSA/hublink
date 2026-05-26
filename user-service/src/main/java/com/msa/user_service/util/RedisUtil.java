@@ -16,6 +16,7 @@ public class RedisUtil {
     private static final String RT_PREFIX = "RT:";
     private static final String BL_PREFIX = "BL:";
     private static final String BL_USER_PREFIX = "BL:USER:";
+    private static final String SESSION_PREFIX = "SESSION:";
 
     public RedisUtil(
             RedisTemplate<String, String> redisTemplate,
@@ -68,5 +69,22 @@ public class RedisUtil {
     public void invalidateUser(String userId, long accessTokenTtl) {
         deleteRefreshToken(userId);
         blockUser(userId, accessTokenTtl);
+        deleteSession(userId);
+    }
+
+    // 단일 세션 jti 저장 (로그인/refresh 시 갱신)
+    public void saveSession(String userId, String jti, long ttl) {
+        redisTemplate.opsForValue()
+                .set(SESSION_PREFIX + userId, jti, ttl, TimeUnit.MILLISECONDS);
+    }
+
+    // 단일 세션 jti 조회 (Gateway에서 검증용)
+    public String getSession(String userId) {
+        return redisTemplate.opsForValue().get(SESSION_PREFIX + userId);
+    }
+
+    // 단일 세션 삭제 (로그아웃/유저 삭제 시)
+    public void deleteSession(String userId) {
+        redisTemplate.delete(SESSION_PREFIX + userId);
     }
 }

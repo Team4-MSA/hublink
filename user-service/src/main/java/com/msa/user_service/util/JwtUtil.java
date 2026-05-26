@@ -28,10 +28,11 @@ public class JwtUtil {
     }
 
     // Access Token 생성
-    public String generateAccessToken(UUID userId, String role) {
+    public String generateAccessToken(UUID userId, String role, String jti) {
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("role", role)
+                .id(jti)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessExpiration))
                 .signWith(secretKey)
@@ -51,6 +52,11 @@ public class JwtUtil {
     // 토큰에서 userId 추출
     public String getUserId(String token) {
         return getClaims(token).getSubject();
+    }
+
+    // 토큰에서 jti 추출
+    public String getJti(String token) {
+        return getClaims(token).getId();
     }
 
     // 토큰 만료시간 추출 (블랙리스트 TTL용)

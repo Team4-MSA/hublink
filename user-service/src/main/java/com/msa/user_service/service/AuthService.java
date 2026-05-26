@@ -9,6 +9,7 @@ import com.msa.user_service.global.UserErrorCode;
 import com.msa.user_service.util.JwtUtil;
 import com.msa.user_service.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,9 @@ public class AuthService {
     private final RedisUtil redisUtil;
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
+
+    @Value("${jwt.refresh-expiration}")
+    private long refreshExpiration;
 
     public LogInResponse logIn(LogInRequest request) {
 
@@ -38,15 +42,16 @@ public class AuthService {
             throw new CustomException(UserErrorCode.NOT_APPROVED);
         }
 
-        // 4. AT + RT 발급
-        String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getRole().name());
+        // 4. jti 생성 + AT + RT 발급
+        String jti = UUID.randomUUID().toString();
+        String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getRole().name(), jti);
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
-        // 5. Redis에 RT 저장
-        redisUtil.saveRefreshToken(
-                user.getUserId().toString(),
-                refreshToken
-        );
+        String userId = user.getUserId().toString();
+
+        // 5. Redis에 RT + SESSION(jti) 저장 (새 로그인 시 이전 세션 덮어씀)
+        redisUtil.saveRefreshToken(userId, refreshToken);
+        redisUtil.saveSession(userId, jti, refreshExpiration);
 
         return LogInResponse.builder()
                 .accessToken(accessToken)
@@ -65,8 +70,9 @@ public class AuthService {
             redisUtil.addBlacklist(accessToken, expiration);
         }
 
-        // 2. RT 삭제
+        // 2. RT + SESSION 삭제
         redisUtil.deleteRefreshToken(userId);
+        redisUtil.deleteSession(userId);
     }
 
     public LogInResponse refresh(String refreshToken) {
@@ -85,24 +91,28 @@ public class AuthService {
         // 3. RT 일치 확인 (불일치 = 탈취 감지 → 세션 전체 삭제)
         if (!savedToken.equals(refreshToken)) {
             redisUtil.deleteRefreshToken(userId);
+            redisUtil.deleteSession(userId);
             throw new CustomException(UserErrorCode.INVALID_TOKEN);
         }
 
         // 4. 최신 유저 정보 조회
         User user = userService.findActiveUserById(UUID.fromString(userId));
 
-        // 5. 사용자 상태 확인 (INACTIVE/REJECTED 계정은 토큰 갱신 불가 → RT도 즉시 폐기)
+        // 5. 사용자 상태 확인 (INACTIVE/REJECTED 계정은 토큰 갱신 불가 → RT + SESSION 즉시 폐기)
         if (user.getStatus() != UserStatus.APPROVED) {
             redisUtil.deleteRefreshToken(userId);
+            redisUtil.deleteSession(userId);
             throw new CustomException(UserErrorCode.NOT_APPROVED);
         }
 
-        // 6. 새 AT + RT 발급
-        String newAccessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getRole().name());
+        // 6. 새 jti + AT + RT 발급
+        String newJti = UUID.randomUUID().toString();
+        String newAccessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getRole().name(), newJti);
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
-        // 7. 기존 RT 폐기 + 새 RT 저장 (RTR)
+        // 7. 기존 RT 폐기 + 새 RT + SESSION 저장 (RTR + jti 갱신)
         redisUtil.saveRefreshToken(userId, newRefreshToken);
+        redisUtil.saveSession(userId, newJti, refreshExpiration);
 
         return LogInResponse.builder()
                 .accessToken(newAccessToken)

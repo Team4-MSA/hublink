@@ -28,6 +28,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     private static final String INTERNAL_PATH_PREFIX = "/internal/";
     private static final String BL_PREFIX = "BL:";
     private static final String BL_USER_PREFIX = "BL:USER:";
+    private static final String SESSION_PREFIX = "SESSION:";
 
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/v1/auth/signup",
@@ -80,22 +81,28 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
         String userId = claims.getSubject();
         String role = claims.get("role", String.class);
+        String jti = claims.getId();
 
-        // 필수 Claim(userId, role) null 검증
-        if (userId == null || role == null) {
+        // 필수 Claim(userId, role, jti) null 검증
+        if (userId == null || role == null || jti == null) {
             return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "토큰에 필수 정보가 누락되었습니다.");
         }
 
-        // Redis 블랙리스트 체크 (AT 블랙리스트 + 삭제된 유저 차단) - 병렬 조회
+        // Redis 병렬 조회: AT 블랙리스트 + 삭제된 유저 차단 + 단일 세션 jti 검증
         Mono<Boolean> tokenBlacklisted = redisTemplate.hasKey(BL_PREFIX + token)
                 .onErrorMap(e -> new RedisUnavailableException());
         Mono<Boolean> userBlocked = redisTemplate.hasKey(BL_USER_PREFIX + userId)
                 .onErrorMap(e -> new RedisUnavailableException());
+        Mono<String> sessionJti = redisTemplate.opsForValue().get(SESSION_PREFIX + userId)
+                .onErrorMap(e -> new RedisUnavailableException());
 
-        return Mono.zip(tokenBlacklisted, userBlocked)
+        return Mono.zip(tokenBlacklisted, userBlocked, sessionJti)
                 .flatMap(tuple -> {
                     if (Boolean.TRUE.equals(tuple.getT1()) || Boolean.TRUE.equals(tuple.getT2())) {
                         return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "인증이 만료되었습니다.");
+                    }
+                    if (!jti.equals(tuple.getT3())) {
+                        return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "다른 기기에서 로그인되었습니다.");
                     }
 
                     ServerWebExchange mutatedExchange = exchange.mutate()

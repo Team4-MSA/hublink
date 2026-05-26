@@ -27,7 +27,7 @@ public class UserCircuitService {
 
         // 유저 서버가 죽어도 주문 목록은 나오게 "알 수 없는 유저"로 채워서 리턴
         return userIds.stream()
-                .map(id -> new UsernameResDto(id, "알 수 없는 유저(서버 점검 중)", null))
+                .map(id -> new UsernameResDto(id, "알 수 없는 유저(서버 점검 중)", null, null))
                 .toList();
     }
 

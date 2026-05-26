@@ -5,5 +5,6 @@ import java.util.UUID;
 public record UsernameResDto(
         UUID id,
         String name,
-        UUID companyId
+        UUID companyId,
+        String email
 ) {}

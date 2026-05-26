@@ -39,14 +39,12 @@ public class AuthService {
         }
 
         // 4. AT + RT 발급
-        String accessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getRole().name());
+        String accessToken = jwtUtil.generateAccessToken(
+                user.getUserId(), user.getRole().name(), user.getHubId(), user.getCompanyId());
         String refreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
         // 5. Redis에 RT 저장
-        redisUtil.saveRefreshToken(
-                user.getUserId().toString(),
-                refreshToken
-        );
+        redisUtil.saveRefreshToken(user.getUserId().toString(), refreshToken);
 
         return LogInResponse.builder()
                 .accessToken(accessToken)
@@ -98,7 +96,8 @@ public class AuthService {
         }
 
         // 6. 새 AT + RT 발급
-        String newAccessToken = jwtUtil.generateAccessToken(user.getUserId(), user.getRole().name());
+        String newAccessToken = jwtUtil.generateAccessToken(
+                user.getUserId(), user.getRole().name(), user.getHubId(), user.getCompanyId());
         String newRefreshToken = jwtUtil.generateRefreshToken(user.getUserId());
 
         // 7. 기존 RT 폐기 + 새 RT 저장 (RTR)

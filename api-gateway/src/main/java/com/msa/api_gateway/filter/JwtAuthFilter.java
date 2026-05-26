@@ -80,6 +80,8 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
         String userId = claims.getSubject();
         String role = claims.get("role", String.class);
+        String hubId = claims.get("hubId", String.class);
+        String companyId = claims.get("companyId", String.class);
 
         // 필수 Claim(userId, role) null 검증
         if (userId == null || role == null) {
@@ -98,11 +100,16 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                         return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "인증이 만료되었습니다.");
                     }
 
+                    var requestMutator = exchange.getRequest().mutate()
+                            .header("X-User-Id", userId)
+                            .header("X-User-Role", role);
+
+                    // null인 경우 헤더 미포함 (MASTER는 X-Hub-Id, X-Company-Id 없음)
+                    if (hubId != null) requestMutator.header("X-Hub-Id", hubId);
+                    if (companyId != null) requestMutator.header("X-Company-Id", companyId);
+
                     ServerWebExchange mutatedExchange = exchange.mutate()
-                            .request(exchange.getRequest().mutate()
-                                    .header("X-User-Id", userId)
-                                    .header("X-User-Role", role)
-                                    .build())
+                            .request(requestMutator.build())
                             .build();
 
                     return chain.filter(mutatedExchange);

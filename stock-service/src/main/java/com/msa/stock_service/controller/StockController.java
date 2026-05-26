@@ -2,6 +2,7 @@ package com.msa.stock_service.controller;
 
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.stock_service.dto.StockDecreaRequestDto;
+import com.msa.stock_service.dto.StockHistoryModifyDto;
 import com.msa.stock_service.dto.StockHistoryResponseDto;
 import com.msa.stock_service.dto.StockHistorySearchResponseDto;
 import com.msa.stock_service.dto.StockRequestDto;
@@ -32,6 +33,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class StockController {
     private final StockService stockService;
     private final StockOrchestrator stockOrchestrator;
+
+    /**
+     * 특정 상품에 대한 재고
+     * @param dto
+     * @return
+     */
+    @PatchMapping("/modify")
+    public StockHistoryModifyDto modifyStock(@RequestBody StockRequestDto dto){
+       return  stockService.modifyStock(dto);
+    }
 
     /**
      * 상품에 대한 재고 이력을 조회

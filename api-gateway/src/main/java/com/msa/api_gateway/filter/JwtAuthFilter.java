@@ -1,5 +1,7 @@
 package com.msa.api_gateway.filter;
 
+import com.msa.api_gateway.exception.RedisUnavailableException;
+import com.msa.api_gateway.util.WebFluxResponseUtils;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -25,6 +27,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
     private static final String INTERNAL_PATH_PREFIX = "/internal/";
     private static final String BL_PREFIX = "BL:";
+    private static final String BL_USER_PREFIX = "BL:USER:";
 
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/v1/auth/signup",
@@ -48,24 +51,20 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getPath().value();
 
         if (path.startsWith(INTERNAL_PATH_PREFIX)) {
-            exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
-            return exchange.getResponse().setComplete();
+            return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.FORBIDDEN, "접근이 거부되었습니다.");
         }
 
-        if (PUBLIC_PATHS.stream().anyMatch(path::startsWith)) {
+        if (PUBLIC_PATHS.stream().anyMatch(path::equals)) {
             return chain.filter(exchange);
         }
 
-        // Authorization 헤더 확인
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
+            return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "인증 토큰이 없습니다.");
         }
 
         String token = authHeader.substring(7);
 
-        // JWT 검증
         Claims claims;
         try {
             claims = Jwts.parser()
@@ -74,25 +73,31 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                     .parseSignedClaims(token)
                     .getPayload();
         } catch (ExpiredJwtException e) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
+            return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "토큰이 만료되었습니다.");
         } catch (JwtException e) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
+            return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다.");
         }
 
         String userId = claims.getSubject();
         String role = claims.get("role", String.class);
 
-        // Redis 블랙리스트 체크 (로그아웃된 AT 차단)
-        return redisTemplate.hasKey(BL_PREFIX + token)
-                .flatMap(isBlacklisted -> {
-                    if (isBlacklisted) {
-                        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                        return exchange.getResponse().setComplete();
+        // 필수 Claim(userId, role) null 검증
+        if (userId == null || role == null) {
+            return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "토큰에 필수 정보가 누락되었습니다.");
+        }
+
+        // Redis 블랙리스트 체크 (AT 블랙리스트 + 삭제된 유저 차단) - 병렬 조회
+        Mono<Boolean> tokenBlacklisted = redisTemplate.hasKey(BL_PREFIX + token)
+                .onErrorMap(e -> new RedisUnavailableException());
+        Mono<Boolean> userBlocked = redisTemplate.hasKey(BL_USER_PREFIX + userId)
+                .onErrorMap(e -> new RedisUnavailableException());
+
+        return Mono.zip(tokenBlacklisted, userBlocked)
+                .flatMap(tuple -> {
+                    if (Boolean.TRUE.equals(tuple.getT1()) || Boolean.TRUE.equals(tuple.getT2())) {
+                        return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "인증이 만료되었습니다.");
                     }
 
-                    // 하위 서비스로 X-User-Id, X-User-Role 헤더 전달
                     ServerWebExchange mutatedExchange = exchange.mutate()
                             .request(exchange.getRequest().mutate()
                                     .header("X-User-Id", userId)
@@ -101,7 +106,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                             .build();
 
                     return chain.filter(mutatedExchange);
-                });
+                })
+                .onErrorResume(RedisUnavailableException.class, e ->
+                        WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.SERVICE_UNAVAILABLE, "서비스가 일시적으로 불가합니다."));
     }
 
     @Override

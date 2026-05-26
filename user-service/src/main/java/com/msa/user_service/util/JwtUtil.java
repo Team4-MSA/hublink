@@ -53,11 +53,6 @@ public class JwtUtil {
         return getClaims(token).getSubject();
     }
 
-    // 토큰에서 role 추출
-    public String getRole(String token) {
-        return getClaims(token).get("role", String.class);
-    }
-
     // 토큰 만료시간 추출 (블랙리스트 TTL용)
     public long getExpiration(String token) {
         Date expiration = getClaims(token).getExpiration();

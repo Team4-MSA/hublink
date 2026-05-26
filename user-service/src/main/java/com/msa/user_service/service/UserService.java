@@ -6,12 +6,16 @@ import com.msa.user_service.dto.*;
 import com.msa.user_service.entity.*;
 import com.msa.user_service.global.UserErrorCode;
 import com.msa.user_service.repository.UserRepository;
+import com.msa.user_service.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.UUID;
 
@@ -26,6 +30,10 @@ public class UserService {
     private final CompanyManagerService companyManagerService;
     private final DeliveryManagerService deliveryManagerService;
     private final PasswordEncoder passwordEncoder;
+    private final RedisUtil redisUtil;
+
+    @Value("${jwt.access-expiration}")
+    private long accessExpiration;
 
     @Transactional
     public UserResponse signUp(SignUpRequest request) {
@@ -77,6 +85,12 @@ public class UserService {
     public void deleteUser(UUID userId, String deletedBy) {
         User user = findActiveUser(userId);
         user.delete(deletedBy);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                redisUtil.invalidateUser(userId.toString(), accessExpiration);
+            }
+        });
     }
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)

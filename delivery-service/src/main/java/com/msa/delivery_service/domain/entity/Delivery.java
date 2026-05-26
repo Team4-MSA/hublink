@@ -17,6 +17,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -25,6 +26,7 @@ import java.util.UUID;
 @Builder
 @Entity
 @Table(name = "p_deliveries", schema = "delivery_service")
+@SQLRestriction("deleted_at IS NULL")
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Delivery extends BaseEntity {
@@ -34,7 +36,7 @@ public class Delivery extends BaseEntity {
     @Column(name = "delivery_id", nullable = false)
     private UUID deliveryId;
 
-    @Column(name = "order_id", nullable = false, unique = true)
+    @Column(name = "order_id", nullable = false)
     private UUID orderId;
 
     @Column(name = "departure_hub_id", nullable = false)

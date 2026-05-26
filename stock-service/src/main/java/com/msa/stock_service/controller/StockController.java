@@ -11,6 +11,7 @@ import com.msa.stock_service.entity.Stock;
 import com.msa.stock_service.entity.StockHistory;
 import com.msa.stock_service.service.StockOrchestrator;
 import com.msa.stock_service.service.StockService;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.PATCH;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +41,7 @@ public class StockController {
      * @return
      */
     @PatchMapping("/modify")
-    public StockHistoryModifyDto modifyStock(@RequestBody StockRequestDto dto){
+    public StockHistoryModifyDto modifyStock(@Valid @RequestBody StockRequestDto dto){
        return  stockService.modifyStock(dto);
     }
 

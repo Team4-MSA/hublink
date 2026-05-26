@@ -49,7 +49,7 @@ public class StockHistoryRepositoryCustomImpl implements StockHistoryRepositoryC
     }
 
     private BooleanExpression isDeleted() {
-        return stockHistory.deletedAt.isNotNull();
+        return stockHistory.deletedAt.isNull();
     }
 
     private List<OrderSpecifier<?>> getAllOrderSpecifiers(Pageable pageable) {

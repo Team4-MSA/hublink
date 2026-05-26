@@ -79,7 +79,7 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
     }
 
     private BooleanExpression isDeleted() {
-        return product.deletedAt.isNotNull();
+        return product.deletedAt.isNull();
     }
 
     /**

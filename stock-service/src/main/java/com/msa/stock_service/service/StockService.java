@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class StockService {
     private final StockRepository stockRepository;
     private final StockHistoryRepository stockHistoryRepository;
-
+    @Transactional
     public StockHistoryModifyDto modifyStock(StockRequestDto dto){
         //상품아이디로 재고를 조회한다.
         Stock modifyStock = stockRepository.findByProductId(dto.getProductId());

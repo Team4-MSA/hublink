@@ -25,7 +25,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class DeliveryCreationTransactionalService {
+public class DeliveryCreateService {
     /*
         외부 서비스 호출과 DB 커넥션을 분리하기 위해 트랜잭션을 외부로 분리
         Self-Invocation 방지를 위해 따로 클래스 작성

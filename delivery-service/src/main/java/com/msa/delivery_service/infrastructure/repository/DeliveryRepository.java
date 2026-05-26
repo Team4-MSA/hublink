@@ -15,25 +15,21 @@ import java.util.UUID;
 
 public interface DeliveryRepository extends JpaRepository<Delivery, UUID> {
 
-    boolean existsByOrderIdAndDeletedAtIsNull(UUID orderId);
+    boolean existsByOrderId(UUID orderId);
 
-    Optional<Delivery> findByOrderIdAndDeletedAtIsNull(UUID orderId);
-
-    Optional<Delivery> findByDeliveryIdAndDeletedAtIsNull(UUID deliveryId);
-
-    Page<Delivery> findAllByDeletedAtIsNull(Pageable pageable);
+    Optional<Delivery> findByOrderId(UUID orderId);
 
     // 특정 업체 배송 담당자에게 배정된 배송 목록 조회
-    Page<Delivery> findAllByCompanyDeliveryManagerIdAndDeletedAtIsNull(UUID companyDeliveryManagerId, Pageable pageable);
+    Page<Delivery> findAllByCompanyDeliveryManagerId(UUID companyDeliveryManagerId, Pageable pageable);
 
     // 아직 배송 중인 업체 배송 담당자 ID 목록 조회
     @Query("""
-        select distinct d.companyDeliveryManagerId 
+        select distinct d.companyDeliveryManagerId
         from Delivery d
         where d.companyDeliveryManagerId in :managerIds
             and d.deletedAt is null
             and d.status not in :finishedStatuses
-""")
+    """)
     Set<UUID> findWorkingManagerIds(
             @Param("managerIds") Collection<UUID> managerIds,
             @Param("finishedStatuses") Collection<DeliveryStatus> finishedStatuses

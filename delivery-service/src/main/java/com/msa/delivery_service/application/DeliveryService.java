@@ -60,14 +60,14 @@ public class DeliveryService {
     private final DeliveryRouteHistoryRepository deliveryRouteHistoryRepository;
     private final HubClient hubClient;
     private final UserClient userClient;
-    private final DeliveryCreationTransactionalService deliveryCreationTransactionalService;
+    private final DeliveryCreateService deliveryCreateService;
 
     @Transactional(readOnly = true)
     public PageRes<DeliveryResponse> getDeliveries(String role, Pageable pageable) {
         // MASTER: 전체 배송 목록 조회 가능
         // 그 외 권한: 접근 불가
         Page<DeliveryResponse> deliveries = switch (role) {
-            case MASTER -> deliveryRepository.findAllByDeletedAtIsNull(pageable)
+            case MASTER -> deliveryRepository.findAll(pageable)
                     .map(DeliveryResponse::from);
             default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
         };
@@ -80,7 +80,7 @@ public class DeliveryService {
         // DELIVERY_MANAGER: 본인에게 배정된 배송 목록 조회 가능
         // 그 외 권한: 접근 불가
         Page<DeliveryResponse> deliveries = switch (role) {
-            case DELIVERY_MANAGER -> deliveryRepository.findAllByCompanyDeliveryManagerIdAndDeletedAtIsNull(userId, pageable)
+            case DELIVERY_MANAGER -> deliveryRepository.findAllByCompanyDeliveryManagerId(userId, pageable)
                     .map(DeliveryResponse::from);
             default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
         };
@@ -90,10 +90,10 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public DeliveryDetailResponse getDelivery(UUID userId, String role, UUID deliveryId) {
-        Delivery delivery = deliveryRepository.findByDeliveryIdAndDeletedAtIsNull(deliveryId)
+        Delivery delivery = deliveryRepository.findById(deliveryId)
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
         List<DeliveryRouteHistory> routeHistories = deliveryRouteHistoryRepository
-                .findByDeliveryDeliveryIdAndDeletedAtIsNullOrderBySequenceAsc(deliveryId);
+                .findByDeliveryDeliveryIdOrderBySequenceAsc(deliveryId);
 
         // MASTER, HUB_MANAGER, SUPPLIER_MANAGER: 배송 상세 조회 가능
         // DELIVERY_MANAGER: 본인에게 배정된 배송만 조회 가능 (경로를 포함하기 때문에 허브 배송 담당자도 조회 가능)
@@ -101,7 +101,7 @@ public class DeliveryService {
             case MASTER, HUB_MANAGER, SUPPLIER_MANAGER -> DeliveryDetailResponse.of(delivery, routeHistories);
             case DELIVERY_MANAGER -> {
                 boolean assignedDelivery = userId.equals(delivery.getCompanyDeliveryManagerId())
-                        || deliveryRouteHistoryRepository.existsByDeliveryDeliveryIdAndDeliveryManagerIdAndDeletedAtIsNull(
+                        || deliveryRouteHistoryRepository.existsByDeliveryDeliveryIdAndDeliveryManagerId(
                         delivery.getDeliveryId(),
                         userId
                 );
@@ -115,7 +115,7 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public DeliveryResponse getDeliveryByOrderId(String role, UUID orderId) {
-        Delivery delivery = deliveryRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+        Delivery delivery = deliveryRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
         // MASTER, HUB_MANAGER, SUPPLIER_MANAGER: 주문 기준 배송 조회 가능
@@ -133,7 +133,7 @@ public class DeliveryService {
             UUID deliveryId,
             DeliveryStatusUpdateRequest request
     ) {
-        Delivery delivery = deliveryRepository.findByDeliveryIdAndDeletedAtIsNull(deliveryId)
+        Delivery delivery = deliveryRepository.findById(deliveryId)
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
         // MASTER, HUB_MANAGER: 대표 배송 상태 변경 가능
@@ -165,7 +165,7 @@ public class DeliveryService {
             UUID routeHistoryId,
             DeliveryRouteStatusUpdateRequest request
     ) {
-        DeliveryRouteHistory routeHistory = deliveryRouteHistoryRepository.findByDeliveryRouteHistoryIdAndDeletedAtIsNull(routeHistoryId)
+        DeliveryRouteHistory routeHistory = deliveryRouteHistoryRepository.findById(routeHistoryId)
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_ROUTE_HISTORY_NOT_FOUND));
 
         // MASTER, HUB_MANAGER: 경로 상태 변경 가능
@@ -199,7 +199,7 @@ public class DeliveryService {
     */
 
     public DeliveryResponse createDelivery(DeliveryRequest request) {
-        if (deliveryRepository.existsByOrderIdAndDeletedAtIsNull(request.getOrderId())) {
+        if (deliveryRepository.existsByOrderId(request.getOrderId())) {
             throw new CustomException(DeliveryErrorCode.DUPLICATE_ORDER_DELIVERY);
         }
 
@@ -215,7 +215,7 @@ public class DeliveryService {
         // 배송 경로 테이블에 들어갈 허브 배송 담당자들 배정
         Map<UUID, UUID> hubDeliveryManagerIds = assignHubDeliveryManagers(hubRoutes, deliveryManagers);
 
-        return deliveryCreationTransactionalService.createDelivery(
+        return deliveryCreateService.createDelivery(
                 request,
                 hubManager,
                 companyDeliveryManager,
@@ -228,18 +228,18 @@ public class DeliveryService {
 
     @Transactional
     public void updateFinalDepartureDeadline(DeadlineGeneratedEvent event) {
-        Delivery delivery = deliveryRepository.findByDeliveryIdAndDeletedAtIsNull(event.getDeliveryId())
+        Delivery delivery = deliveryRepository.findById(event.getDeliveryId())
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
         delivery.updateFinalDepartureDeadline(event.getFinalDepartureDeadline());
     }
 
     @Transactional
     public void compensateDeliveryCreation(UUID orderId) {
-        deliveryRepository.findByOrderIdAndDeletedAtIsNull(orderId)
+        deliveryRepository.findByOrderId(orderId)
                 .ifPresent(delivery -> {
                     delivery.cancel();
                     delivery.delete("SYSTEM");
-                    deliveryRouteHistoryRepository.findByDeliveryDeliveryIdAndDeletedAtIsNullOrderBySequenceAsc(delivery.getDeliveryId())
+                    deliveryRouteHistoryRepository.findByDeliveryDeliveryIdOrderBySequenceAsc(delivery.getDeliveryId())
                             .forEach(routeHistory -> {
                                 if (routeHistory.getStatus().canChangeTo(DeliveryRouteStatus.FAILED)) {
                                     routeHistory.updateStatus(DeliveryRouteStatus.FAILED);

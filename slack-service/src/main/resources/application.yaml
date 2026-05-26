@@ -2,16 +2,4 @@ spring:
   application:
     name: slack-service
   config:
-    import: "optional:configserver:"
-  cloud:
-    config:
-      discovery:
-        enabled: true
-        service-id: config-server
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:19090/eureka/
-    register-with-eureka: true
-    fetch-registry: true
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:19092}

@@ -12,8 +12,8 @@ import java.util.UUID;
 @FeignClient(name = "hub-service", fallbackFactory = HubClientFallbackFactory.class)
 public interface HubClient {
     @GetMapping("/internal/hubs/{hubId}/exists")
-    GlobalResponse<Boolean> getHubExist(@PathVariable UUID hubId);
+    Boolean getHubExist(@PathVariable UUID hubId);
 
     @GetMapping("/internal/hubs/coordinates")
-    GlobalResponse<CoordinateDto> getCoordinates(@RequestParam("address") String address);
+    CoordinateDto getCoordinates(@RequestParam("address") String address);
 }

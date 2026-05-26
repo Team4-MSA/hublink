@@ -19,19 +19,19 @@ public class HubClientFallbackFactory implements FallbackFactory<HubClient> {
     public HubClient create(Throwable cause) {
         return new HubClient() {
             @Override
-            public GlobalResponse<Boolean> getHubExist(UUID hubId) {
+            public Boolean getHubExist(UUID hubId) {
                 log.error("HubService getHubExists 통신 실패 - hubId: {}, 사유: {}", hubId, cause.getMessage());
 
                 throw new CustomException(CompanyErrorCode.HUB_SERVICE_UNAVAILABLE);
             }
 
             @Override
-            public GlobalResponse<CoordinateDto> getCoordinates(String address) {
+            public CoordinateDto getCoordinates(String address) {
                 log.error("hub-service 통신 장애. 주소: {}, 사유: {}", address, cause.getMessage());
 
                 CoordinateDto emptyCoordinate = new CoordinateDto(null, null);
 
-                return (GlobalResponse<CoordinateDto>) GlobalResponse.success(200, emptyCoordinate);
+                return emptyCoordinate;
             }
         };
     }

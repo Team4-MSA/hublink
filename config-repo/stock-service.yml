@@ -4,6 +4,11 @@ server:
 spring:
   application:
     name: stock-service
+  datasource:
+    url: ${DB_URL}?currentSchema=stock_service
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
 
 eureka:
   client:

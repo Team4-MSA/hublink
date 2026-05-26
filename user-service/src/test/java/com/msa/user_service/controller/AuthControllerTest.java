@@ -44,7 +44,7 @@ class AuthControllerTest {
 
         String body = """
                 {
-                    "username": "newuser1",
+                    "username": "masteruser",
                     "password": "Password1!",
                     "name": "새유저",
                     "email": "new@example.com",

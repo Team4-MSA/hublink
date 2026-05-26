@@ -12,6 +12,8 @@ import com.msa.user_service.entity.UserStatus;
 import com.msa.user_service.fixture.TestFixtures;
 import com.msa.user_service.global.UserErrorCode;
 import com.msa.user_service.repository.UserRepository;
+import com.msa.user_service.util.RedisUtil;
+import org.springframework.transaction.support.TransactionSynchronization;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +30,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
@@ -41,6 +45,7 @@ class UserServiceTest {
     @Mock private UserApprovalService userApprovalService;
     @Mock private HubManagerService hubManagerService;
     @Mock private PasswordEncoder passwordEncoder;
+    @Mock private RedisUtil redisUtil;
 
     @InjectMocks
     private UserService userService;
@@ -157,8 +162,13 @@ class UserServiceTest {
             // when
             userService.deleteUser(TestFixtures.USER_ID, "admin");
 
-            // then: user.delete() 가 호출됐는지 확인 (deletedAt 세팅)
+            // then
             assertThat(user.getDeletedAt()).isNotNull();
+
+            // afterCommit 콜백 수동 트리거 → Redis 무효화 호출 검증
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(TransactionSynchronization::afterCommit);
+            then(redisUtil).should().invalidateUser(eq(TestFixtures.USER_ID.toString()), anyLong());
         } finally {
             TransactionSynchronizationManager.clearSynchronization();
         }

@@ -65,7 +65,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange);
         }
 
-        if (PUBLIC_PREFIXES.stream().anyMatch(path::startsWith)) {
+         if (PUBLIC_PREFIXES.stream().anyMatch(path::startsWith) || path.contains("/v3/api-docs")) {
             return chain.filter(exchange);
         }
 

@@ -7,6 +7,7 @@ import com.msa.user_service.dto.DeliveryManagerRequest;
 import com.msa.user_service.dto.DeliveryManagerResponse;
 import com.msa.user_service.dto.HubExistsResponse;
 import com.msa.user_service.dto.InternalDeliveryManagerResponse;
+import com.msa.user_service.dto.UpdateDeliveryManagerRequest;
 import com.msa.user_service.entity.DeliveryManager;
 import com.msa.user_service.entity.DeliveryManagerType;
 import com.msa.user_service.entity.User;
@@ -222,11 +223,111 @@ class DeliveryManagerServiceTest {
         assertThat(result.get(0).getDeliveryManagerId()).isEqualTo(TestFixtures.USER_ID);
     }
 
+    @Test
+    @DisplayName("배송 담당자 수정 - type, slackId 변경 및 User.slackId 전파")
+    void update_typeAndSlackId() {
+        // given
+        DeliveryManager dm = TestFixtures.hubDeliveryManager();
+        User user = TestFixtures.pendingDeliveryManagerUser();
+        UpdateDeliveryManagerRequest request = updateDmRequest(null, DeliveryManagerType.HUB_DELIVERY, "U_NEW_SLACK");
+
+        given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(dm));
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // when
+        DeliveryManagerResponse response = deliveryManagerService.update(
+                TestFixtures.USER_ID, request, "MASTER", TestFixtures.ADMIN_ID);
+
+        // then
+        assertThat(response.getSlackId()).isEqualTo("U_NEW_SLACK");
+        assertThat(user.getSlackId()).isEqualTo("U_NEW_SLACK"); // User에 전파됐는지 확인
+    }
+
+    @Test
+    @DisplayName("배송 담당자 수정 - hubId 변경 시 User.hubId 전파 (MASTER만 가능)")
+    void update_hubId_asMaster() {
+        // given
+        UUID newHubId = UUID.randomUUID();
+        DeliveryManager dm = TestFixtures.hubDeliveryManager(); // HUB_ID 소속
+        User user = TestFixtures.pendingDeliveryManagerUser();
+        UpdateDeliveryManagerRequest request = updateDmRequest(newHubId, null, null);
+
+        given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(dm));
+        given(hubClient.checkHubExists(newHubId)).willReturn(hubExistsResponse(true));
+        given(deliveryManagerRepository.findLatestByHubId(newHubId)).willReturn(Optional.empty());
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // when
+        deliveryManagerService.update(TestFixtures.USER_ID, request, "MASTER", TestFixtures.ADMIN_ID);
+
+        // then
+        assertThat(dm.getHubId()).isEqualTo(newHubId);
+        assertThat(user.getHubId()).isEqualTo(newHubId); // User에 전파됐는지 확인
+    }
+
+    @Test
+    @DisplayName("배송 담당자 수정 - HUB_MANAGER가 hubId 변경 시도 → 403")
+    void update_hubId_asHubManager_forbidden() {
+        // given
+        UUID newHubId = UUID.randomUUID();
+        DeliveryManager dm = TestFixtures.hubDeliveryManager(); // HUB_ID 소속
+        User hubManagerUser = TestFixtures.approvedHubManagerUser(); // HUB_ID 소속 허브 매니저
+        UpdateDeliveryManagerRequest request = updateDmRequest(newHubId, null, null);
+
+        given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(dm));
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.ADMIN_ID))
+                .willReturn(Optional.of(hubManagerUser));
+
+        // then
+        assertThatThrownBy(() ->
+                deliveryManagerService.update(TestFixtures.USER_ID, request, "HUB_MANAGER", TestFixtures.ADMIN_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("배송 담당자 수정 - HUB_MANAGER가 다른 허브 담당자 수정 시도 → 403")
+    void update_wrongHub_asHubManager_forbidden() {
+        // given
+        DeliveryManager dm = TestFixtures.hubDeliveryManager(); // HUB_ID 소속
+        UUID otherHubId = UUID.randomUUID();
+        User otherHubManager = TestFixtures.approvedHubManagerUser();
+        // otherHubManager의 hubId를 다른 값으로 세팅
+        TestFixtures.setField(otherHubManager, "hubId", otherHubId);
+        UpdateDeliveryManagerRequest request = updateDmRequest(null, DeliveryManagerType.HUB_DELIVERY, null);
+
+        given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(dm));
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.ADMIN_ID))
+                .willReturn(Optional.of(otherHubManager));
+
+        // then
+        assertThatThrownBy(() ->
+                deliveryManagerService.update(TestFixtures.USER_ID, request, "HUB_MANAGER", TestFixtures.ADMIN_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_ACCESS_DENIED));
+    }
+
     private DeliveryManagerRequest dmRequest(UUID userId, UUID hubId, DeliveryManagerType type) {
         DeliveryManagerRequest req = new DeliveryManagerRequest();
         ReflectionTestUtils.setField(req, "userId", userId);
         ReflectionTestUtils.setField(req, "hubId", hubId);
         ReflectionTestUtils.setField(req, "type", type);
+        return req;
+    }
+
+    private UpdateDeliveryManagerRequest updateDmRequest(UUID hubId, DeliveryManagerType type, String slackId) {
+        UpdateDeliveryManagerRequest req = new UpdateDeliveryManagerRequest();
+        ReflectionTestUtils.setField(req, "hubId", hubId);
+        ReflectionTestUtils.setField(req, "type", type);
+        ReflectionTestUtils.setField(req, "slackId", slackId);
         return req;
     }
 

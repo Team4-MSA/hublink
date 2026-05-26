@@ -4,6 +4,7 @@ import com.msa.core_common.error.exception.CustomException;
 import com.msa.user_service.client.CompanyClient;
 import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.ApproveUserRequest;
+import com.msa.user_service.dto.CompanyExistsResponse;
 import com.msa.user_service.dto.HubExistsResponse;
 import com.msa.user_service.dto.SignUpRequest;
 import com.msa.user_service.dto.UpdateUserRequest;
@@ -171,6 +172,55 @@ class UserServiceTest {
     }
 
     @Test
+    @DisplayName("유저 정보 수정 - DELIVERY_MANAGER: hubId 변경 시 허브 검증 후 DM에도 전파")
+    void updateUser_deliveryManager_syncHubId() {
+        // given
+        UUID newHubId = UUID.randomUUID();
+        User user = TestFixtures.pendingDeliveryManagerUser();
+        UpdateUserRequest request = updateUserRequestFull("배송매니저", "deliv@example.com", "U_DELIV", newHubId, null);
+
+        given(hubClient.checkHubExists(newHubId)).willReturn(hubExistsResponse(true));
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // when
+        userService.updateUser(TestFixtures.USER_ID, request);
+
+        // then
+        then(deliveryManagerService).should().syncHubId(TestFixtures.USER_ID, newHubId);
+    }
+
+    @Test
+    @DisplayName("유저 정보 수정 실패 - 존재하지 않는 hubId")
+    void updateUser_hubNotFound() {
+        // given
+        UUID unknownHubId = UUID.randomUUID();
+        UpdateUserRequest request = updateUserRequestFull("이름", "test@test.com", "U_X", unknownHubId, null);
+        given(hubClient.checkHubExists(unknownHubId)).willReturn(hubExistsResponse(false));
+
+        // then
+        assertThatThrownBy(() -> userService.updateUser(TestFixtures.USER_ID, request))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("유저 정보 수정 실패 - 존재하지 않는 companyId")
+    void updateUser_companyNotFound() {
+        // given
+        UUID unknownCompanyId = UUID.randomUUID();
+        UpdateUserRequest request = updateUserRequestFull("이름", "test@test.com", "U_X", null, unknownCompanyId);
+        given(companyClient.checkCompanyExists(unknownCompanyId)).willReturn(companyExistsResponse(false));
+
+        // then
+        assertThatThrownBy(() -> userService.updateUser(TestFixtures.USER_ID, request))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.COMPANY_NOT_FOUND));
+    }
+
+    @Test
     @DisplayName("유저 삭제 성공 - Redis 무효화 콜백 등록")
     void deleteUser_success() {
         // given
@@ -256,10 +306,17 @@ class UserServiceTest {
     }
 
     private UpdateUserRequest updateUserRequest(String name, String email, String slackId) {
+        return updateUserRequestFull(name, email, slackId, null, null);
+    }
+
+    private UpdateUserRequest updateUserRequestFull(String name, String email, String slackId,
+                                                     UUID hubId, UUID companyId) {
         UpdateUserRequest req = new UpdateUserRequest();
         ReflectionTestUtils.setField(req, "name", name);
         ReflectionTestUtils.setField(req, "email", email);
         ReflectionTestUtils.setField(req, "slackId", slackId);
+        ReflectionTestUtils.setField(req, "hubId", hubId);
+        ReflectionTestUtils.setField(req, "companyId", companyId);
         return req;
     }
 
@@ -272,6 +329,12 @@ class UserServiceTest {
 
     private HubExistsResponse hubExistsResponse(boolean exists) {
         HubExistsResponse res = new HubExistsResponse();
+        ReflectionTestUtils.setField(res, "exists", exists);
+        return res;
+    }
+
+    private CompanyExistsResponse companyExistsResponse(boolean exists) {
+        CompanyExistsResponse res = new CompanyExistsResponse();
         ReflectionTestUtils.setField(res, "exists", exists);
         return res;
     }

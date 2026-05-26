@@ -190,4 +190,62 @@ class DeliveryManagerControllerTest {
                         .header("X-User-Role", "COMPANY_MANAGER"))
                 .andExpect(status().isForbidden());
     }
+
+    @Test
+    @DisplayName("배송 담당자 수정 성공 - MASTER, 200 OK")
+    void update_asMaster() throws Exception {
+        // given
+        DeliveryManagerResponse response = TestFixtures.deliveryManagerResponse();
+        given(deliveryManagerService.update(any(), any(), any(), any())).willReturn(response);
+
+        String body = """
+                {
+                    "type": "HUB_DELIVERY",
+                    "slackId": "U_UPDATED"
+                }
+                """;
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/delivery-managers/{targetUserId}", TestFixtures.USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body)
+                        .header("X-User-Id", TestFixtures.ADMIN_ID.toString())
+                        .header("X-User-Role", "MASTER"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(TestFixtures.USER_ID.toString()));
+    }
+
+    @Test
+    @DisplayName("배송 담당자 수정 - HUB_MANAGER 가능 (담당 허브)")
+    void update_asHubManager() throws Exception {
+        // given
+        DeliveryManagerResponse response = TestFixtures.deliveryManagerResponse();
+        given(deliveryManagerService.update(any(), any(), any(), any())).willReturn(response);
+
+        String body = """
+                {
+                    "slackId": "U_UPDATED"
+                }
+                """;
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/delivery-managers/{targetUserId}", TestFixtures.USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body)
+                        .header("X-User-Id", TestFixtures.ADMIN_ID.toString())
+                        .header("X-User-Role", "HUB_MANAGER"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("배송 담당자 수정 - COMPANY_MANAGER → 403")
+    void update_forbidden() throws Exception {
+        // when & then
+        mockMvc.perform(patch("/api/v1/delivery-managers/{targetUserId}", TestFixtures.USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}")
+                        .header("X-User-Id", TestFixtures.USER_ID.toString())
+                        .header("X-User-Role", "COMPANY_MANAGER"))
+                .andExpect(status().isForbidden());
+    }
 }

@@ -4,6 +4,7 @@ import com.msa.core_common.stream.DeadlineStreamConstants;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.stream.Consumer;
 import org.springframework.data.redis.connection.stream.MapRecord;
@@ -21,6 +22,7 @@ public class DeadlineGeneratedStreamListenerConfig {
 
     // Long polling 2초 적용
     // 100건씩 처리
+    @DependsOn("deadlineGeneratedStreamGroupInitializer")
     @Bean(destroyMethod = "stop")
     public StreamMessageListenerContainer<String, MapRecord<String, String, String>> deadlineGeneratedListenerContainer() {
         StreamMessageListenerContainer<String, MapRecord<String, String, String>> container =

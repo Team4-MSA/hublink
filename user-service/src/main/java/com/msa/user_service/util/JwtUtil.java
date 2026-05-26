@@ -2,6 +2,7 @@ package com.msa.user_service.util;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.JwtBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -28,14 +29,17 @@ public class JwtUtil {
     }
 
     // Access Token 생성
-    public String generateAccessToken(UUID userId, String role) {
-        return Jwts.builder()
+    public String generateAccessToken(UUID userId, String role, UUID hubId, UUID companyId) {
+        JwtBuilder builder = Jwts.builder()
                 .subject(userId.toString())
                 .claim("role", role)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + accessExpiration))
-                .signWith(secretKey)
-                .compact();
+                .expiration(new Date(System.currentTimeMillis() + accessExpiration));
+
+        if (hubId != null) builder.claim("hubId", hubId.toString());
+        if (companyId != null) builder.claim("companyId", companyId.toString());
+
+        return builder.signWith(secretKey).compact();
     }
 
     // Refresh Token 생성

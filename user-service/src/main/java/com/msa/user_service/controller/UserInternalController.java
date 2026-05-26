@@ -1,6 +1,7 @@
 package com.msa.user_service.controller;
 
 import com.msa.user_service.dto.UserAuthResponse;
+import com.msa.user_service.dto.UserNameAndCompanyResponse;
 import com.msa.user_service.dto.VerifyResponse;
 import com.msa.user_service.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -8,8 +9,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -47,5 +50,12 @@ public class UserInternalController {
             @PathVariable UUID companyId
     ) {
         return ResponseEntity.ok(VerifyResponse.of(userService.verifyCompany(userId, companyId)));
+    }
+
+    @GetMapping("/namesAndCompanies")
+    public ResponseEntity<List<UserNameAndCompanyResponse>> getUserNamesAndCompanies(
+            @RequestParam List<UUID> userIds
+    ) {
+        return ResponseEntity.ok(userService.getUserNamesAndCompanies(userIds));
     }
 }

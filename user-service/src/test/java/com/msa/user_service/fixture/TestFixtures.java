@@ -9,14 +9,11 @@ import java.util.UUID;
 
 public class TestFixtures {
 
-    //  고정 UUID
-    public static final UUID USER_ID            = UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001");
-    public static final UUID ADMIN_ID           = UUID.fromString("aaaaaaaa-0000-0000-0000-000000000099");
-    public static final UUID HUB_ID             = UUID.fromString("bbbbbbbb-0000-0000-0000-000000000001");
-    public static final UUID COMPANY_ID         = UUID.fromString("cccccccc-0000-0000-0000-000000000001");
-    public static final UUID HUB_MANAGER_ID     = UUID.fromString("dddddddd-0000-0000-0000-000000000001");
-    public static final UUID COMPANY_MANAGER_ID = UUID.fromString("eeeeeeee-0000-0000-0000-000000000001");
-    public static final UUID DELIVERY_MANAGER_ID= UUID.fromString("ffffffff-0000-0000-0000-000000000001");
+    // 고정 UUID
+    public static final UUID USER_ID  = UUID.fromString("aaaaaaaa-0000-0000-0000-000000000001");
+    public static final UUID ADMIN_ID = UUID.fromString("aaaaaaaa-0000-0000-0000-000000000099");
+    public static final UUID HUB_ID   = UUID.fromString("bbbbbbbb-0000-0000-0000-000000000001");
+    public static final UUID COMPANY_ID = UUID.fromString("cccccccc-0000-0000-0000-000000000001");
 
     // User
 
@@ -32,6 +29,23 @@ public class TestFixtures {
                 .status(UserStatus.APPROVED)
                 .build();
         setField(user, "userId", USER_ID);
+        setAuditFields(user);
+        return user;
+    }
+
+    /** 승인된 HUB_MANAGER 유저 (ADMIN_ID) */
+    public static User approvedHubManagerUser() {
+        User user = User.builder()
+                .username("hubmanager_admin")
+                .password("$2a$10$encodedpasswordhash")
+                .name("허브매니저어드민")
+                .email("hubadmin@example.com")
+                .slackId("U_HUB_ADMIN")
+                .role(UserRole.HUB_MANAGER)
+                .status(UserStatus.APPROVED)
+                .hubId(HUB_ID)
+                .build();
+        setField(user, "userId", ADMIN_ID);
         setAuditFields(user);
         return user;
     }
@@ -87,31 +101,7 @@ public class TestFixtures {
         return user;
     }
 
-    // HubManager
-
-    public static HubManager hubManager() {
-        HubManager hm = HubManager.builder()
-                .userId(USER_ID)
-                .hubId(HUB_ID)
-                .build();
-        setField(hm, "hubManagerId", HUB_MANAGER_ID);
-        setAuditFields(hm);
-        return hm;
-    }
-
-    // CompanyManager
-
-    public static CompanyManager companyManager() {
-        CompanyManager cm = CompanyManager.builder()
-                .userId(USER_ID)
-                .companyId(COMPANY_ID)
-                .build();
-        setField(cm, "companyManagerId", COMPANY_MANAGER_ID);
-        setAuditFields(cm);
-        return cm;
-    }
-
-    // DeliveryManager
+    // DeliveryManager (userId == PK)
 
     public static DeliveryManager hubDeliveryManager() {
         DeliveryManager dm = DeliveryManager.builder()
@@ -121,7 +111,6 @@ public class TestFixtures {
                 .deliverySequence(1)
                 .slackId("U_DELIV")
                 .build();
-        setField(dm, "deliveryManagerId", DELIVERY_MANAGER_ID);
         setAuditFields(dm);
         return dm;
     }
@@ -130,14 +119,6 @@ public class TestFixtures {
 
     public static UserResponse userResponse() {
         return UserResponse.from(approvedMasterUser());
-    }
-
-    public static HubManagerResponse hubManagerResponse() {
-        return HubManagerResponse.from(hubManager());
-    }
-
-    public static CompanyManagerResponse companyManagerResponse() {
-        return CompanyManagerResponse.from(companyManager());
     }
 
     public static DeliveryManagerResponse deliveryManagerResponse() {

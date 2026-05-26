@@ -55,7 +55,7 @@ class DeliveryManagerControllerTest {
                         .header("X-User-Id", TestFixtures.ADMIN_ID.toString())
                         .header("X-User-Role", "MASTER"))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.deliveryManagerId").value(TestFixtures.DELIVERY_MANAGER_ID.toString()))
+                .andExpect(jsonPath("$.data.userId").value(TestFixtures.USER_ID.toString()))
                 .andExpect(jsonPath("$.data.type").value("HUB_DELIVERY"));
     }
 
@@ -137,7 +137,7 @@ class DeliveryManagerControllerTest {
         given(deliveryManagerService.getOne(any(), any(), any())).willReturn(response);
 
         // when & then
-        mockMvc.perform(get("/api/v1/delivery-managers/{deliveryManagerId}", TestFixtures.DELIVERY_MANAGER_ID)
+        mockMvc.perform(get("/api/v1/delivery-managers/{targetUserId}", TestFixtures.USER_ID)
                         .header("X-User-Id", TestFixtures.ADMIN_ID.toString())
                         .header("X-User-Role", "MASTER"))
                 .andExpect(status().isOk())
@@ -152,7 +152,7 @@ class DeliveryManagerControllerTest {
         given(deliveryManagerService.getOne(any(), any(), any())).willReturn(response);
 
         // when & then
-        mockMvc.perform(get("/api/v1/delivery-managers/{deliveryManagerId}", TestFixtures.DELIVERY_MANAGER_ID)
+        mockMvc.perform(get("/api/v1/delivery-managers/{targetUserId}", TestFixtures.USER_ID)
                         .header("X-User-Id", TestFixtures.USER_ID.toString())
                         .header("X-User-Role", "DELIVERY_MANAGER"))
                 .andExpect(status().isOk());
@@ -162,7 +162,7 @@ class DeliveryManagerControllerTest {
     @DisplayName("배송 담당자 단건 조회 - COMPANY_MANAGER → 403")
     void getOne_forbidden() throws Exception {
         // when & then
-        mockMvc.perform(get("/api/v1/delivery-managers/{deliveryManagerId}", TestFixtures.DELIVERY_MANAGER_ID)
+        mockMvc.perform(get("/api/v1/delivery-managers/{targetUserId}", TestFixtures.USER_ID)
                         .header("X-User-Id", TestFixtures.USER_ID.toString())
                         .header("X-User-Role", "COMPANY_MANAGER"))
                 .andExpect(status().isForbidden());
@@ -175,7 +175,7 @@ class DeliveryManagerControllerTest {
         willDoNothing().given(deliveryManagerService).delete(any(), any(), any(), any());
 
         // when & then
-        mockMvc.perform(delete("/api/v1/delivery-managers/{deliveryManagerId}", TestFixtures.DELIVERY_MANAGER_ID)
+        mockMvc.perform(delete("/api/v1/delivery-managers/{targetUserId}", TestFixtures.USER_ID)
                         .header("X-User-Id", TestFixtures.ADMIN_ID.toString())
                         .header("X-User-Role", "MASTER"))
                 .andExpect(status().isNoContent());
@@ -185,7 +185,7 @@ class DeliveryManagerControllerTest {
     @DisplayName("배송 담당자 삭제 - COMPANY_MANAGER → 403")
     void delete_forbidden() throws Exception {
         // when & then
-        mockMvc.perform(delete("/api/v1/delivery-managers/{deliveryManagerId}", TestFixtures.DELIVERY_MANAGER_ID)
+        mockMvc.perform(delete("/api/v1/delivery-managers/{targetUserId}", TestFixtures.USER_ID)
                         .header("X-User-Id", TestFixtures.USER_ID.toString())
                         .header("X-User-Role", "COMPANY_MANAGER"))
                 .andExpect(status().isForbidden());

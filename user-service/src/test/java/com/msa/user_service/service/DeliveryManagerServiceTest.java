@@ -13,7 +13,6 @@ import com.msa.user_service.entity.User;
 import com.msa.user_service.fixture.TestFixtures;
 import com.msa.user_service.global.UserErrorCode;
 import com.msa.user_service.repository.DeliveryManagerRepository;
-import com.msa.user_service.repository.HubManagerRepository;
 import com.msa.user_service.repository.UserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,7 +39,6 @@ import static org.mockito.BDDMockito.given;
 class DeliveryManagerServiceTest {
 
     @Mock private DeliveryManagerRepository deliveryManagerRepository;
-    @Mock private HubManagerRepository hubManagerRepository;
     @Mock private UserRepository userRepository;
     @Mock private HubClient hubClient;
 
@@ -64,7 +62,7 @@ class DeliveryManagerServiceTest {
         DeliveryManagerResponse response = deliveryManagerService.register(request, "MASTER", TestFixtures.ADMIN_ID);
 
         // then
-        assertThat(response.getDeliveryManagerId()).isEqualTo(TestFixtures.DELIVERY_MANAGER_ID);
+        assertThat(response.getUserId()).isEqualTo(TestFixtures.USER_ID);
         assertThat(response.getType()).isEqualTo(DeliveryManagerType.HUB_DELIVERY);
     }
 
@@ -73,13 +71,13 @@ class DeliveryManagerServiceTest {
     void register_success_asHubManager() {
         // given
         DeliveryManagerRequest request = dmRequest(TestFixtures.USER_ID, TestFixtures.HUB_ID, DeliveryManagerType.HUB_DELIVERY);
-        User user = TestFixtures.approvedMasterUser();
+        User hubManagerUser = TestFixtures.approvedHubManagerUser(); // ADMIN_ID, HUB_ID 소속
+        User targetUser = TestFixtures.approvedMasterUser();
         DeliveryManager saved = TestFixtures.hubDeliveryManager();
 
-        given(hubManagerRepository.existsByUserIdAndHubIdAndDeletedAtIsNull(TestFixtures.ADMIN_ID, TestFixtures.HUB_ID))
-                .willReturn(true);
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.ADMIN_ID)).willReturn(Optional.of(hubManagerUser));
         given(hubClient.checkHubExists(TestFixtures.HUB_ID)).willReturn(hubExistsResponse(true));
-        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID)).willReturn(Optional.of(user));
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID)).willReturn(Optional.of(targetUser));
         given(deliveryManagerRepository.findLatestByHubId(TestFixtures.HUB_ID)).willReturn(Optional.empty());
         given(deliveryManagerRepository.save(any(DeliveryManager.class))).willReturn(saved);
 
@@ -94,13 +92,14 @@ class DeliveryManagerServiceTest {
     @DisplayName("배송 담당자 등록 실패 - HUB_MANAGER: 담당 허브 아닌 경우")
     void register_hubAccessDenied() {
         // given
-        DeliveryManagerRequest request = dmRequest(TestFixtures.USER_ID, TestFixtures.HUB_ID, DeliveryManagerType.HUB_DELIVERY);
+        UUID otherHubId = UUID.randomUUID();
+        DeliveryManagerRequest otherHubRequest = dmRequest(TestFixtures.USER_ID, otherHubId, DeliveryManagerType.HUB_DELIVERY);
+        User hubManagerUser = TestFixtures.approvedHubManagerUser(); // HUB_ID 소속
 
-        given(hubManagerRepository.existsByUserIdAndHubIdAndDeletedAtIsNull(TestFixtures.ADMIN_ID, TestFixtures.HUB_ID))
-                .willReturn(false);
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.ADMIN_ID)).willReturn(Optional.of(hubManagerUser));
 
         // then
-        assertThatThrownBy(() -> deliveryManagerService.register(request, "HUB_MANAGER", TestFixtures.ADMIN_ID))
+        assertThatThrownBy(() -> deliveryManagerService.register(otherHubRequest, "HUB_MANAGER", TestFixtures.ADMIN_ID))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(UserErrorCode.HUB_ACCESS_DENIED));
@@ -127,15 +126,15 @@ class DeliveryManagerServiceTest {
     void getOne_asMaster() {
         // given
         DeliveryManager dm = TestFixtures.hubDeliveryManager();
-        given(deliveryManagerRepository.findByDeliveryManagerIdAndDeletedAtIsNull(TestFixtures.DELIVERY_MANAGER_ID))
+        given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
                 .willReturn(Optional.of(dm));
 
         // when
         DeliveryManagerResponse response = deliveryManagerService.getOne(
-                TestFixtures.DELIVERY_MANAGER_ID, "MASTER", TestFixtures.ADMIN_ID);
+                TestFixtures.USER_ID, "MASTER", TestFixtures.ADMIN_ID);
 
         // then
-        assertThat(response.getDeliveryManagerId()).isEqualTo(TestFixtures.DELIVERY_MANAGER_ID);
+        assertThat(response.getUserId()).isEqualTo(TestFixtures.USER_ID);
     }
 
     @Test
@@ -145,12 +144,12 @@ class DeliveryManagerServiceTest {
         DeliveryManager dm = TestFixtures.hubDeliveryManager(); // userId = USER_ID
         UUID otherUserId = UUID.randomUUID();
 
-        given(deliveryManagerRepository.findByDeliveryManagerIdAndDeletedAtIsNull(TestFixtures.DELIVERY_MANAGER_ID))
+        given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
                 .willReturn(Optional.of(dm));
 
         // then
         assertThatThrownBy(() ->
-                deliveryManagerService.getOne(TestFixtures.DELIVERY_MANAGER_ID, "DELIVERY_MANAGER", otherUserId))
+                deliveryManagerService.getOne(TestFixtures.USER_ID, "DELIVERY_MANAGER", otherUserId))
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(UserErrorCode.SELF_ONLY_ACCESS));
@@ -160,7 +159,7 @@ class DeliveryManagerServiceTest {
     @DisplayName("배송 담당자 단건 조회 실패 - 없는 ID")
     void getOne_notFound() {
         // given
-        given(deliveryManagerRepository.findByDeliveryManagerIdAndDeletedAtIsNull(any()))
+        given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(any()))
                 .willReturn(Optional.empty());
 
         // then
@@ -192,34 +191,35 @@ class DeliveryManagerServiceTest {
     void delete_asMaster() {
         // given
         DeliveryManager dm = TestFixtures.hubDeliveryManager();
-        given(deliveryManagerRepository.findByDeliveryManagerIdAndDeletedAtIsNull(TestFixtures.DELIVERY_MANAGER_ID))
+        given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
                 .willReturn(Optional.of(dm));
 
         // when
-        deliveryManagerService.delete(TestFixtures.DELIVERY_MANAGER_ID, "admin", "MASTER", TestFixtures.ADMIN_ID);
+        deliveryManagerService.delete(TestFixtures.USER_ID, "admin", "MASTER", TestFixtures.ADMIN_ID);
 
         // then
         assertThat(dm.getDeletedAt()).isNotNull();
     }
 
     @Test
-    @DisplayName("Internal: 허브별 배송 담당자 목록 조회")
-    void getDeliveryManagersByHubForInternal_success() {
+    @DisplayName("Internal: 허브 리스트별 배송 담당자 목록 조회")
+    void getDeliveryManagersByHubsForInternal_success() {
         // given
         DeliveryManager dm = TestFixtures.hubDeliveryManager();
         User user = TestFixtures.approvedMasterUser();
 
-        given(deliveryManagerRepository.findAllByHubIdAndDeletedAtIsNull(TestFixtures.HUB_ID))
+        given(deliveryManagerRepository.findAllByHubIdInAndDeletedAtIsNull(List.of(TestFixtures.HUB_ID)))
                 .willReturn(List.of(dm));
         given(userRepository.findAllByUserIdInAndDeletedAtIsNull(List.of(TestFixtures.USER_ID)))
                 .willReturn(List.of(user));
 
         // when
         List<InternalDeliveryManagerResponse> result =
-                deliveryManagerService.getDeliveryManagersByHubForInternal(TestFixtures.HUB_ID);
+                deliveryManagerService.getDeliveryManagersByHubsForInternal(List.of(TestFixtures.HUB_ID));
 
         // then
         assertThat(result).hasSize(1);
+        assertThat(result.get(0).getDeliveryManagerId()).isEqualTo(TestFixtures.USER_ID);
     }
 
     private DeliveryManagerRequest dmRequest(UUID userId, UUID hubId, DeliveryManagerType type) {

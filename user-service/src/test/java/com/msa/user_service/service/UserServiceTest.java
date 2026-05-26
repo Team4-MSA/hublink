@@ -1,7 +1,10 @@
 package com.msa.user_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
+import com.msa.user_service.client.CompanyClient;
+import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.ApproveUserRequest;
+import com.msa.user_service.dto.HubExistsResponse;
 import com.msa.user_service.dto.SignUpRequest;
 import com.msa.user_service.dto.UpdateUserRequest;
 import com.msa.user_service.dto.UserResponse;
@@ -43,7 +46,9 @@ class UserServiceTest {
 
     @Mock private UserRepository userRepository;
     @Mock private UserApprovalService userApprovalService;
-    @Mock private HubManagerService hubManagerService;
+    @Mock private DeliveryManagerService deliveryManagerService;
+    @Mock private HubClient hubClient;
+    @Mock private CompanyClient companyClient;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private RedisUtil redisUtil;
 
@@ -146,6 +151,23 @@ class UserServiceTest {
         // then
         assertThat(response.getName()).isEqualTo("변경이름");
         assertThat(response.getEmail()).isEqualTo("changed@example.com");
+        then(deliveryManagerService).shouldHaveNoInteractions(); // MASTER 역할이므로 전파 없음
+    }
+
+    @Test
+    @DisplayName("유저 정보 수정 - DELIVERY_MANAGER: slackId 변경 시 전파")
+    void updateUser_deliveryManager_syncSlackId() {
+        // given
+        User user = TestFixtures.pendingDeliveryManagerUser();
+        UpdateUserRequest request = updateUserRequest("배송매니저", "deliv@example.com", "U_NEW_SLACK");
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // when
+        userService.updateUser(TestFixtures.USER_ID, request);
+
+        // then
+        then(deliveryManagerService).should().updateSlackId(TestFixtures.USER_ID, "U_NEW_SLACK");
     }
 
     @Test
@@ -156,7 +178,6 @@ class UserServiceTest {
         given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
                 .willReturn(Optional.of(user));
 
-        // TransactionSynchronizationManager 활성화 (트랜잭션 없는 단위 테스트 환경)
         TransactionSynchronizationManager.initSynchronization();
         try {
             // when
@@ -165,7 +186,6 @@ class UserServiceTest {
             // then
             assertThat(user.getDeletedAt()).isNotNull();
 
-            // afterCommit 콜백 수동 트리거 → Redis 무효화 호출 검증
             TransactionSynchronizationManager.getSynchronizations()
                     .forEach(TransactionSynchronization::afterCommit);
             then(redisUtil).should().invalidateUser(eq(TestFixtures.USER_ID.toString()), anyLong());
@@ -175,19 +195,20 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("유저 승인 - HUB_MANAGER: 허브 존재 검증 후 executeApproval 호출")
+    @DisplayName("유저 승인 - HUB_MANAGER: hubClient로 허브 존재 검증 후 executeApproval 호출")
     void approveUser_hubManager_success() {
         // given
         User user = TestFixtures.pendingHubManagerUser();
         ApproveUserRequest request = approveRequest(UserStatus.APPROVED, null);
         given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
                 .willReturn(Optional.of(user));
+        given(hubClient.checkHubExists(TestFixtures.HUB_ID)).willReturn(hubExistsResponse(true));
 
         // when
         userService.approveUser(TestFixtures.USER_ID, request, TestFixtures.ADMIN_ID);
 
         // then
-        then(hubManagerService).should().validateHubExists(TestFixtures.HUB_ID);
+        then(hubClient).should().checkHubExists(TestFixtures.HUB_ID);
         then(userApprovalService).should().executeApproval(TestFixtures.USER_ID, request, TestFixtures.ADMIN_ID);
     }
 
@@ -247,5 +268,11 @@ class UserServiceTest {
         ReflectionTestUtils.setField(req, "status", status);
         ReflectionTestUtils.setField(req, "deliveryManagerType", type);
         return req;
+    }
+
+    private HubExistsResponse hubExistsResponse(boolean exists) {
+        HubExistsResponse res = new HubExistsResponse();
+        ReflectionTestUtils.setField(res, "exists", exists);
+        return res;
     }
 }

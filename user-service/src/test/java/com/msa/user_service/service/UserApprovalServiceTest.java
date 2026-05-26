@@ -29,15 +29,13 @@ class UserApprovalServiceTest {
 
     @Mock private UserRepository userRepository;
     @Mock private UserApprovalHistoryRepository approvalHistoryRepository;
-    @Mock private HubManagerService hubManagerService;
-    @Mock private CompanyManagerService companyManagerService;
     @Mock private DeliveryManagerService deliveryManagerService;
 
     @InjectMocks
     private UserApprovalService userApprovalService;
 
     @Test
-    @DisplayName("HUB_MANAGER 승인 - hubManagerService.createOnApproval 호출")
+    @DisplayName("HUB_MANAGER 승인 - 별도 테이블 생성 없이 상태만 APPROVED로 변경")
     void executeApproval_approve_hubManager() {
         // given
         User user = TestFixtures.pendingHubManagerUser();
@@ -53,12 +51,12 @@ class UserApprovalServiceTest {
 
         // then
         assertThat(user.getStatus()).isEqualTo(UserStatus.APPROVED);
-        then(hubManagerService).should().createOnApproval(TestFixtures.USER_ID, TestFixtures.HUB_ID);
+        then(deliveryManagerService).shouldHaveNoInteractions();
         then(approvalHistoryRepository).should().save(any(UserApprovalHistory.class));
     }
 
     @Test
-    @DisplayName("COMPANY_MANAGER 승인 - companyManagerService.createOnApproval 호출")
+    @DisplayName("COMPANY_MANAGER 승인 - 별도 테이블 생성 없이 상태만 APPROVED로 변경")
     void executeApproval_approve_companyManager() {
         // given
         User user = TestFixtures.pendingCompanyManagerUser();
@@ -74,7 +72,7 @@ class UserApprovalServiceTest {
 
         // then
         assertThat(user.getStatus()).isEqualTo(UserStatus.APPROVED);
-        then(companyManagerService).should().createOnApproval(TestFixtures.USER_ID, TestFixtures.COMPANY_ID);
+        then(deliveryManagerService).shouldHaveNoInteractions();
     }
 
     @Test
@@ -116,7 +114,7 @@ class UserApprovalServiceTest {
 
         // then
         assertThat(user.getStatus()).isEqualTo(UserStatus.REJECTED);
-        then(hubManagerService).shouldHaveNoInteractions();
+        then(deliveryManagerService).shouldHaveNoInteractions();
     }
 
     @Test

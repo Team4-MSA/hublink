@@ -190,6 +190,24 @@ class UserServiceTest {
     }
 
     @Test
+    @DisplayName("유저 정보 수정 - DELIVERY_MANAGER: 동일 hubId 전달 시 순번 재계산 없음")
+    void updateUser_deliveryManager_sameHubId_noSync() {
+        // given
+        User user = TestFixtures.pendingDeliveryManagerUser();
+        UpdateUserRequest request = updateUserRequestFull("배송매니저", "deliv@example.com", "U_DELIV",
+                TestFixtures.HUB_ID, null);
+
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // when
+        userService.updateUser(TestFixtures.USER_ID, request);
+
+        // then
+        then(deliveryManagerService).should(never()).syncHubId(any(), any());
+    }
+
+    @Test
     @DisplayName("사전 검증 실패 - 존재하지 않는 hubId")
     void validateUpdateResources_hubNotFound() {
         // given

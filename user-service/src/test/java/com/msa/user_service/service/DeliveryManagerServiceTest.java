@@ -34,6 +34,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("DeliveryManagerService 테스트")
@@ -200,6 +201,30 @@ class DeliveryManagerServiceTest {
 
         // then
         assertThat(dm.getDeletedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Internal: hubIds가 null이면 빈 리스트 반환")
+    void getDeliveryManagersByHubsForInternal_nullHubIds() {
+        // when
+        List<InternalDeliveryManagerResponse> result =
+                deliveryManagerService.getDeliveryManagersByHubsForInternal(null);
+
+        // then
+        assertThat(result).isEmpty();
+        then(deliveryManagerRepository).shouldHaveNoInteractions();
+    }
+
+    @Test
+    @DisplayName("Internal: hubIds가 비어있으면 빈 리스트 반환")
+    void getDeliveryManagersByHubsForInternal_emptyHubIds() {
+        // when
+        List<InternalDeliveryManagerResponse> result =
+                deliveryManagerService.getDeliveryManagersByHubsForInternal(List.of());
+
+        // then
+        assertThat(result).isEmpty();
+        then(deliveryManagerRepository).shouldHaveNoInteractions();
     }
 
     @Test

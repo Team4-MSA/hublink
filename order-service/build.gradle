@@ -43,6 +43,8 @@ dependencies {
 	implementation 'io.github.openfeign:feign-micrometer'
 	implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 	implementation 'me.paulschwarz:spring-dotenv:4.0.0'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	implementation project(':core-common')
 }
 

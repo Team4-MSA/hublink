@@ -194,15 +194,6 @@ services:
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     depends_on:
-      - user-service
-      - order-service
-      - hub-service
-      - company-service
-      - product-service
-      - stock-service
-      - delivery-service
-      - slack-service
-      - ai-service
       - zipkin
 
   grafana:

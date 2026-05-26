@@ -14,7 +14,11 @@ RUN ./gradlew dependencies || true
 COPY . .
 
 ARG SERVICE_NAME
-RUN ./gradlew :${SERVICE_NAME}:clean :${SERVICE_NAME}:bootJar -x test
+RUN --mount=type=cache,target=/root/.gradle \
+    ./gradlew :${SERVICE_NAME}:clean :${SERVICE_NAME}:bootJar -x test && \
+    find /app/${SERVICE_NAME}/build/libs/ \
+    -name "*.jar" ! -name "*plain.jar" \
+    -exec cp {} /app/app.jar \;
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app

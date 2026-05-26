@@ -1,7 +1,11 @@
 package com.msa.stock_service.service;
 
+import com.msa.core_common.response.paging.PageRes;
 import com.msa.stock_service.dto.StockDecreaRequestDto;
+import com.msa.stock_service.dto.StockHistoryResponseDto;
+import com.msa.stock_service.dto.StockHistorySearchResponseDto;
 import com.msa.stock_service.dto.StockRequestDto;
+import com.msa.stock_service.dto.StockResponseDto;
 import com.msa.stock_service.entity.Stock;
 import com.msa.stock_service.entity.StockChangeReason;
 import com.msa.stock_service.entity.StockHistory;
@@ -14,6 +18,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class StockService {
     private final StockRepository stockRepository;
     private final StockHistoryRepository stockHistoryRepository;
+
+     //재고 이력 조회
+    @Transactional(readOnly = true)
+    public PageRes<StockHistorySearchResponseDto> getStockhistories(UUID productId, Pageable pageable) {
+        return stockHistoryRepository.searchHistoriesByproductId(productId, pageable);
+    }
 
     /**
      * 재고 복원

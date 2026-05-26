@@ -35,6 +35,13 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             "/api/v1/auth/refresh"
     );
 
+    private static final List<String> PUBLIC_PREFIXES = List.of(
+            "/swagger-ui",
+            "/v3/api-docs",
+            "/swagger-resources",
+            "/webjars"
+    );
+
     private final SecretKey secretKey;
     private final ReactiveRedisTemplate<String, String> redisTemplate;
 
@@ -55,6 +62,10 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }
 
         if (PUBLIC_PATHS.stream().anyMatch(path::equals)) {
+            return chain.filter(exchange);
+        }
+
+         if (PUBLIC_PREFIXES.stream().anyMatch(path::startsWith) || path.contains("/v3/api-docs")) {
             return chain.filter(exchange);
         }
 

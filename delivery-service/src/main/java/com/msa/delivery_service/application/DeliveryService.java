@@ -330,11 +330,25 @@ public class DeliveryService {
             List<DeliveryManagerResponse> deliveryManagers
     ) {
         Map<UUID, UUID> hubDeliveryManagerIds = new HashMap<>();
+        // 각 허브에 해당 하는 담당 매니저를 따로 조회해서 발생하던 N+1 문제 방지
+        // 처음부터 모든 경로의 허브 배송 담당자들을 전부 미리 조회
+        List<DeliveryManagerResponse> hubDeliveryManagers = deliveryManagers.stream()
+                .filter(deliveryManager -> HUB_DELIVERY_MANAGER_TYPE.equals(deliveryManager.getType()))
+                .toList();
+        Set<UUID> workingManagerIds = hubDeliveryManagers.isEmpty()
+                ? Set.of()
+                : deliveryRouteHistoryRepository.findWorkingManagerIds(
+                hubDeliveryManagers.stream()
+                        .map(DeliveryManagerResponse::getDeliveryManagerId)
+                        .toList(),
+                List.of(DeliveryRouteStatus.COMPLETED, DeliveryRouteStatus.SKIPPED, DeliveryRouteStatus.FAILED)
+        );
 
         for (HubRouteResponse hubRoute : hubRoutes) {
             DeliveryManagerResponse hubDeliveryManager = selectHubDeliveryManager(
                     deliveryManagers,
-                    hubRoute.getDepartureHubId()
+                    hubRoute.getDepartureHubId(),
+                    workingManagerIds
             );
             hubDeliveryManagerIds.put(hubRoute.getHubRouteId(), hubDeliveryManager.getDeliveryManagerId());
         }
@@ -345,7 +359,8 @@ public class DeliveryService {
     // 특정 출발 허브 구간을 담당할 허브 배송 담당자 선택
     private DeliveryManagerResponse selectHubDeliveryManager(
             List<DeliveryManagerResponse> deliveryManagers,
-            UUID departureHubId
+            UUID departureHubId,
+            Set<UUID> workingManagerIds
     ) {
         List<DeliveryManagerResponse> hubDeliveryManagers = deliveryManagers.stream()
                 .filter(deliveryManager -> departureHubId.equals(deliveryManager.getHubId()))
@@ -355,13 +370,6 @@ public class DeliveryService {
         if (hubDeliveryManagers.isEmpty()) {
             throw new CustomException(DeliveryErrorCode.NO_DELIVERY_MANAGER);
         }
-
-        Set<UUID> workingManagerIds = deliveryRouteHistoryRepository.findWorkingManagerIds(
-                hubDeliveryManagers.stream()
-                        .map(DeliveryManagerResponse::getDeliveryManagerId)
-                        .toList(),
-                List.of(DeliveryRouteStatus.COMPLETED, DeliveryRouteStatus.SKIPPED, DeliveryRouteStatus.FAILED)
-        );
 
         List<DeliveryManagerResponse> availableManagers = hubDeliveryManagers.stream()
                 .filter(deliveryManager -> !workingManagerIds.contains(deliveryManager.getDeliveryManagerId()))

@@ -19,7 +19,7 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
-import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 
 @Component
@@ -42,7 +42,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             @Value("${jwt.secret}") String secret,
             ReactiveRedisTemplate<String, String> redisTemplate
     ) {
-        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(secret));
         this.redisTemplate = redisTemplate;
     }
 

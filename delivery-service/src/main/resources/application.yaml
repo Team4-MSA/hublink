@@ -15,3 +15,6 @@ eureka:
       defaultZone: http://localhost:19090/eureka/
     register-with-eureka: true
     fetch-registry: true
+
+swagger:
+  gateway-url: http://localhost:19091

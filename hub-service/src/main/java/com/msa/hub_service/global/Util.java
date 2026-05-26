@@ -2,7 +2,6 @@ package com.msa.hub_service.global;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.hub_service.dto.RouteCalculationResult;
-import com.msa.hub_service.entity.HubEntity;
 import com.msa.hub_service.entity.RouteType;
 
 import java.math.BigDecimal;
@@ -56,24 +55,33 @@ public class Util {
         private static final double ROAD_CURVATURE_WEIGHT = 1.3;
         private static final double H2H_DISTANCE_THRESHOLD_KM = 200.0;
 
-        public static RouteCalculationResult calculate(HubEntity dep, HubEntity arr) {
+        public static RouteCalculationResult calculate(BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
             // 위경도 상 거리
-            double straightDistance = Util.DistanceCalculator.getDistance(
-                    dep.getLatitude(), dep.getLongitude(),
-                    arr.getLatitude(), arr.getLongitude()
-            );
+            double straightDistance = Util.DistanceCalculator.getDistance(lat1, lon1, lat2, lon2);
 
             // 실제 거리
-            double actualDistance = straightDistance * ROAD_CURVATURE_WEIGHT;
+            double actualDistance = actualDistance(straightDistance);
             BigDecimal distanceKm = BigDecimal.valueOf(actualDistance).setScale(2, RoundingMode.HALF_UP);
 
             // 주행 시간
-            int durationMin = (int) Math.round((actualDistance / AVERAGE_TRUCK_SPEED_KMH) * 60.0);
+            int durationMin = calculateDuration(actualDistance);
 
             // 거리에 따른 루트 타입
-            RouteType type = (actualDistance > H2H_DISTANCE_THRESHOLD_KM) ? RouteType.H2H : RouteType.P2P;
+            RouteType type = determineRouteType(actualDistance);
 
             return new RouteCalculationResult(distanceKm, durationMin, type);
+        }
+
+        public static RouteType determineRouteType(double km) {
+            return (km > H2H_DISTANCE_THRESHOLD_KM) ? RouteType.H2H : RouteType.P2P;
+        }
+
+        public static Integer calculateDuration(double km) {
+            return (int) Math.round((km / AVERAGE_TRUCK_SPEED_KMH) * 60.0);
+        }
+
+        public static double actualDistance(double straightDistance) {
+            return straightDistance * ROAD_CURVATURE_WEIGHT;
         }
     }
 }

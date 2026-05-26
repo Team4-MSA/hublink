@@ -44,28 +44,25 @@ public class HubRouteEntity extends BaseEntity {
     @Column(name = "route_type", length = 50)
     private RouteType routeType;
 
-    public static HubRouteEntity create(
-            HubEntity departureHub,
-            HubEntity arrivalHub
-    ) {
+    public static HubRouteEntity create(HubEntity departureHub, HubEntity arrivalHub) {
         validateHubs(departureHub, arrivalHub);
 
-        RouteCalculationResult routeInfo = Util.RouteCalculator.calculate(departureHub, arrivalHub);
+        RouteCalculationResult routeInfo = Util.RouteCalculator.calculate(departureHub.getLatitude(), departureHub.getLongitude(), arrivalHub.getLatitude(), arrivalHub.getLongitude());
 
-        return HubRouteEntity.builder()
-                .departureHub(departureHub)
-                .arrivalHub(arrivalHub)
-                .estimatedDistanceKm(routeInfo.distanceKm())
-                .estimatedDurationMin(routeInfo.durationMinutes())
-                .routeType(routeInfo.routeType())
-                .build();
+        return HubRouteEntity.builder().departureHub(departureHub).arrivalHub(arrivalHub).estimatedDistanceKm(routeInfo.distanceKm()).estimatedDurationMin(routeInfo.durationMin()).routeType(routeInfo.routeType()).build();
     }
 
-    public void recalculateRouteInfo(){
-        RouteCalculationResult routeInfo = Util.RouteCalculator.calculate(departureHub, arrivalHub);
+    public void update(BigDecimal targetKm, Integer targetMin, RouteType targetType) {
+        this.estimatedDistanceKm = targetKm;
+        this.estimatedDurationMin = targetMin;
+        this.routeType = targetType;
+    }
+
+    public void recalculateRouteInfo() {
+        RouteCalculationResult routeInfo = Util.RouteCalculator.calculate(departureHub.getLatitude(), departureHub.getLongitude(), arrivalHub.getLatitude(), arrivalHub.getLongitude());
 
         this.estimatedDistanceKm = routeInfo.distanceKm();
-        this.estimatedDurationMin = routeInfo.durationMinutes();
+        this.estimatedDurationMin = routeInfo.durationMin();
         this.routeType = routeInfo.routeType();
 
     }
@@ -75,8 +72,7 @@ public class HubRouteEntity extends BaseEntity {
         if (arr == null) throw new CustomException(HubErrorCode.ARRIVAL_HUB_REQUIRED);
         if (dep.getHubId().equals(arr.getHubId())) throw new CustomException(HubErrorCode.SAME_HUB_NOT_ALLOWED);
 
-        if (dep.getLatitude() == null || dep.getLongitude() == null ||
-                arr.getLatitude() == null || arr.getLongitude() == null) {
+        if (dep.getLatitude() == null || dep.getLongitude() == null || arr.getLatitude() == null || arr.getLongitude() == null) {
             throw new CustomException(HubErrorCode.NULL_COORDINATES);
         }
     }

@@ -9,6 +9,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.util.UUID;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,6 +44,9 @@ public class Product extends BaseEntity {
     @Column(nullable = false)
     private Integer price;
 
+    @Version
+    private Integer version;
+
     public static Product create (ProductRequestDto dto) {
         return Product.builder()
             .companyId(dto.getCompanyId())
@@ -51,5 +55,15 @@ public class Product extends BaseEntity {
             .description(dto.getDescription())
             .price(dto.getPrice())
             .build();
+    }
+
+    //상품 수정
+    public Product modifyProduct(ProductRequestDto dto) {
+        this.companyId = dto.getCompanyId();
+        this.hubId = dto.getHubId();
+        this.price = dto.getPrice();
+        this.name = dto.getName();
+        this.description = dto.getDescription();
+        return this;
     }
 }

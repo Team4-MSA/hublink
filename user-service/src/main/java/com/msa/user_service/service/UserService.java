@@ -90,15 +90,15 @@ public class UserService {
     @Transactional
     public UserResponse updateUser(UUID userId, UpdateUserRequest request) {
         User user = findActiveUser(userId);
+        UUID oldHubId = user.getHubId();
         user.update(request.getName(), request.getEmail(), request.getSlackId(),
                 request.getHubId(), request.getCompanyId());
 
-        // DELIVERY_MANAGER: slackId, hubId 변경 시 DeliveryManager에도 전파
         if (user.getRole() == UserRole.DELIVERY_MANAGER) {
             if (request.getSlackId() != null) {
                 deliveryManagerService.updateSlackId(userId, request.getSlackId());
             }
-            if (request.getHubId() != null) {
+            if (request.getHubId() != null && !request.getHubId().equals(oldHubId)) {
                 deliveryManagerService.syncHubId(userId, request.getHubId());
             }
         }

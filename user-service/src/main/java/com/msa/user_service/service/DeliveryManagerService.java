@@ -120,6 +120,9 @@ public class DeliveryManagerService {
     }
 
     public List<InternalDeliveryManagerResponse> getDeliveryManagersByHubsForInternal(List<UUID> hubIds) {
+        if (hubIds == null || hubIds.isEmpty()) {
+            return List.of();
+        }
         List<DeliveryManager> deliveryManagers = deliveryManagerRepository.findAllByHubIdInAndDeletedAtIsNull(hubIds);
 
         List<UUID> userIds = deliveryManagers.stream()

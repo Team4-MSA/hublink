@@ -38,7 +38,7 @@ services:
     ports:
       - "19092:19092"
     environment:
-      - CONFIG_REPO_PATH=file:/config-repo/
+      - .env
     depends_on:
       - eureka-server
     volumes:

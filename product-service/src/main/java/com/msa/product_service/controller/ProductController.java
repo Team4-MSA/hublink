@@ -66,16 +66,14 @@ public class ProductController {
      * 상품 삭제
      * @param id
      * @param userRole
-     * @param username
      * @param userId
      * @return
      */
     @PatchMapping("/{productId}")
     public UUID deleteProduct(@PathVariable("productId") UUID id,
                               @RequestHeader("X-User-Role") String userRole,
-                              @RequestHeader("X-User-username") String username,
                               @RequestHeader("X-User-Id")UUID userId) {
-        Product deleteProduct = productOrchestrator.deleteProduct(id,username, userRole,userId);
+        Product deleteProduct = productOrchestrator.deleteProduct(id,userRole,userId);
         return  deleteProduct.getId();
     }
 
@@ -88,9 +86,8 @@ public class ProductController {
     public UUID modifyProduct(@Valid @RequestBody ProductRequestDto dto,
                               @PathVariable("productId") UUID id,
                               @RequestHeader("X-User-Role")String userRole,
-                              @RequestHeader("X-User-Id") UUID userId,
-                              @RequestHeader("X-User-username") String username) {
-        Product modifyProduct = productOrchestrator.modifyProduct(dto,id,userRole, userId, username);
+                              @RequestHeader("X-User-Id") UUID userId) {
+        Product modifyProduct = productOrchestrator.modifyProduct(dto,id,userRole, userId);
         return modifyProduct.getId();
     }
 
@@ -99,16 +96,14 @@ public class ProductController {
      * 상품 생성
      * @param userRole
      * @param userId
-     * @param username
      * @param dto
      * @return
      */
     @PostMapping
     public ProductResponseDto createProduct(@RequestHeader("X-User-Role")String userRole,
                                             @RequestHeader("X-User-Id") UUID userId,
-                                            @RequestHeader("X-User-username") String username,
                                             @RequestBody ProductRequestDto dto){
-        Product newProduct = productOrchestrator.createProductFlow(userRole,dto,userId,username);
+        Product newProduct = productOrchestrator.createProductFlow(userRole,dto,userId);
         return ProductResponseDto.from(newProduct);
     }
 

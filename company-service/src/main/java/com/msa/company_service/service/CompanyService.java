@@ -143,7 +143,8 @@ public class CompanyService {
         return new CompanyDto(
                 company.getAddress(),
                 company.getLatitude(),
-                company.getLongitude()
+                company.getLongitude(),
+                company.getHubId()
         );
     }
 

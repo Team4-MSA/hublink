@@ -95,7 +95,8 @@ public class HubRouteService {
     @Transactional
     @Caching(evict = {
             @CacheEvict(cacheNames = "hubRoute", key = "#hubRouteId.toString()"),
-            @CacheEvict(cacheNames = "hubPath", allEntries = true)
+            @CacheEvict(cacheNames = "hubPath", allEntries = true),
+            @CacheEvict(cacheNames = "companyPath", allEntries = true)
     })
     public HubRouteResponse updateHubRoute(UUID hubRouteId, HubRouteUpdateRequest request) {
         HubRouteEntity hubRoute = hubRouteRepository.findById(hubRouteId)
@@ -144,7 +145,8 @@ public class HubRouteService {
     @Transactional
     @Caching(evict = {
             @CacheEvict(cacheNames = "hubRoute", key = "#hubRouteId.toString()"),
-            @CacheEvict(cacheNames = "hubPath", allEntries = true)
+            @CacheEvict(cacheNames = "hubPath", allEntries = true),
+            @CacheEvict(cacheNames = "companyPath", allEntries = true)
     })
     public HubRouteResponse deleteHubRoute(UUID hubRouteId) {
         HubRouteEntity hubRoute = hubRouteRepository.findById(hubRouteId)
@@ -202,11 +204,31 @@ public class HubRouteService {
         return routeList;
     }
 
+    // 업체-업체 경로
+    @Cacheable(cacheNames = "companyPath", key = "#departureCompanyId.toString() + '_' + #arrivalCompanyId.toString()")
+    public List<HubRouteResponse> getCompanyToCompanyPath(UUID departureCompanyId, UUID arrivalCompanyId){
+        CompanyDto departureCompany = companyClient.getCompanyLocation(departureCompanyId);
+
+        UUID departureHubId = departureCompany.hubId();
+
+        if (departureHubId == null) {
+            throw new CustomException(HubErrorCode.HUB_NOT_FOUND);
+        }
+
+        CompanyDto arrivalCompany = companyClient.getCompanyLocation(arrivalCompanyId);
+        BigDecimal[] arrivalCoords = getValidCoordinates(arrivalCompany);
+
+        List<HubEntity> allHubs = hubRepository.findAll();
+        UUID arrivalHubId = findClosestHub(allHubs, arrivalCoords[0], arrivalCoords[1]);
+
+        return getHubPath(departureHubId, arrivalHubId, arrivalCompanyId);
+    }
+
     // 자동 생성
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    @CacheEvict(cacheNames = {"hubRoute", "hubPath"}, allEntries = true)
+    @CacheEvict(cacheNames = {"hubRoute", "hubPath", "companyPath"}, allEntries = true)
     public void createRoutesForNewHub(HubCreatedEvent event) {
         HubEntity newHub = hubRepository.findById(event.hubId())
                 .orElseThrow(() -> new CustomException(HubErrorCode.HUB_NOT_FOUND));
@@ -253,7 +275,7 @@ public class HubRouteService {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    @CacheEvict(cacheNames = {"hubRoute", "hubPath"}, allEntries = true)
+    @CacheEvict(cacheNames = {"hubRoute", "hubPath", "companyPath"}, allEntries = true)
     public void updateRoutesForUpdatedHub(HubUpdatedEvent event) {
         List<HubRouteEntity> affectedRoutes = hubRouteRepository.findByInvolvedHubId(event.hubId());
 
@@ -274,7 +296,7 @@ public class HubRouteService {
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    @CacheEvict(cacheNames = {"hubRoute", "hubPath"}, allEntries = true)
+    @CacheEvict(cacheNames = {"hubRoute", "hubPath", "companyPath"}, allEntries = true)
     public void deleteRoutesForDeletedHub(HubDeletedEvent event) {
         List<HubRouteEntity> affectedRoutes = hubRouteRepository.findByInvolvedHubId(event.hubId());
 
@@ -289,29 +311,44 @@ public class HubRouteService {
         }
     }
 
+    // 컴퍼니 주소랑 가까운 허브 찾기
+    private UUID findClosestHub(List<HubEntity> hubs, BigDecimal targetLat, BigDecimal targetLon) {
+        UUID closestHubId = null;
+        double minDistance = Double.MAX_VALUE;
+
+        for (HubEntity hub : hubs) {
+            if (hub.getLatitude() == null || hub.getLongitude() == null) continue;
+
+            double distance = calculate(
+                    hub.getLatitude(), hub.getLongitude(),
+                    targetLat, targetLon
+            ).distanceKm().doubleValue();
+
+            if (distance < minDistance) {
+                minDistance = distance;
+                closestHubId = hub.getHubId();
+            }
+        }
+
+        if (closestHubId == null) {
+            throw new CustomException(HubErrorCode.HUB_NOT_FOUND);
+        }
+        return closestHubId;
+    }
+
+
+    // 도착 허브에서 도착 컴퍼니 까지 루트 생성
     private HubRouteResponse createLastMileRoute(HubEntity arrivalHub, UUID companyId, int sequence) {
 
         CompanyDto company = companyClient.getCompanyLocation(companyId);
 
-        BigDecimal targetLat = company.latitude();
-        BigDecimal targetLon = company.longitude();
-
-        if (company.latitude() == null || company.longitude() == null) {
-            log.warn("Company(ID: {})의 좌표가 누락되어 주소({}) 기반으로 좌표를 재조회합니다.", companyId, company.address());
-            try {
-                CoordinateDto coordinate = geocodingPort.getCoordinate(company.address());
-                targetLat = coordinate.latitude();
-                targetLon = coordinate.longitude();
-            }catch (Exception e){
-                log.error("API 장애로 좌표를 복구하지 못했습니다. address: {}, exception: {}", company.address(), e.getMessage());
-            }
-        }
+        BigDecimal[] arrivalCoords = getValidCoordinates(company);
 
         RouteCalculationResult calcResult = calculate(
                 arrivalHub.getLatitude(),
                 arrivalHub.getLongitude(),
-                targetLat,
-                targetLon
+                arrivalCoords[0],
+                arrivalCoords[1]
         );
 
         return new HubRouteResponse(
@@ -324,6 +361,23 @@ public class HubRouteService {
                 RouteType.P2P,
                 sequence
         );
+    }
+
+    // 위도 경도 있는지 검사
+    private BigDecimal[] getValidCoordinates(CompanyDto company) {
+        BigDecimal targetLat = company.latitude();
+        BigDecimal targetLon = company.longitude();
+
+        if (targetLat == null || targetLon == null) {
+            try {
+                CoordinateDto coordinate = geocodingPort.getCoordinate(company.address());
+                targetLat = coordinate.latitude();
+                targetLon = coordinate.longitude();
+            } catch (Exception e) {
+                throw new CustomException(HubErrorCode.NULL_COORDINATES); // 좌표 복구 실패 시 예외 처리
+            }
+        }
+        return new BigDecimal[]{targetLat, targetLon};
     }
 
     // 루트 순서 추가

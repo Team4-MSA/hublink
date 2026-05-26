@@ -6,6 +6,7 @@ import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.DeliveryManagerRequest;
 import com.msa.user_service.dto.DeliveryManagerResponse;
 import com.msa.user_service.dto.InternalDeliveryManagerResponse;
+import com.msa.user_service.dto.UpdateDeliveryManagerRequest;
 import com.msa.user_service.entity.DeliveryManager;
 import com.msa.user_service.entity.DeliveryManagerType;
 import com.msa.user_service.entity.User;
@@ -141,6 +142,42 @@ public class DeliveryManagerService {
     }
 
     @Transactional
+    public DeliveryManagerResponse update(UUID targetUserId, UpdateDeliveryManagerRequest request,
+                                          String role, UUID requestUserId) {
+        DeliveryManager dm = deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(targetUserId)
+                .orElseThrow(() -> new CustomException(UserErrorCode.DELIVERY_MANAGER_NOT_FOUND));
+
+        // HUB_MANAGER는 자신이 담당하는 허브의 배송 담당자만 수정 가능
+        if (role.equals("HUB_MANAGER")) {
+            validateHubAccess(requestUserId, dm.getHubId());
+        }
+
+        // hubId 변경 처리 - MASTER만 허용, HUB_MANAGER는 허브 이동 불가
+        if (request.getHubId() != null && !request.getHubId().equals(dm.getHubId())) {
+            if (role.equals("HUB_MANAGER")) {
+                throw new CustomException(UserErrorCode.HUB_ACCESS_DENIED);
+            }
+            validateHubExists(request.getHubId());
+            int newSequence = deliveryManagerRepository.findLatestByHubId(request.getHubId())
+                    .map(latest -> latest.getDeliverySequence() + 1)
+                    .orElse(1);
+            dm.changeHub(request.getHubId(), newSequence);
+        }
+
+        dm.update(request.getType(), request.getSlackId());
+
+        // User에 hubId / slackId 전파
+        if (request.getHubId() != null || request.getSlackId() != null) {
+            User user = userRepository.findByUserIdAndDeletedAtIsNull(targetUserId)
+                    .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+            if (request.getHubId() != null) user.updateHubId(request.getHubId());
+            if (request.getSlackId() != null) user.updateSlackId(request.getSlackId());
+        }
+
+        return DeliveryManagerResponse.from(dm);
+    }
+
+    @Transactional
     public void delete(UUID userId, String deletedBy, String role, UUID requestUserId) {
         DeliveryManager deliveryManager = deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.DELIVERY_MANAGER_NOT_FOUND));
@@ -162,6 +199,18 @@ public class DeliveryManagerService {
     public void updateSlackId(UUID userId, String slackId) {
         deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .ifPresent(dm -> dm.updateSlackId(slackId));
+    }
+
+    // User 업데이트에서 허브 변경 시 DeliverManager 에도 전파 (User → DeliverManager 단방향)
+    @Transactional
+    public void syncHubId(UUID userId, UUID newHubId) {
+        deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(userId)
+                .ifPresent(dm -> {
+                    int newSequence = deliveryManagerRepository.findLatestByHubId(newHubId)
+                            .map(latest -> latest.getDeliverySequence() + 1)
+                            .orElse(1);
+                    dm.changeHub(newHubId, newSequence);
+                });
     }
 
     private DeliveryManager saveDeliveryManager(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {

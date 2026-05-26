@@ -33,6 +33,16 @@ public class DeliveryManager extends BaseEntity {
     @Column(name = "slack_id", length = 100)
     private String slackId;
 
+    public void update(DeliveryManagerType type, String slackId) {
+        if (type != null) this.type = type;
+        if (slackId != null) this.slackId = slackId;
+    }
+
+    public void changeHub(UUID hubId, int deliverySequence) {
+        this.hubId = hubId;
+        this.deliverySequence = deliverySequence;
+    }
+
     public void updateSlackId(String slackId) {
         this.slackId = slackId;
     }

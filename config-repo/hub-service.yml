@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: hub-service
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
 
 management:
   tracing:
@@ -53,3 +57,6 @@ resilience4j:
         failureRateThreshold: 50
         permittedNumberOfCallsInHalfOpenState: 3
         waitDurationInOpenState: 20s
+    instances:
+      company-service:
+        baseConfig: default

@@ -18,6 +18,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -43,16 +44,20 @@ public class DeliveryCreationTransactionalService {
             String workStartTime,
             String workEndTime
     ) {
+        UUID departureHubId = hubRoutes.get(0).getDepartureHubId();
+        UUID destinationHubId = getDestinationHubId(hubRoutes);
+
         Delivery delivery = Delivery.create(
                 request.getOrderId(),
-                request.getDepartureHubId(),
-                request.getDestinationHubId(),
+                departureHubId,
+                destinationHubId,
                 request.getReceiverCompanyId(),
                 companyDeliveryManager.getDeliveryManagerId(),
                 request.getDeliveryAddress(),
                 request.getReceiverName(),
                 hubManager.getHubManagerSlackId()
         );
+        delivery.updateEstimatedArrival(calculateEstimatedArrivalAt(hubRoutes));
         Delivery savedDelivery = saveDelivery(delivery);
 
         List<DeliveryRouteHistory> routeHistories = HubRouteResponse.toDeliveryRouteHistories(
@@ -78,6 +83,25 @@ public class DeliveryCreationTransactionalService {
         );
 
         return DeliveryResponse.from(savedDelivery);
+    }
+
+    private LocalDateTime calculateEstimatedArrivalAt(List<HubRouteResponse> hubRoutes) {
+        long totalEstimatedDurationMinutes = hubRoutes.stream()
+                .map(HubRouteResponse::getEstimatedDurationMin)
+                .filter(duration -> duration != null)
+                .mapToLong(Integer::longValue)
+                .sum();
+        return LocalDateTime.now().plusMinutes(totalEstimatedDurationMinutes);
+    }
+
+    private UUID getDestinationHubId(List<HubRouteResponse> hubRoutes) {
+        for (int i = hubRoutes.size() - 1; i >= 0; i--) {
+            HubRouteResponse hubRoute = hubRoutes.get(i);
+            if (!"HUB_TO_HUB".equals(hubRoute.getRouteType())) {
+                return hubRoute.getDepartureHubId();
+            }
+        }
+        return hubRoutes.get(hubRoutes.size() - 1).getArrivalHubId();
     }
 
     private Delivery saveDelivery(Delivery delivery) {

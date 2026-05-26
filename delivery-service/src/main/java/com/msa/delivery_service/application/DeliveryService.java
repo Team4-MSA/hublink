@@ -67,7 +67,7 @@ public class DeliveryService {
         // MASTER: 전체 배송 목록 조회 가능
         // 그 외 권한: 접근 불가
         Page<DeliveryResponse> deliveries = switch (role) {
-            case MASTER -> deliveryRepository.findAll(pageable)
+            case MASTER -> deliveryRepository.findAllByDeletedAtIsNull(pageable)
                     .map(DeliveryResponse::from);
             default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
         };
@@ -80,7 +80,7 @@ public class DeliveryService {
         // DELIVERY_MANAGER: 본인에게 배정된 배송 목록 조회 가능
         // 그 외 권한: 접근 불가
         Page<DeliveryResponse> deliveries = switch (role) {
-            case DELIVERY_MANAGER -> deliveryRepository.findAllByCompanyDeliveryManagerId(userId, pageable)
+            case DELIVERY_MANAGER -> deliveryRepository.findAllByCompanyDeliveryManagerIdAndDeletedAtIsNull(userId, pageable)
                     .map(DeliveryResponse::from);
             default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
         };
@@ -90,10 +90,10 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public DeliveryDetailResponse getDelivery(UUID userId, String role, UUID deliveryId) {
-        Delivery delivery = deliveryRepository.findById(deliveryId)
+        Delivery delivery = deliveryRepository.findByDeliveryIdAndDeletedAtIsNull(deliveryId)
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
         List<DeliveryRouteHistory> routeHistories = deliveryRouteHistoryRepository
-                .findByDeliveryDeliveryIdOrderBySequenceAsc(deliveryId);
+                .findByDeliveryDeliveryIdAndDeletedAtIsNullOrderBySequenceAsc(deliveryId);
 
         // MASTER, HUB_MANAGER, SUPPLIER_MANAGER: 배송 상세 조회 가능
         // DELIVERY_MANAGER: 본인에게 배정된 배송만 조회 가능 (경로를 포함하기 때문에 허브 배송 담당자도 조회 가능)
@@ -101,7 +101,7 @@ public class DeliveryService {
             case MASTER, HUB_MANAGER, SUPPLIER_MANAGER -> DeliveryDetailResponse.of(delivery, routeHistories);
             case DELIVERY_MANAGER -> {
                 boolean assignedDelivery = userId.equals(delivery.getCompanyDeliveryManagerId())
-                        || deliveryRouteHistoryRepository.existsByDeliveryDeliveryIdAndDeliveryManagerId(
+                        || deliveryRouteHistoryRepository.existsByDeliveryDeliveryIdAndDeliveryManagerIdAndDeletedAtIsNull(
                         delivery.getDeliveryId(),
                         userId
                 );
@@ -115,7 +115,7 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public DeliveryResponse getDeliveryByOrderId(String role, UUID orderId) {
-        Delivery delivery = deliveryRepository.findByOrderId(orderId)
+        Delivery delivery = deliveryRepository.findByOrderIdAndDeletedAtIsNull(orderId)
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
         // MASTER, HUB_MANAGER, SUPPLIER_MANAGER: 주문 기준 배송 조회 가능
@@ -133,7 +133,7 @@ public class DeliveryService {
             UUID deliveryId,
             DeliveryStatusUpdateRequest request
     ) {
-        Delivery delivery = deliveryRepository.findById(deliveryId)
+        Delivery delivery = deliveryRepository.findByDeliveryIdAndDeletedAtIsNull(deliveryId)
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
         // MASTER, HUB_MANAGER: 대표 배송 상태 변경 가능
@@ -165,7 +165,7 @@ public class DeliveryService {
             UUID routeHistoryId,
             DeliveryRouteStatusUpdateRequest request
     ) {
-        DeliveryRouteHistory routeHistory = deliveryRouteHistoryRepository.findById(routeHistoryId)
+        DeliveryRouteHistory routeHistory = deliveryRouteHistoryRepository.findByDeliveryRouteHistoryIdAndDeletedAtIsNull(routeHistoryId)
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_ROUTE_HISTORY_NOT_FOUND));
 
         // MASTER, HUB_MANAGER: 경로 상태 변경 가능
@@ -199,18 +199,18 @@ public class DeliveryService {
     */
 
     public DeliveryResponse createDelivery(DeliveryRequest request) {
-        if (deliveryRepository.existsByOrderId(request.getOrderId())) {
+        if (deliveryRepository.existsByOrderIdAndDeletedAtIsNull(request.getOrderId())) {
             throw new CustomException(DeliveryErrorCode.DUPLICATE_ORDER_DELIVERY);
         }
 
-        HubManagerResponse hubManager = getHubManager(request.getDepartureHubId());
         List<HubRouteResponse> hubRoutes = getHubRoutes(request);
-        List<DeliveryManagerResponse> deliveryManagers = getDeliveryManagers(request, hubRoutes);
+        HubManagerResponse hubManager = getHubManager(getDepartureHubId(hubRoutes));
+        List<DeliveryManagerResponse> deliveryManagers = getDeliveryManagers(hubRoutes);
 
         // 배송 테이블에 들어갈 업체 배송 담당자 배정
         DeliveryManagerResponse companyDeliveryManager = assignCompanyDeliveryManager(
                 deliveryManagers,
-                request.getDestinationHubId()
+                getDestinationHubId(hubRoutes)
         );
         // 배송 경로 테이블에 들어갈 허브 배송 담당자들 배정
         Map<UUID, UUID> hubDeliveryManagerIds = assignHubDeliveryManagers(hubRoutes, deliveryManagers);
@@ -228,21 +228,24 @@ public class DeliveryService {
 
     @Transactional
     public void updateFinalDepartureDeadline(DeadlineGeneratedEvent event) {
-        Delivery delivery = deliveryRepository.findById(event.getDeliveryId())
+        Delivery delivery = deliveryRepository.findByDeliveryIdAndDeletedAtIsNull(event.getDeliveryId())
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
-
         delivery.updateFinalDepartureDeadline(event.getFinalDepartureDeadline());
     }
 
     @Transactional
     public void compensateDeliveryCreation(UUID orderId) {
-        deliveryRepository.findByOrderId(orderId)
+        deliveryRepository.findByOrderIdAndDeletedAtIsNull(orderId)
                 .ifPresent(delivery -> {
                     delivery.cancel();
-                    deliveryRouteHistoryRepository.findByDeliveryDeliveryIdOrderBySequenceAsc(delivery.getDeliveryId())
-                            .stream()
-                            .filter(routeHistory -> routeHistory.getStatus().canChangeTo(DeliveryRouteStatus.FAILED))
-                            .forEach(routeHistory -> routeHistory.updateStatus(DeliveryRouteStatus.FAILED));
+                    delivery.delete("SYSTEM");
+                    deliveryRouteHistoryRepository.findByDeliveryDeliveryIdAndDeletedAtIsNullOrderBySequenceAsc(delivery.getDeliveryId())
+                            .forEach(routeHistory -> {
+                                if (routeHistory.getStatus().canChangeTo(DeliveryRouteStatus.FAILED)) {
+                                    routeHistory.updateStatus(DeliveryRouteStatus.FAILED);
+                                }
+                                routeHistory.delete("SYSTEM");
+                            });
                 });
     }
 
@@ -263,15 +266,11 @@ public class DeliveryService {
     }
 
     // 배송 경로에 필요한 허브들의 배송 담당자 목록 조회
-    private List<DeliveryManagerResponse> getDeliveryManagers(
-            DeliveryRequest request,
-            List<HubRouteResponse> hubRoutes
-    ) {
+    private List<DeliveryManagerResponse> getDeliveryManagers(List<HubRouteResponse> hubRoutes) {
         Set<UUID> hubIds = new LinkedHashSet<>();
         for (HubRouteResponse hubRoute : hubRoutes) {
             hubIds.add(hubRoute.getDepartureHubId());
         }
-        hubIds.add(request.getDestinationHubId());
 
         try {
             List<DeliveryManagerResponse> deliveryManagers = userClient.getDeliveryManagers(new ArrayList<>(hubIds));
@@ -327,11 +326,28 @@ public class DeliveryService {
             List<DeliveryManagerResponse> deliveryManagers
     ) {
         Map<UUID, UUID> hubDeliveryManagerIds = new HashMap<>();
+        // 각 허브에 해당 하는 담당 매니저를 따로 조회해서 발생하던 N+1 문제 방지
+        // 처음부터 모든 경로의 허브 배송 담당자들을 전부 미리 조회
+        List<DeliveryManagerResponse> hubDeliveryManagers = deliveryManagers.stream()
+                .filter(deliveryManager -> HUB_DELIVERY_MANAGER_TYPE.equals(deliveryManager.getType()))
+                .toList();
+        Set<UUID> workingManagerIds = hubDeliveryManagers.isEmpty()
+                ? Set.of()
+                : deliveryRouteHistoryRepository.findWorkingManagerIds(
+                hubDeliveryManagers.stream()
+                        .map(DeliveryManagerResponse::getDeliveryManagerId)
+                        .toList(),
+                List.of(DeliveryRouteStatus.COMPLETED, DeliveryRouteStatus.SKIPPED, DeliveryRouteStatus.FAILED)
+        );
 
         for (HubRouteResponse hubRoute : hubRoutes) {
+            if (!isHubToHubRoute(hubRoute)) {
+                continue;
+            }
             DeliveryManagerResponse hubDeliveryManager = selectHubDeliveryManager(
                     deliveryManagers,
-                    hubRoute.getDepartureHubId()
+                    hubRoute.getDepartureHubId(),
+                    workingManagerIds
             );
             hubDeliveryManagerIds.put(hubRoute.getHubRouteId(), hubDeliveryManager.getDeliveryManagerId());
         }
@@ -342,7 +358,8 @@ public class DeliveryService {
     // 특정 출발 허브 구간을 담당할 허브 배송 담당자 선택
     private DeliveryManagerResponse selectHubDeliveryManager(
             List<DeliveryManagerResponse> deliveryManagers,
-            UUID departureHubId
+            UUID departureHubId,
+            Set<UUID> workingManagerIds
     ) {
         List<DeliveryManagerResponse> hubDeliveryManagers = deliveryManagers.stream()
                 .filter(deliveryManager -> departureHubId.equals(deliveryManager.getHubId()))
@@ -352,13 +369,6 @@ public class DeliveryService {
         if (hubDeliveryManagers.isEmpty()) {
             throw new CustomException(DeliveryErrorCode.NO_DELIVERY_MANAGER);
         }
-
-        Set<UUID> workingManagerIds = deliveryRouteHistoryRepository.findWorkingManagerIds(
-                hubDeliveryManagers.stream()
-                        .map(DeliveryManagerResponse::getDeliveryManagerId)
-                        .toList(),
-                List.of(DeliveryRouteStatus.COMPLETED, DeliveryRouteStatus.SKIPPED, DeliveryRouteStatus.FAILED)
-        );
 
         List<DeliveryManagerResponse> availableManagers = hubDeliveryManagers.stream()
                 .filter(deliveryManager -> !workingManagerIds.contains(deliveryManager.getDeliveryManagerId()))
@@ -378,8 +388,8 @@ public class DeliveryService {
     private List<HubRouteResponse> getHubRoutes(DeliveryRequest request) {
         try {
             List<HubRouteResponse> hubRoutes = hubClient.getRoutes(
-                    request.getDepartureHubId(),
-                    request.getDestinationHubId()
+                    request.getSupplyCompanyId(),
+                    request.getReceiverCompanyId()
             );
             if (hubRoutes == null || hubRoutes.isEmpty()) {
                 throw new CustomException(DeliveryErrorCode.NO_HUB_ROUTE);
@@ -390,5 +400,24 @@ public class DeliveryService {
         } catch (FeignException e) {
             throw new CustomException(DeliveryErrorCode.HUB_SERVICE_UNAVAILABLE);
         }
+    }
+
+    private UUID getDepartureHubId(List<HubRouteResponse> hubRoutes) {
+        return hubRoutes.get(0).getDepartureHubId();
+    }
+
+    // Hub-Hub 경로가 아닌 원소의 경우 Hub-Company이므로 해당 경로의 출발 hub가 마지막 hub
+    private UUID getDestinationHubId(List<HubRouteResponse> hubRoutes) {
+        for (int i = hubRoutes.size() - 1; i >= 0; i--) {
+            HubRouteResponse hubRoute = hubRoutes.get(i);
+            if (!isHubToHubRoute(hubRoute)) {
+                return hubRoute.getDepartureHubId();
+            }
+        }
+        return hubRoutes.get(hubRoutes.size() - 1).getArrivalHubId();
+    }
+
+    private boolean isHubToHubRoute(HubRouteResponse hubRoute) {
+        return "HUB_TO_HUB".equals(hubRoute.getRouteType());
     }
 }

@@ -21,7 +21,7 @@ spring:
       password: ${REDIS_PASSWORD:}
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
         default_schema: delivery_service

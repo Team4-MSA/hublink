@@ -26,6 +26,8 @@ public class OpenApiConfig {
                         new Server()
                                 .url(gatewayUrl)
                                 .description("API Gateway")
+//                                .url("/")
+//                                .description("Current server")
                 ));
     }
 }

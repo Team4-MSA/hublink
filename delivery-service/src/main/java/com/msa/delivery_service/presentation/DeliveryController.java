@@ -7,6 +7,7 @@ import com.msa.delivery_service.presentation.dto.DeliveryResponse;
 import com.msa.delivery_service.presentation.dto.DeliveryRouteHistoryResponse;
 import com.msa.delivery_service.presentation.dto.DeliveryRouteStatusUpdateRequest;
 import com.msa.delivery_service.presentation.dto.DeliveryStatusUpdateRequest;
+import org.springdoc.core.annotations.ParameterObject;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -37,6 +38,7 @@ public class DeliveryController {
     @GetMapping("/deliveries")
     public PageRes<DeliveryResponse> getDeliveries(
             @RequestHeader("X-User-Role") String role,
+            @ParameterObject
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return deliveryService.getDeliveries(role, pageable);
@@ -48,6 +50,7 @@ public class DeliveryController {
     public PageRes<DeliveryResponse> getMyDeliveries(
             @RequestHeader("X-User-Id") UUID userId,
             @RequestHeader("X-User-Role") String role,
+            @ParameterObject
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return deliveryService.getMyDeliveries(userId, role, pageable);

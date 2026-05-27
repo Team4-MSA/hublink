@@ -3,6 +3,8 @@ package com.msa.delivery_service.presentation;
 import com.msa.delivery_service.application.DeliveryService;
 import com.msa.delivery_service.presentation.dto.DeliveryRequest;
 import com.msa.delivery_service.presentation.dto.DeliveryResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,17 +20,19 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/internal/deliveries")
+@Tag(name = "Internal Delivery", description = "배송 외부 호출 API")
 public class DeliveryInternalController {
 
     private final DeliveryService deliveryService;
 
-    // 주문 정보를 기반으로 배송과 배송 경로를 생성한다.
+    @Operation(summary = "배송 생성")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public DeliveryResponse createDelivery(@Valid @RequestBody DeliveryRequest request) {
         return deliveryService.createDelivery(request);
     }
-    // 보상 트랜잭션 API
+
+    @Operation(summary = "배송 생성 - 보상 API")
     @PostMapping("/orders/{orderId}/compensate")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void compensateDeliveryCreation(@PathVariable UUID orderId) {

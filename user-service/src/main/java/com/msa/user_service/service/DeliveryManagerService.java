@@ -6,16 +6,18 @@ import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.DeliveryManagerRequest;
 import com.msa.user_service.dto.DeliveryManagerResponse;
 import com.msa.user_service.dto.InternalDeliveryManagerResponse;
+import com.msa.user_service.dto.UpdateDeliveryManagerRequest;
 import com.msa.user_service.entity.DeliveryManager;
 import com.msa.user_service.entity.DeliveryManagerType;
 import com.msa.user_service.entity.User;
+import com.msa.user_service.entity.UserRole;
 import com.msa.user_service.global.UserErrorCode;
 import com.msa.user_service.repository.DeliveryManagerRepository;
-import com.msa.user_service.repository.HubManagerRepository;
 import com.msa.user_service.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -29,31 +31,31 @@ import java.util.stream.Collectors;
 public class DeliveryManagerService {
 
     private final DeliveryManagerRepository deliveryManagerRepository;
-    private final HubManagerRepository hubManagerRepository;
     private final UserRepository userRepository;
     private final HubClient hubClient;
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void validateHubExists(UUID hubId) {
-        if (!hubClient.checkHubExists(hubId).isExists()) {
+        if (hubId == null || !hubClient.checkHubExists(hubId).isExists()) {
             throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
         }
     }
 
     private void validateHubAccess(UUID requestUserId, UUID hubId) {
-        if (!hubManagerRepository.existsByUserIdAndHubIdAndDeletedAtIsNull(requestUserId, hubId)) {
+        User user = userRepository.findByUserIdAndDeletedAtIsNull(requestUserId)
+                .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+        if (user.getRole() != UserRole.HUB_MANAGER || !hubId.equals(user.getHubId())) {
             throw new CustomException(UserErrorCode.HUB_ACCESS_DENIED);
         }
     }
 
-    private List<UUID> getMyHubIds(UUID requestUserId) {
-        List<UUID> hubIds = hubManagerRepository.findAllByUserIdAndDeletedAtIsNull(requestUserId)
-                .stream()
-                .map(hm -> hm.getHubId())
-                .toList();
-        if (hubIds.isEmpty()) {
+    private UUID getMyHubId(UUID requestUserId) {
+        User user = userRepository.findByUserIdAndDeletedAtIsNull(requestUserId)
+                .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+        if (user.getHubId() == null) {
             throw new CustomException(UserErrorCode.NO_ASSIGNED_HUB);
         }
-        return hubIds;
+        return user.getHubId();
     }
 
     @Transactional
@@ -61,8 +63,6 @@ public class DeliveryManagerService {
         if (role.equals("HUB_MANAGER")) {
             validateHubAccess(requestUserId, request.getHubId());
         }
-
-        validateHubExists(request.getHubId());
 
         User user = userRepository.findByUserIdAndDeletedAtIsNull(request.getUserId())
                 .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
@@ -75,10 +75,10 @@ public class DeliveryManagerService {
     public PageRes<DeliveryManagerResponse> getList(UUID hubId, DeliveryManagerType type, Pageable pageable,
                                                      String role, UUID requestUserId) {
         if (role.equals("HUB_MANAGER")) {
-            List<UUID> myHubIds = getMyHubIds(requestUserId);
+            UUID myHubId = getMyHubId(requestUserId);
 
             if (hubId != null) {
-                if (!myHubIds.contains(hubId)) {
+                if (!myHubId.equals(hubId)) {
                     throw new CustomException(UserErrorCode.HUB_ACCESS_DENIED);
                 }
                 return type != null
@@ -87,8 +87,8 @@ public class DeliveryManagerService {
             }
 
             return type != null
-                    ? new PageRes<>(deliveryManagerRepository.findAllByHubIdInAndTypeAndDeletedAtIsNull(myHubIds, type, pageable).map(DeliveryManagerResponse::from))
-                    : new PageRes<>(deliveryManagerRepository.findAllByHubIdInAndDeletedAtIsNull(myHubIds, pageable).map(DeliveryManagerResponse::from));
+                    ? new PageRes<>(deliveryManagerRepository.findAllByHubIdAndTypeAndDeletedAtIsNull(myHubId, type, pageable).map(DeliveryManagerResponse::from))
+                    : new PageRes<>(deliveryManagerRepository.findAllByHubIdAndDeletedAtIsNull(myHubId, pageable).map(DeliveryManagerResponse::from));
         }
 
         if (hubId != null && type != null) {
@@ -103,8 +103,8 @@ public class DeliveryManagerService {
         return new PageRes<>(deliveryManagerRepository.findAllByDeletedAtIsNull(pageable).map(DeliveryManagerResponse::from));
     }
 
-    public DeliveryManagerResponse getOne(UUID deliveryManagerId, String role, UUID requestUserId) {
-        DeliveryManager deliveryManager = deliveryManagerRepository.findByDeliveryManagerIdAndDeletedAtIsNull(deliveryManagerId)
+    public DeliveryManagerResponse getOne(UUID userId, String role, UUID requestUserId) {
+        DeliveryManager deliveryManager = deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.DELIVERY_MANAGER_NOT_FOUND));
 
         if (role.equals("HUB_MANAGER")) {
@@ -119,8 +119,11 @@ public class DeliveryManagerService {
         return DeliveryManagerResponse.from(deliveryManager);
     }
 
-    public List<InternalDeliveryManagerResponse> getDeliveryManagersByHubForInternal(UUID hubId) {
-        List<DeliveryManager> deliveryManagers = deliveryManagerRepository.findAllByHubIdAndDeletedAtIsNull(hubId);
+    public List<InternalDeliveryManagerResponse> getDeliveryManagersByHubsForInternal(List<UUID> hubIds) {
+        if (hubIds == null || hubIds.isEmpty()) {
+            return List.of();
+        }
+        List<DeliveryManager> deliveryManagers = deliveryManagerRepository.findAllByHubIdInAndDeletedAtIsNull(hubIds);
 
         List<UUID> userIds = deliveryManagers.stream()
                 .map(DeliveryManager::getUserId)
@@ -142,8 +145,46 @@ public class DeliveryManagerService {
     }
 
     @Transactional
-    public void delete(UUID deliveryManagerId, String deletedBy, String role, UUID requestUserId) {
-        DeliveryManager deliveryManager = deliveryManagerRepository.findByDeliveryManagerIdAndDeletedAtIsNull(deliveryManagerId)
+    public DeliveryManagerResponse update(UUID targetUserId, UpdateDeliveryManagerRequest request,
+                                          String role, UUID requestUserId) {
+        DeliveryManager dm = deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(targetUserId)
+                .orElseThrow(() -> new CustomException(UserErrorCode.DELIVERY_MANAGER_NOT_FOUND));
+
+        // HUB_MANAGER는 자신이 담당하는 허브의 배송 담당자만 수정 가능
+        if (role.equals("HUB_MANAGER")) {
+            validateHubAccess(requestUserId, dm.getHubId());
+        }
+
+        // 정원 체크: 타입 변경 또는 COMPANY_DELIVERY의 허브 변경 시
+        validateDeliveryManagerCapacityForUpdate(dm, request);
+
+        // hubId 변경 처리 - MASTER만 허용, HUB_MANAGER는 허브 이동 불가
+        if (request.getHubId() != null && !request.getHubId().equals(dm.getHubId())) {
+            if (role.equals("HUB_MANAGER")) {
+                throw new CustomException(UserErrorCode.HUB_ACCESS_DENIED);
+            }
+            int newSequence = deliveryManagerRepository.findLatestByHubId(request.getHubId())
+                    .map(latest -> latest.getDeliverySequence() + 1)
+                    .orElse(1);
+            dm.changeHub(request.getHubId(), newSequence);
+        }
+
+        dm.update(request.getType(), request.getSlackId());
+
+        // User에 hubId / slackId 전파
+        if (request.getHubId() != null || request.getSlackId() != null) {
+            User user = userRepository.findByUserIdAndDeletedAtIsNull(targetUserId)
+                    .orElseThrow(() -> new CustomException(UserErrorCode.USER_NOT_FOUND));
+            if (request.getHubId() != null) user.updateHubId(request.getHubId());
+            if (request.getSlackId() != null) user.updateSlackId(request.getSlackId());
+        }
+
+        return DeliveryManagerResponse.from(dm);
+    }
+
+    @Transactional
+    public void delete(UUID userId, String deletedBy, String role, UUID requestUserId) {
+        DeliveryManager deliveryManager = deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new CustomException(UserErrorCode.DELIVERY_MANAGER_NOT_FOUND));
 
         if (role.equals("HUB_MANAGER")) {
@@ -159,7 +200,34 @@ public class DeliveryManagerService {
         saveDeliveryManager(userId, hubId, type, slackId);
     }
 
+    @Transactional
+    public void updateSlackId(UUID userId, String slackId) {
+        deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(userId)
+                .ifPresent(dm -> dm.updateSlackId(slackId));
+    }
+
+    // User 업데이트에서 허브 변경 시 DeliverManager 에도 전파 (User → DeliverManager 단방향)
+    @Transactional
+    public void syncHubId(UUID userId, UUID newHubId) {
+        deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(userId)
+                .ifPresent(dm -> {
+                    if (newHubId.equals(dm.getHubId())) {
+                        return;
+                    }
+                    // COMPANY_DELIVERY는 허브 변경 시 새 허브의 정원 체크
+                    if (dm.getType() == DeliveryManagerType.COMPANY_DELIVERY) {
+                        validateDeliveryManagerCapacity(newHubId, DeliveryManagerType.COMPANY_DELIVERY);
+                    }
+                    int newSequence = deliveryManagerRepository.findLatestByHubId(newHubId)
+                            .map(latest -> latest.getDeliverySequence() + 1)
+                            .orElse(1);
+                    dm.changeHub(newHubId, newSequence);
+                });
+    }
+
     private DeliveryManager saveDeliveryManager(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
+        validateDeliveryManagerCapacity(hubId, type);
+
         int nextSequence = deliveryManagerRepository
                 .findLatestByHubId(hubId)
                 .map(dm -> dm.getDeliverySequence() + 1)
@@ -172,5 +240,30 @@ public class DeliveryManagerService {
                 .deliverySequence(nextSequence)
                 .slackId(slackId)
                 .build());
+    }
+
+    private void validateDeliveryManagerCapacityForUpdate(DeliveryManager dm, UpdateDeliveryManagerRequest request) {
+        DeliveryManagerType newType = request.getType() != null ? request.getType() : dm.getType();
+        UUID newHubId = request.getHubId() != null ? request.getHubId() : dm.getHubId();
+
+        boolean typeChanging = request.getType() != null && request.getType() != dm.getType();
+        boolean hubChanging = request.getHubId() != null && !request.getHubId().equals(dm.getHubId());
+
+        // 타입이 변경되거나, COMPANY_DELIVERY 상태에서 허브가 변경되는 경우 정원 체크
+        if (typeChanging || (hubChanging && newType == DeliveryManagerType.COMPANY_DELIVERY)) {
+            validateDeliveryManagerCapacity(newHubId, newType);
+        }
+    }
+
+    private void validateDeliveryManagerCapacity(UUID hubId, DeliveryManagerType type) {
+        if (type == DeliveryManagerType.HUB_DELIVERY) {
+            if (deliveryManagerRepository.countByTypeAndDeletedAtIsNull(DeliveryManagerType.HUB_DELIVERY) >= 10) {
+                throw new CustomException(UserErrorCode.HUB_DELIVERY_LIMIT_EXCEEDED);
+            }
+        } else if (type == DeliveryManagerType.COMPANY_DELIVERY) {
+            if (deliveryManagerRepository.countByHubIdAndTypeAndDeletedAtIsNull(hubId, DeliveryManagerType.COMPANY_DELIVERY) >= 10) {
+                throw new CustomException(UserErrorCode.COMPANY_DELIVERY_LIMIT_EXCEEDED);
+            }
+        }
     }
 }

@@ -65,12 +65,12 @@ public class UserController {
     public ResponseEntity<UserResponse> updateUser(
             @PathVariable UUID userId,
             @Valid @RequestBody UpdateUserRequest request,
-            @RequestHeader("X-User-Id") String requestUserId,
             @RequestHeader("X-User-Role") String role
     ) {
-        if (!role.equals("MASTER") && !requestUserId.equals(userId.toString())) {
+        if (!role.equals("MASTER")) {
             throw new CustomException(UserErrorCode.ACCESS_DENIED);
         }
+        userService.validateUpdateResources(request);
         return ResponseEntity.ok(userService.updateUser(userId, request));
     }
 

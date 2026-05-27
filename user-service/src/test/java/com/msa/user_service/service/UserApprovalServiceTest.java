@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("UserApprovalService 테스트")
@@ -29,15 +30,13 @@ class UserApprovalServiceTest {
 
     @Mock private UserRepository userRepository;
     @Mock private UserApprovalHistoryRepository approvalHistoryRepository;
-    @Mock private HubManagerService hubManagerService;
-    @Mock private CompanyManagerService companyManagerService;
     @Mock private DeliveryManagerService deliveryManagerService;
 
     @InjectMocks
     private UserApprovalService userApprovalService;
 
     @Test
-    @DisplayName("HUB_MANAGER 승인 - hubManagerService.createOnApproval 호출")
+    @DisplayName("HUB_MANAGER 승인 - 별도 테이블 생성 없이 상태만 APPROVED로 변경")
     void executeApproval_approve_hubManager() {
         // given
         User user = TestFixtures.pendingHubManagerUser();
@@ -53,12 +52,12 @@ class UserApprovalServiceTest {
 
         // then
         assertThat(user.getStatus()).isEqualTo(UserStatus.APPROVED);
-        then(hubManagerService).should().createOnApproval(TestFixtures.USER_ID, TestFixtures.HUB_ID);
+        then(deliveryManagerService).shouldHaveNoInteractions();
         then(approvalHistoryRepository).should().save(any(UserApprovalHistory.class));
     }
 
     @Test
-    @DisplayName("COMPANY_MANAGER 승인 - companyManagerService.createOnApproval 호출")
+    @DisplayName("COMPANY_MANAGER 승인 - 별도 테이블 생성 없이 상태만 APPROVED로 변경")
     void executeApproval_approve_companyManager() {
         // given
         User user = TestFixtures.pendingCompanyManagerUser();
@@ -74,7 +73,7 @@ class UserApprovalServiceTest {
 
         // then
         assertThat(user.getStatus()).isEqualTo(UserStatus.APPROVED);
-        then(companyManagerService).should().createOnApproval(TestFixtures.USER_ID, TestFixtures.COMPANY_ID);
+        then(deliveryManagerService).shouldHaveNoInteractions();
     }
 
     @Test
@@ -116,7 +115,7 @@ class UserApprovalServiceTest {
 
         // then
         assertThat(user.getStatus()).isEqualTo(UserStatus.REJECTED);
-        then(hubManagerService).shouldHaveNoInteractions();
+        then(deliveryManagerService).shouldHaveNoInteractions();
     }
 
     @Test
@@ -154,6 +153,29 @@ class UserApprovalServiceTest {
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(UserErrorCode.NOT_PENDING_STATUS));
+    }
+
+    @Test
+    @DisplayName("HUB_MANAGER 승인 실패 - 해당 허브에 이미 담당자 존재")
+    void executeApproval_approve_hubManager_alreadyExists() {
+        // given
+        User pendingUser = TestFixtures.pendingHubManagerUser();
+        User existingManager = TestFixtures.approvedHubManagerUser();
+        ApproveUserRequest request = approveRequest(UserStatus.APPROVED, null);
+
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(pendingUser));
+        given(userRepository.findByHubIdAndRoleAndDeletedAtIsNull(TestFixtures.HUB_ID, UserRole.HUB_MANAGER))
+                .willReturn(Optional.of(existingManager));
+
+        // then
+        assertThatThrownBy(() ->
+                userApprovalService.executeApproval(TestFixtures.USER_ID, request, TestFixtures.ADMIN_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_MANAGER_ALREADY_EXISTS));
+
+        then(approvalHistoryRepository).should(never()).save(any());
     }
 
     private ApproveUserRequest approveRequest(UserStatus status, DeliveryManagerType type) {

@@ -131,6 +131,7 @@ public class UserService {
                     if (user.getHubId() == null || !hubClient.checkHubExists(user.getHubId()).isExists()) {
                         throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
                     }
+                    // 중복 체크는 executeApproval() 트랜잭션 내부에서 수행 (TOCTOU 방지)
                 }
                 case COMPANY_MANAGER -> {
                     if (user.getCompanyId() == null || !companyClient.checkCompanyExists(user.getCompanyId()).isExists()) {
@@ -151,12 +152,11 @@ public class UserService {
         userApprovalService.executeApproval(userId, request, processedBy);
     }
 
-    // Internal API용 - 허브 담당 HUB_MANAGER 목록 조회
-    public List<InternalHubManagerResponse> getHubManagersByHubId(UUID hubId) {
-        return userRepository.findAllByHubIdAndRoleAndDeletedAtIsNull(hubId, UserRole.HUB_MANAGER)
-                .stream()
+    // Internal API용 - 허브 담당 HUB_MANAGER 단건 조회
+    public InternalHubManagerResponse getHubManagerByHubId(UUID hubId) {
+        return userRepository.findByHubIdAndRoleAndDeletedAtIsNull(hubId, UserRole.HUB_MANAGER)
                 .map(InternalHubManagerResponse::of)
-                .toList();
+                .orElseThrow(() -> new CustomException(UserErrorCode.HUB_MANAGER_NOT_FOUND));
     }
 
     // Internal API용 - 허브 소속 여부 검증

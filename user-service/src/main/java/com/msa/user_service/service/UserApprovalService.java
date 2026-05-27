@@ -36,6 +36,13 @@ public class UserApprovalService {
         UserStatus previousStatus = user.getStatus();
 
         if (request.getStatus() == UserStatus.APPROVED) {
+
+            if (user.getRole() == UserRole.HUB_MANAGER) {
+                if (userRepository.findByHubIdAndRoleAndDeletedAtIsNull(user.getHubId(), UserRole.HUB_MANAGER).isPresent()) {
+                    throw new CustomException(UserErrorCode.HUB_MANAGER_ALREADY_EXISTS);
+                }
+            }
+
             user.approve();
 
             if (user.getRole() == UserRole.DELIVERY_MANAGER) {

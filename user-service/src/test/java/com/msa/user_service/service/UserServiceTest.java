@@ -7,6 +7,7 @@ import com.msa.user_service.dto.ApproveUserRequest;
 import com.msa.user_service.dto.CompanyExistsResponse;
 import com.msa.user_service.dto.HubExistsResponse;
 import com.msa.user_service.dto.InternalHubManagerResponse;
+import com.msa.user_service.entity.UserRole;
 import com.msa.user_service.dto.SignUpRequest;
 import com.msa.user_service.dto.UpdateUserRequest;
 import com.msa.user_service.dto.UserResponse;
@@ -29,7 +30,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -314,35 +314,35 @@ class UserServiceTest {
     }
 
     @Test
-    @DisplayName("허브 매니저 목록 조회 성공 - 여러 명 반환")
-    void getHubManagersByHubId_multipleManagers() {
+    @DisplayName("허브 매니저 단건 조회 성공")
+    void getHubManagerByHubId_success() {
         // given
-        User manager1 = TestFixtures.approvedHubManagerUser();
-        User manager2 = TestFixtures.approvedHubManagerUser();
-        given(userRepository.findAllByHubIdAndRoleAndDeletedAtIsNull(TestFixtures.HUB_ID, UserRole.HUB_MANAGER))
-                .willReturn(List.of(manager1, manager2));
+        User manager = TestFixtures.approvedHubManagerUser();
+        given(userRepository.findByHubIdAndRoleAndDeletedAtIsNull(TestFixtures.HUB_ID, UserRole.HUB_MANAGER))
+                .willReturn(Optional.of(manager));
 
         // when
-        List<InternalHubManagerResponse> result = userService.getHubManagersByHubId(TestFixtures.HUB_ID);
+        InternalHubManagerResponse result = userService.getHubManagerByHubId(TestFixtures.HUB_ID);
 
         // then
-        assertThat(result).hasSize(2);
-        assertThat(result).allSatisfy(r -> assertThat(r.getHubId()).isEqualTo(TestFixtures.HUB_ID));
+        assertThat(result.getHubId()).isEqualTo(TestFixtures.HUB_ID);
+        assertThat(result.getHubManagerSlackId()).isEqualTo("U_HUB_ADMIN");
     }
 
     @Test
-    @DisplayName("허브 매니저 목록 조회 - 해당 허브에 매니저 없으면 빈 리스트 반환")
-    void getHubManagersByHubId_empty() {
+    @DisplayName("허브 매니저 단건 조회 실패 - 없으면 HUB_MANAGER_NOT_FOUND")
+    void getHubManagerByHubId_notFound() {
         // given
-        given(userRepository.findAllByHubIdAndRoleAndDeletedAtIsNull(TestFixtures.HUB_ID, UserRole.HUB_MANAGER))
-                .willReturn(List.of());
-
-        // when
-        List<InternalHubManagerResponse> result = userService.getHubManagersByHubId(TestFixtures.HUB_ID);
+        given(userRepository.findByHubIdAndRoleAndDeletedAtIsNull(TestFixtures.HUB_ID, UserRole.HUB_MANAGER))
+                .willReturn(Optional.empty());
 
         // then
-        assertThat(result).isEmpty();
+        assertThatThrownBy(() -> userService.getHubManagerByHubId(TestFixtures.HUB_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_MANAGER_NOT_FOUND));
     }
+
 
     private SignUpRequest signUpRequest(String username, String password, String name, String email) {
         SignUpRequest req = new SignUpRequest();

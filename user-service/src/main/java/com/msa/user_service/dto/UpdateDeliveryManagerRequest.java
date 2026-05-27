@@ -1,6 +1,6 @@
 package com.msa.user_service.dto;
 
-import jakarta.validation.constraints.NotNull;
+import com.msa.user_service.entity.DeliveryManagerType;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -8,11 +8,9 @@ import java.util.UUID;
 
 @Getter
 @NoArgsConstructor
-public class HubManagerRequest {
+public class UpdateDeliveryManagerRequest {
 
-    @NotNull
-    private UUID userId;
-
-    @NotNull
     private UUID hubId;
+    private DeliveryManagerType type;
+    private String slackId;
 }

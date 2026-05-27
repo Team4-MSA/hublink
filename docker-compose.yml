@@ -6,38 +6,30 @@ services:
       - "6379:6379"
 
   eureka-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: eureka-server
+    image: ${ECR_REGISTRY}/hublink-eureka-server:latest
     container_name: hublink-eureka-server
+    env_file:
+      - .env
     ports:
       - "19090:19090"
 
   api-gateway:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: api-gateway
+    image: ${ECR_REGISTRY}/hublink-api-gateway:latest
     container_name: hublink-api-gateway
     ports:
       - "19091:19091"
+    env_file:
+      - .env
     depends_on:
       - eureka-server
       - config-server
 
   config-server:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: config-server
+    image: ${ECR_REGISTRY}/hublink-config-server:latest
     container_name: hublink-config-server
     ports:
       - "19092:19092"
-    environment:
+    env_file:
       - .env
     depends_on:
       - eureka-server
@@ -45,11 +37,7 @@ services:
       - ./config-repo:/config-repo
 
   user-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: user-service
+    image: ${ECR_REGISTRY}/hublink-user-service:latest
     container_name: hublink-user-service
     expose:
       - "19093"
@@ -60,11 +48,7 @@ services:
       - config-server
 
   order-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: order-service
+    image: ${ECR_REGISTRY}/hublink-order-service:latest
     container_name: hublink-order-service
     expose:
       - "19094"
@@ -75,11 +59,7 @@ services:
       - config-server
 
   hub-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: hub-service
+    image: ${ECR_REGISTRY}/hublink-hub-service:latest
     container_name: hublink-hub-service
     expose:
       - "19095"
@@ -90,11 +70,7 @@ services:
       - config-server
 
   company-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: company-service
+    image: ${ECR_REGISTRY}/hublink-company-service:latest
     container_name: hublink-company-service
     expose:
       - "19096"
@@ -105,11 +81,7 @@ services:
       - config-server
 
   product-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: product-service
+    image: ${ECR_REGISTRY}/hublink-product-service:latest
     container_name: hublink-product-service
     expose:
       - "19097"
@@ -120,11 +92,7 @@ services:
       - config-server
 
   stock-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: stock-service
+    image: ${ECR_REGISTRY}/hublink-stock-service:latest
     container_name: hublink-stock-service
     expose:
       - "19098"
@@ -135,11 +103,7 @@ services:
       - config-server
 
   delivery-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: delivery-service
+    image: ${ECR_REGISTRY}/hublink-delivery-service:latest
     container_name: hublink-delivery-service
     expose:
       - "19099"
@@ -151,11 +115,7 @@ services:
       - config-server
 
   slack-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: slack-service
+    image: ${ECR_REGISTRY}/hublink-slack-service:latest
     container_name: hublink-slack-service
     expose:
       - "19100"
@@ -167,11 +127,7 @@ services:
       - config-server
 
   ai-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        SERVICE_NAME: ai-service
+    image: ${ECR_REGISTRY}/hublink-ai-service:latest
     container_name: hublink-ai-service
     expose:
       - "19101"
@@ -191,8 +147,6 @@ services:
   prometheus:
     image: prom/prometheus:v3.11.3
     container_name: hublink-prometheus
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     ports:
       - "9090:9090"
     volumes:
@@ -209,5 +163,6 @@ services:
       - prometheus
     volumes:
       - grafana-storage:/var/lib/grafana
+
 volumes:
   grafana-storage:

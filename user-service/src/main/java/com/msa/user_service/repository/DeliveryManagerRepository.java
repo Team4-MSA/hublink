@@ -17,8 +17,6 @@ import java.util.UUID;
 
 public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager, UUID> {
 
-    Optional<DeliveryManager> findByDeliveryManagerIdAndDeletedAtIsNull(UUID deliveryManagerId);
-
     Optional<DeliveryManager> findByUserIdAndDeletedAtIsNull(UUID userId);
 
     Page<DeliveryManager> findAllByDeletedAtIsNull(Pageable pageable);
@@ -31,6 +29,8 @@ public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager
 
     List<DeliveryManager> findAllByHubIdAndDeletedAtIsNull(UUID hubId);
 
+    List<DeliveryManager> findAllByHubIdInAndDeletedAtIsNull(Collection<UUID> hubIds);
+
     boolean existsByUserIdAndDeletedAtIsNull(UUID userId);
 
     Page<DeliveryManager> findAllByHubIdInAndDeletedAtIsNull(Collection<UUID> hubIds, Pageable pageable);
@@ -40,4 +40,8 @@ public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT d FROM DeliveryManager d WHERE d.hubId = :hubId ORDER BY d.deliverySequence DESC LIMIT 1")
     Optional<DeliveryManager> findLatestByHubId(@Param("hubId") UUID hubId);
+
+    long countByTypeAndDeletedAtIsNull(DeliveryManagerType type);
+
+    long countByHubIdAndTypeAndDeletedAtIsNull(UUID hubId, DeliveryManagerType type);
 }

@@ -12,7 +12,6 @@ import java.util.UUID;
 @Builder
 public class DeliveryManagerResponse {
 
-    private UUID deliveryManagerId;
     private UUID userId;
     private UUID hubId;
     private DeliveryManagerType type;
@@ -23,7 +22,6 @@ public class DeliveryManagerResponse {
 
     public static DeliveryManagerResponse from(DeliveryManager deliveryManager) {
         return DeliveryManagerResponse.builder()
-                .deliveryManagerId(deliveryManager.getDeliveryManagerId())
                 .userId(deliveryManager.getUserId())
                 .hubId(deliveryManager.getHubId())
                 .type(deliveryManager.getType())

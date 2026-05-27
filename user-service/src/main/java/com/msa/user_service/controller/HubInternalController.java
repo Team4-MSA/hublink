@@ -1,7 +1,7 @@
 package com.msa.user_service.controller;
 
 import com.msa.user_service.dto.InternalHubManagerResponse;
-import com.msa.user_service.service.HubManagerService;
+import com.msa.user_service.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,12 +16,12 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class HubInternalController {
 
-    private final HubManagerService hubManagerService;
+    private final UserService userService;
 
     @GetMapping("/{hubId}")
     public ResponseEntity<InternalHubManagerResponse> getHubManager(
             @PathVariable UUID hubId
     ) {
-        return ResponseEntity.ok(hubManagerService.getHubManagerByHubIdForInternal(hubId));
+        return ResponseEntity.ok(userService.getHubManagerByHubId(hubId));
     }
 }

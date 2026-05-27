@@ -1,8 +1,7 @@
-package com.msa.user_service.config;
+package com.msa.api_gateway.config;
 
-import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
@@ -14,18 +13,14 @@ import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
-
     @Value("${swagger.gateway-url:http://localhost:19091}")
     private String gatewayUrl;
 
     @Bean
     public OpenAPI openAPI() {
         String securitySchemeName = "BearerAuth";
+
         return new OpenAPI()
-                .info(new Info()
-                        .title("User Service API")
-                        .description("유저 서비스 API 문서")
-                        .version("v1"))
                 .servers(List.of(
                         new Server()
                                 .url(gatewayUrl)

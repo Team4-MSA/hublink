@@ -53,6 +53,9 @@ dependencies {
 	// Prometheus
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+	// 아크 유닛 설정
+	testImplementation testFixtures(project(':core-common'))
 }
 
 dependencyManagement {

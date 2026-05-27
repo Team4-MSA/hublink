@@ -338,6 +338,84 @@ class DeliveryManagerServiceTest {
     }
 
     @Test
+    @DisplayName("배송 담당자 등록 실패 - HUB_DELIVERY 전체 정원 초과")
+    void register_hubDelivery_limitExceeded() {
+        // given
+        DeliveryManagerRequest request = dmRequest(TestFixtures.USER_ID, TestFixtures.HUB_ID, DeliveryManagerType.HUB_DELIVERY);
+        User user = TestFixtures.approvedMasterUser();
+
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID)).willReturn(Optional.of(user));
+        given(deliveryManagerRepository.countByTypeAndDeletedAtIsNull(DeliveryManagerType.HUB_DELIVERY)).willReturn(10L);
+
+        // then
+        assertThatThrownBy(() -> deliveryManagerService.register(request, "MASTER", TestFixtures.ADMIN_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_DELIVERY_LIMIT_EXCEEDED));
+    }
+
+    @Test
+    @DisplayName("배송 담당자 등록 실패 - COMPANY_DELIVERY 허브별 정원 초과")
+    void register_companyDelivery_limitExceeded() {
+        // given
+        DeliveryManagerRequest request = dmRequest(TestFixtures.USER_ID, TestFixtures.HUB_ID, DeliveryManagerType.COMPANY_DELIVERY);
+        User user = TestFixtures.approvedMasterUser();
+
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID)).willReturn(Optional.of(user));
+        given(deliveryManagerRepository.countByHubIdAndTypeAndDeletedAtIsNull(TestFixtures.HUB_ID, DeliveryManagerType.COMPANY_DELIVERY)).willReturn(10L);
+
+        // then
+        assertThatThrownBy(() -> deliveryManagerService.register(request, "MASTER", TestFixtures.ADMIN_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.COMPANY_DELIVERY_LIMIT_EXCEEDED));
+    }
+
+    @Test
+    @DisplayName("배송 담당자 수정 실패 - 타입을 HUB_DELIVERY로 변경 시 전체 정원 초과")
+    void update_typeChange_hubDelivery_limitExceeded() {
+        // given
+        DeliveryManager dm = TestFixtures.hubDeliveryManager(); // 현재 HUB_DELIVERY
+        // COMPANY_DELIVERY → HUB_DELIVERY 로 변경 시도
+        TestFixtures.setField(dm, "type", DeliveryManagerType.COMPANY_DELIVERY);
+        UpdateDeliveryManagerRequest request = updateDmRequest(null, DeliveryManagerType.HUB_DELIVERY, null);
+
+        given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(dm));
+        given(deliveryManagerRepository.countByTypeAndDeletedAtIsNull(DeliveryManagerType.HUB_DELIVERY))
+                .willReturn(10L);
+
+        // then
+        assertThatThrownBy(() ->
+                deliveryManagerService.update(TestFixtures.USER_ID, request, "MASTER", TestFixtures.ADMIN_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_DELIVERY_LIMIT_EXCEEDED));
+    }
+
+    @Test
+    @DisplayName("배송 담당자 수정 실패 - COMPANY_DELIVERY 상태에서 허브 변경 시 새 허브 정원 초과")
+    void update_hubChange_companyDelivery_limitExceeded() {
+        // given
+        UUID newHubId = UUID.randomUUID();
+        DeliveryManager dm = TestFixtures.hubDeliveryManager();
+        TestFixtures.setField(dm, "type", DeliveryManagerType.COMPANY_DELIVERY);
+        UpdateDeliveryManagerRequest request = updateDmRequest(newHubId, null, null);
+
+        given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(dm));
+        given(deliveryManagerRepository.countByHubIdAndTypeAndDeletedAtIsNull(newHubId, DeliveryManagerType.COMPANY_DELIVERY))
+                .willReturn(10L);
+
+        // then
+        assertThatThrownBy(() ->
+                deliveryManagerService.update(TestFixtures.USER_ID, request, "MASTER", TestFixtures.ADMIN_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.COMPANY_DELIVERY_LIMIT_EXCEEDED));
+    }
+
+    @Test
     @DisplayName("validateHubExists - 허브 존재하면 정상 통과")
     void validateHubExists_success() {
         // given

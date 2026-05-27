@@ -40,4 +40,8 @@ public interface DeliveryManagerRepository extends JpaRepository<DeliveryManager
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT d FROM DeliveryManager d WHERE d.hubId = :hubId ORDER BY d.deliverySequence DESC LIMIT 1")
     Optional<DeliveryManager> findLatestByHubId(@Param("hubId") UUID hubId);
+
+    long countByTypeAndDeletedAtIsNull(DeliveryManagerType type);
+
+    long countByHubIdAndTypeAndDeletedAtIsNull(UUID hubId, DeliveryManagerType type);
 }

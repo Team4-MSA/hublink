@@ -155,6 +155,9 @@ public class DeliveryManagerService {
             validateHubAccess(requestUserId, dm.getHubId());
         }
 
+        // 정원 체크: 타입 변경 또는 COMPANY_DELIVERY의 허브 변경 시
+        validateDeliveryManagerCapacityForUpdate(dm, request);
+
         // hubId 변경 처리 - MASTER만 허용, HUB_MANAGER는 허브 이동 불가
         if (request.getHubId() != null && !request.getHubId().equals(dm.getHubId())) {
             if (role.equals("HUB_MANAGER")) {
@@ -219,6 +222,8 @@ public class DeliveryManagerService {
     }
 
     private DeliveryManager saveDeliveryManager(UUID userId, UUID hubId, DeliveryManagerType type, String slackId) {
+        validateDeliveryManagerCapacity(hubId, type);
+
         int nextSequence = deliveryManagerRepository
                 .findLatestByHubId(hubId)
                 .map(dm -> dm.getDeliverySequence() + 1)
@@ -231,5 +236,30 @@ public class DeliveryManagerService {
                 .deliverySequence(nextSequence)
                 .slackId(slackId)
                 .build());
+    }
+
+    private void validateDeliveryManagerCapacityForUpdate(DeliveryManager dm, UpdateDeliveryManagerRequest request) {
+        DeliveryManagerType newType = request.getType() != null ? request.getType() : dm.getType();
+        UUID newHubId = request.getHubId() != null ? request.getHubId() : dm.getHubId();
+
+        boolean typeChanging = request.getType() != null && request.getType() != dm.getType();
+        boolean hubChanging = request.getHubId() != null && !request.getHubId().equals(dm.getHubId());
+
+        // 타입이 변경되거나, COMPANY_DELIVERY 상태에서 허브가 변경되는 경우 정원 체크
+        if (typeChanging || (hubChanging && newType == DeliveryManagerType.COMPANY_DELIVERY)) {
+            validateDeliveryManagerCapacity(newHubId, newType);
+        }
+    }
+
+    private void validateDeliveryManagerCapacity(UUID hubId, DeliveryManagerType type) {
+        if (type == DeliveryManagerType.HUB_DELIVERY) {
+            if (deliveryManagerRepository.countByTypeAndDeletedAtIsNull(DeliveryManagerType.HUB_DELIVERY) >= 10) {
+                throw new CustomException(UserErrorCode.HUB_DELIVERY_LIMIT_EXCEEDED);
+            }
+        } else if (type == DeliveryManagerType.COMPANY_DELIVERY) {
+            if (deliveryManagerRepository.countByHubIdAndTypeAndDeletedAtIsNull(hubId, DeliveryManagerType.COMPANY_DELIVERY) >= 10) {
+                throw new CustomException(UserErrorCode.COMPANY_DELIVERY_LIMIT_EXCEEDED);
+            }
+        }
     }
 }

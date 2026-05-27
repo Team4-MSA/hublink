@@ -55,7 +55,6 @@ class DeliveryManagerServiceTest {
         User user = TestFixtures.approvedMasterUser();
         DeliveryManager saved = TestFixtures.hubDeliveryManager();
 
-        given(hubClient.checkHubExists(TestFixtures.HUB_ID)).willReturn(hubExistsResponse(true));
         given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID)).willReturn(Optional.of(user));
         given(deliveryManagerRepository.findLatestByHubId(TestFixtures.HUB_ID)).willReturn(Optional.empty());
         given(deliveryManagerRepository.save(any(DeliveryManager.class))).willReturn(saved);
@@ -78,7 +77,6 @@ class DeliveryManagerServiceTest {
         DeliveryManager saved = TestFixtures.hubDeliveryManager();
 
         given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.ADMIN_ID)).willReturn(Optional.of(hubManagerUser));
-        given(hubClient.checkHubExists(TestFixtures.HUB_ID)).willReturn(hubExistsResponse(true));
         given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID)).willReturn(Optional.of(targetUser));
         given(deliveryManagerRepository.findLatestByHubId(TestFixtures.HUB_ID)).willReturn(Optional.empty());
         given(deliveryManagerRepository.save(any(DeliveryManager.class))).willReturn(saved);
@@ -113,7 +111,6 @@ class DeliveryManagerServiceTest {
         // given
         DeliveryManagerRequest request = dmRequest(TestFixtures.USER_ID, TestFixtures.HUB_ID, DeliveryManagerType.HUB_DELIVERY);
 
-        given(hubClient.checkHubExists(TestFixtures.HUB_ID)).willReturn(hubExistsResponse(true));
         given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID)).willReturn(Optional.empty());
 
         // then
@@ -279,9 +276,9 @@ class DeliveryManagerServiceTest {
         User user = TestFixtures.pendingDeliveryManagerUser();
         UpdateDeliveryManagerRequest request = updateDmRequest(newHubId, null, null);
 
+        // validateHubExists는 컨트롤러에서 호출되므로 update() 내부에서는 hubClient 호출 없음
         given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
                 .willReturn(Optional.of(dm));
-        given(hubClient.checkHubExists(newHubId)).willReturn(hubExistsResponse(true));
         given(deliveryManagerRepository.findLatestByHubId(newHubId)).willReturn(Optional.empty());
         given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
                 .willReturn(Optional.of(user));
@@ -338,6 +335,39 @@ class DeliveryManagerServiceTest {
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(UserErrorCode.HUB_ACCESS_DENIED));
+    }
+
+    @Test
+    @DisplayName("validateHubExists - 허브 존재하면 정상 통과")
+    void validateHubExists_success() {
+        // given
+        given(hubClient.checkHubExists(TestFixtures.HUB_ID)).willReturn(hubExistsResponse(true));
+
+        // when & then (예외 없이 통과)
+        deliveryManagerService.validateHubExists(TestFixtures.HUB_ID);
+    }
+
+    @Test
+    @DisplayName("validateHubExists - 허브 없으면 HUB_NOT_FOUND 예외")
+    void validateHubExists_notFound() {
+        // given
+        given(hubClient.checkHubExists(TestFixtures.HUB_ID)).willReturn(hubExistsResponse(false));
+
+        // then
+        assertThatThrownBy(() -> deliveryManagerService.validateHubExists(TestFixtures.HUB_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("validateHubExists - hubId가 null이면 HUB_NOT_FOUND 예외")
+    void validateHubExists_nullHubId() {
+        // then (hubClient 호출 없이 바로 예외)
+        assertThatThrownBy(() -> deliveryManagerService.validateHubExists(null))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_NOT_FOUND));
     }
 
     private DeliveryManagerRequest dmRequest(UUID userId, UUID hubId, DeliveryManagerType type) {

@@ -6,6 +6,7 @@ import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.ApproveUserRequest;
 import com.msa.user_service.dto.CompanyExistsResponse;
 import com.msa.user_service.dto.HubExistsResponse;
+import com.msa.user_service.dto.InternalHubManagerResponse;
 import com.msa.user_service.dto.SignUpRequest;
 import com.msa.user_service.dto.UpdateUserRequest;
 import com.msa.user_service.dto.UserResponse;
@@ -28,6 +29,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -309,6 +311,37 @@ class UserServiceTest {
                 .isInstanceOf(CustomException.class)
                 .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
                         .isEqualTo(UserErrorCode.NOT_PENDING_STATUS));
+    }
+
+    @Test
+    @DisplayName("허브 매니저 목록 조회 성공 - 여러 명 반환")
+    void getHubManagersByHubId_multipleManagers() {
+        // given
+        User manager1 = TestFixtures.approvedHubManagerUser();
+        User manager2 = TestFixtures.approvedHubManagerUser();
+        given(userRepository.findAllByHubIdAndRoleAndDeletedAtIsNull(TestFixtures.HUB_ID, UserRole.HUB_MANAGER))
+                .willReturn(List.of(manager1, manager2));
+
+        // when
+        List<InternalHubManagerResponse> result = userService.getHubManagersByHubId(TestFixtures.HUB_ID);
+
+        // then
+        assertThat(result).hasSize(2);
+        assertThat(result).allSatisfy(r -> assertThat(r.getHubId()).isEqualTo(TestFixtures.HUB_ID));
+    }
+
+    @Test
+    @DisplayName("허브 매니저 목록 조회 - 해당 허브에 매니저 없으면 빈 리스트 반환")
+    void getHubManagersByHubId_empty() {
+        // given
+        given(userRepository.findAllByHubIdAndRoleAndDeletedAtIsNull(TestFixtures.HUB_ID, UserRole.HUB_MANAGER))
+                .willReturn(List.of());
+
+        // when
+        List<InternalHubManagerResponse> result = userService.getHubManagersByHubId(TestFixtures.HUB_ID);
+
+        // then
+        assertThat(result).isEmpty();
     }
 
     private SignUpRequest signUpRequest(String username, String password, String name, String email) {

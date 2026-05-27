@@ -5,7 +5,7 @@ import com.msa.hub_service.dto.HubRouteResponse;
 import com.msa.hub_service.entity.RouteType;
 import com.msa.hub_service.service.HubRouteService;
 import com.msa.hub_service.service.HubService;
-import jakarta.ws.rs.core.MediaType;
+import org.springframework.http.MediaType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -95,13 +95,7 @@ public class DeliveryCreateService {
     }
 
     private UUID getDestinationHubId(List<HubRouteResponse> hubRoutes) {
-        for (int i = hubRoutes.size() - 1; i >= 0; i--) {
-            HubRouteResponse hubRoute = hubRoutes.get(i);
-            if (!"HUB_TO_HUB".equals(hubRoute.getRouteType())) {
-                return hubRoute.getDepartureHubId();
-            }
-        }
-        return hubRoutes.get(hubRoutes.size() - 1).getArrivalHubId();
+        return hubRoutes.get(hubRoutes.size() - 1).getDepartureHubId();
     }
 
     private Delivery saveDelivery(Delivery delivery) {

@@ -41,7 +41,7 @@ public class Delivery extends BaseEntity {
     @Column(name = "version", nullable = false)
     private Long version;
 
-    @Column(name = "order_id", nullable = false, unique = true)
+    @Column(name = "order_id", nullable = false)
     private UUID orderId;
 
     @Column(name = "departure_hub_id", nullable = false)

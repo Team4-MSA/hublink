@@ -27,6 +27,7 @@ public enum DeliveryErrorCode implements ErrorCode {
     DUPLICATE_ORDER_DELIVERY("DELIVERY_008", "이미 배송이 생성된 주문입니다.", HttpStatus.CONFLICT),
     CONCURRENT_DELIVERY_UPDATE("DELIVERY_012", "다른 요청이 먼저 반영되어 배송 정보가 변경되었습니다. 다시 시도해주세요.", HttpStatus.CONFLICT),
     DELIVERY_ASSIGNMENT_LOCK_TIMEOUT("DELIVERY_014", "배송 기사 배정이 진행 중입니다. 잠시 후 다시 시도해주세요.", HttpStatus.CONFLICT),
+    DELIVERY_ASSIGNMENT_CONFLICT("DELIVERY_015", "동시 요청으로 배송 기사 배정이 충돌했습니다. 다시 시도해주세요.", HttpStatus.CONFLICT),
 
     // 500
     AI_SCHEDULE_EVENT_PUBLISH_FAILED("DELIVERY_009", "AI 최종 배송 시한 요청 이벤트 발행에 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),

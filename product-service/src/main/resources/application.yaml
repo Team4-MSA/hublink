@@ -2,12 +2,7 @@ spring:
   application:
     name: product-service
   config:
-    import: "optional:configserver:"
-  cloud:
-    config:
-      discovery:
-        enabled: true
-        service-id: config-server
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:19092}
 eureka:
   client:
     service-url:

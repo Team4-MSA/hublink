@@ -6,12 +6,7 @@ spring:
     name: user-service
 
   config:
-    import: "optional:configserver:"
-  cloud:
-    config:
-      discovery:
-        enabled: true
-        service-id: config-server
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:19092}
 #    circuitbreaker:
 #      resilience4j:
 #        enabled: true

@@ -151,11 +151,12 @@ public class UserService {
         userApprovalService.executeApproval(userId, request, processedBy);
     }
 
-    // Internal API용 - 허브 담당 HUB_MANAGER 조회
-    public InternalHubManagerResponse getHubManagerByHubId(UUID hubId) {
-        return userRepository.findByHubIdAndRoleAndDeletedAtIsNull(hubId, UserRole.HUB_MANAGER)
+    // Internal API용 - 허브 담당 HUB_MANAGER 목록 조회
+    public List<InternalHubManagerResponse> getHubManagersByHubId(UUID hubId) {
+        return userRepository.findAllByHubIdAndRoleAndDeletedAtIsNull(hubId, UserRole.HUB_MANAGER)
+                .stream()
                 .map(InternalHubManagerResponse::of)
-                .orElseThrow(() -> new CustomException(UserErrorCode.HUB_MANAGER_NOT_FOUND));
+                .toList();
     }
 
     // Internal API용 - 허브 소속 여부 검증

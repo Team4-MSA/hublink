@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -19,9 +20,9 @@ public class HubInternalController {
     private final UserService userService;
 
     @GetMapping("/{hubId}")
-    public ResponseEntity<InternalHubManagerResponse> getHubManager(
+    public ResponseEntity<List<InternalHubManagerResponse>> getHubManagers(
             @PathVariable UUID hubId
     ) {
-        return ResponseEntity.ok(userService.getHubManagerByHubId(hubId));
+        return ResponseEntity.ok(userService.getHubManagersByHubId(hubId));
     }
 }

@@ -43,7 +43,7 @@ class InternalCompanyControllerTest {
     @DisplayName("성공: 업체 위치 정보 조회 (Internal)")
     void getCompanyLocation_Success() throws Exception {
         // given
-        CompanyDto expectedResponse = new CompanyDto("서울시 강남구", LAT, LON);
+        CompanyDto expectedResponse = new CompanyDto("서울시 강남구", LAT, LON, HUB_ID);
 
         given(companyService.getCompanyLoc(any())).willReturn(expectedResponse);
 

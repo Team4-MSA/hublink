@@ -62,9 +62,19 @@ public class User extends BaseEntity {
         this.status = UserStatus.INACTIVE;
     }
 
-    public void update(String name, String email, String slackId) {
-        this.name = name;
-        this.email = email;
+    public void update(String name, String email, String slackId, UUID hubId, UUID companyId) {
+        if (name != null) this.name = name;
+        if (email != null) this.email = email;
+        if (slackId != null) this.slackId = slackId;
+        if (hubId != null) this.hubId = hubId;
+        if (companyId != null) this.companyId = companyId;
+    }
+
+    public void updateHubId(UUID hubId) {
+        this.hubId = hubId;
+    }
+
+    public void updateSlackId(String slackId) {
         this.slackId = slackId;
     }
 }

@@ -15,12 +15,9 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor
 public class DeliveryManager extends BaseEntity {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "delivery_manager_id", columnDefinition = "uuid")
-    private UUID deliveryManagerId;
 
-    @Column(name = "user_id", nullable = false, columnDefinition = "uuid")
+    @Id
+    @Column(name = "user_id", columnDefinition = "uuid")
     private UUID userId;
 
     @Column(name = "hub_id", columnDefinition = "uuid")
@@ -35,4 +32,18 @@ public class DeliveryManager extends BaseEntity {
 
     @Column(name = "slack_id", length = 100)
     private String slackId;
+
+    public void update(DeliveryManagerType type, String slackId) {
+        if (type != null) this.type = type;
+        if (slackId != null) this.slackId = slackId;
+    }
+
+    public void changeHub(UUID hubId, int deliverySequence) {
+        this.hubId = hubId;
+        this.deliverySequence = deliverySequence;
+    }
+
+    public void updateSlackId(String slackId) {
+        this.slackId = slackId;
+    }
 }

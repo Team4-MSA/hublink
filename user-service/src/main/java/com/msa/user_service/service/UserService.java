@@ -2,6 +2,8 @@ package com.msa.user_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
+import com.msa.user_service.client.CompanyClient;
+import com.msa.user_service.client.HubClient;
 import com.msa.user_service.dto.*;
 import com.msa.user_service.entity.*;
 import java.util.List;
@@ -27,9 +29,9 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final UserApprovalService userApprovalService;
-    private final HubManagerService hubManagerService;
-    private final CompanyManagerService companyManagerService;
     private final DeliveryManagerService deliveryManagerService;
+    private final HubClient hubClient;
+    private final CompanyClient companyClient;
     private final PasswordEncoder passwordEncoder;
     private final RedisUtil redisUtil;
 
@@ -75,10 +77,40 @@ public class UserService {
                 .map(UserResponse::from));
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public void validateUpdateResources(UpdateUserRequest request) {
+        if (request.getHubId() != null && !hubClient.checkHubExists(request.getHubId()).isExists()) {
+            throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
+        }
+        if (request.getCompanyId() != null && !companyClient.checkCompanyExists(request.getCompanyId()).isExists()) {
+            throw new CustomException(UserErrorCode.COMPANY_NOT_FOUND);
+        }
+    }
+
     @Transactional
     public UserResponse updateUser(UUID userId, UpdateUserRequest request) {
         User user = findActiveUser(userId);
-        user.update(request.getName(), request.getEmail(), request.getSlackId());
+        UUID oldHubId = user.getHubId();
+        user.update(request.getName(), request.getEmail(), request.getSlackId(),
+                request.getHubId(), request.getCompanyId());
+
+        if (user.getRole() == UserRole.HUB_MANAGER) {
+            if (request.getHubId() != null && !request.getHubId().equals(oldHubId)) {
+                if (userRepository.findByHubIdAndRoleAndDeletedAtIsNull(request.getHubId(), UserRole.HUB_MANAGER).isPresent()) {
+                    throw new CustomException(UserErrorCode.HUB_MANAGER_ALREADY_EXISTS);
+                }
+            }
+        }
+
+        if (user.getRole() == UserRole.DELIVERY_MANAGER) {
+            if (request.getSlackId() != null) {
+                deliveryManagerService.updateSlackId(userId, request.getSlackId());
+            }
+            if (request.getHubId() != null && !request.getHubId().equals(oldHubId)) {
+                deliveryManagerService.syncHubId(userId, request.getHubId());
+            }
+        }
+
         return UserResponse.from(user);
     }
 
@@ -103,13 +135,24 @@ public class UserService {
 
         if (request.getStatus() == UserStatus.APPROVED) {
             switch (user.getRole()) {
-                case HUB_MANAGER -> hubManagerService.validateHubExists(user.getHubId());
-                case COMPANY_MANAGER -> companyManagerService.validateCompanyExists(user.getCompanyId());
+                case HUB_MANAGER -> {
+                    if (user.getHubId() == null || !hubClient.checkHubExists(user.getHubId()).isExists()) {
+                        throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
+                    }
+                    // 중복 체크는 executeApproval() 트랜잭션 내부에서 수행 (TOCTOU 방지)
+                }
+                case COMPANY_MANAGER -> {
+                    if (user.getCompanyId() == null || !companyClient.checkCompanyExists(user.getCompanyId()).isExists()) {
+                        throw new CustomException(UserErrorCode.COMPANY_NOT_FOUND);
+                    }
+                }
                 case DELIVERY_MANAGER -> {
                     if (request.getDeliveryManagerType() == null) {
                         throw new CustomException(UserErrorCode.DELIVERY_TYPE_REQUIRED);
                     }
-                    deliveryManagerService.validateHubExists(user.getHubId());
+                    if (user.getHubId() == null || !hubClient.checkHubExists(user.getHubId()).isExists()) {
+                        throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
+                    }
                 }
             }
         }
@@ -117,14 +160,23 @@ public class UserService {
         userApprovalService.executeApproval(userId, request, processedBy);
     }
 
+    // Internal API용 - 허브 담당 HUB_MANAGER 단건 조회
+    public InternalHubManagerResponse getHubManagerByHubId(UUID hubId) {
+        return userRepository.findByHubIdAndRoleAndDeletedAtIsNull(hubId, UserRole.HUB_MANAGER)
+                .map(InternalHubManagerResponse::of)
+                .orElseThrow(() -> new CustomException(UserErrorCode.HUB_MANAGER_NOT_FOUND));
+    }
+
     // Internal API용 - 허브 소속 여부 검증
     public boolean verifyHub(UUID userId, UUID hubId) {
-        return hubManagerService.existsByUserIdAndHubId(userId, hubId);
+        User user = findActiveUser(userId);
+        return hubId.equals(user.getHubId());
     }
 
     // Internal API용 - 업체 소속 여부 검증
     public boolean verifyCompany(UUID userId, UUID companyId) {
-        return companyManagerService.existsByUserIdAndCompanyId(userId, companyId);
+        User user = findActiveUser(userId);
+        return companyId.equals(user.getCompanyId());
     }
 
     // username으로 User 엔티티 조회

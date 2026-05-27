@@ -28,7 +28,7 @@ spring:
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
       default_schema: user_service
     show-sql: false
     defer-datasource-initialization: false

@@ -8,6 +8,8 @@ services:
   eureka-server:
     image: ${ECR_REGISTRY}/hublink-eureka-server:latest
     container_name: hublink-eureka-server
+    env_file:
+      - .env
     ports:
       - "19090:19090"
 
@@ -16,6 +18,8 @@ services:
     container_name: hublink-api-gateway
     ports:
       - "19091:19091"
+    env_file:
+      - .env
     depends_on:
       - eureka-server
       - config-server
@@ -143,8 +147,6 @@ services:
   prometheus:
     image: prom/prometheus:v3.11.3
     container_name: hublink-prometheus
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     ports:
       - "9090:9090"
     volumes:

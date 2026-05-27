@@ -314,6 +314,26 @@ class UserServiceTest {
     }
 
     @Test
+    @DisplayName("유저 수정 실패 - HUB_MANAGER 허브 변경 시 새 허브에 이미 담당자 존재")
+    void updateUser_hubManager_hubAlreadyHasManager() {
+        // given
+        UUID newHubId = UUID.randomUUID();
+        User user = TestFixtures.pendingHubManagerUser(); // HUB_ID 소속
+        UpdateUserRequest request = updateUserRequestFull("이름", "email@test.com", "U_HUB", newHubId, null);
+
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+        given(userRepository.findByHubIdAndRoleAndDeletedAtIsNull(newHubId, UserRole.HUB_MANAGER))
+                .willReturn(Optional.of(TestFixtures.approvedHubManagerUser())); // 이미 존재
+
+        // then
+        assertThatThrownBy(() -> userService.updateUser(TestFixtures.USER_ID, request))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_MANAGER_ALREADY_EXISTS));
+    }
+
+    @Test
     @DisplayName("허브 매니저 단건 조회 성공")
     void getHubManagerByHubId_success() {
         // given

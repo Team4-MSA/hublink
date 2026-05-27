@@ -94,6 +94,14 @@ public class UserService {
         user.update(request.getName(), request.getEmail(), request.getSlackId(),
                 request.getHubId(), request.getCompanyId());
 
+        if (user.getRole() == UserRole.HUB_MANAGER) {
+            if (request.getHubId() != null && !request.getHubId().equals(oldHubId)) {
+                if (userRepository.findByHubIdAndRoleAndDeletedAtIsNull(request.getHubId(), UserRole.HUB_MANAGER).isPresent()) {
+                    throw new CustomException(UserErrorCode.HUB_MANAGER_ALREADY_EXISTS);
+                }
+            }
+        }
+
         if (user.getRole() == UserRole.DELIVERY_MANAGER) {
             if (request.getSlackId() != null) {
                 deliveryManagerService.updateSlackId(userId, request.getSlackId());

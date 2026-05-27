@@ -372,6 +372,26 @@ class DeliveryManagerServiceTest {
     }
 
     @Test
+    @DisplayName("syncHubId - COMPANY_DELIVERY 허브 변경 시 새 허브 정원 초과 예외")
+    void syncHubId_companyDelivery_limitExceeded() {
+        // given
+        UUID newHubId = UUID.randomUUID();
+        DeliveryManager dm = TestFixtures.hubDeliveryManager();
+        TestFixtures.setField(dm, "type", DeliveryManagerType.COMPANY_DELIVERY);
+
+        given(deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(dm));
+        given(deliveryManagerRepository.countByHubIdAndTypeAndDeletedAtIsNull(newHubId, DeliveryManagerType.COMPANY_DELIVERY))
+                .willReturn(10L);
+
+        // then
+        assertThatThrownBy(() -> deliveryManagerService.syncHubId(TestFixtures.USER_ID, newHubId))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.COMPANY_DELIVERY_LIMIT_EXCEEDED));
+    }
+
+    @Test
     @DisplayName("배송 담당자 수정 실패 - 타입을 HUB_DELIVERY로 변경 시 전체 정원 초과")
     void update_typeChange_hubDelivery_limitExceeded() {
         // given

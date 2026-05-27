@@ -214,6 +214,10 @@ public class DeliveryManagerService {
                     if (newHubId.equals(dm.getHubId())) {
                         return;
                     }
+                    // COMPANY_DELIVERY는 허브 변경 시 새 허브의 정원 체크
+                    if (dm.getType() == DeliveryManagerType.COMPANY_DELIVERY) {
+                        validateDeliveryManagerCapacity(newHubId, DeliveryManagerType.COMPANY_DELIVERY);
+                    }
                     int newSequence = deliveryManagerRepository.findLatestByHubId(newHubId)
                             .map(latest -> latest.getDeliverySequence() + 1)
                             .orElse(1);

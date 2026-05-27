@@ -36,7 +36,7 @@ public class DeliveryManagerService {
 
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void validateHubExists(UUID hubId) {
-        if (!hubClient.checkHubExists(hubId).isExists()) {
+        if (hubId == null || !hubClient.checkHubExists(hubId).isExists()) {
             throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
         }
     }
@@ -208,6 +208,9 @@ public class DeliveryManagerService {
     public void syncHubId(UUID userId, UUID newHubId) {
         deliveryManagerRepository.findByUserIdAndDeletedAtIsNull(userId)
                 .ifPresent(dm -> {
+                    if (newHubId.equals(dm.getHubId())) {
+                        return;
+                    }
                     int newSequence = deliveryManagerRepository.findLatestByHubId(newHubId)
                             .map(latest -> latest.getDeliverySequence() + 1)
                             .orElse(1);

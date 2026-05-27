@@ -147,9 +147,8 @@ class UserControllerTest {
     }
 
     @Test
-    @DisplayName("유저 정보 수정 - 타인 수정 시도 → 403")
-    void updateUser_accessDenied() throws Exception {
-        // given - HUB_MANAGER가 다른 유저를 수정하려는 경우
+    @DisplayName("유저 정보 수정 - MASTER 아닌 경우 → 403 (타인 수정)")
+    void updateUser_otherUser_forbidden() throws Exception {
         String body = """
                 {
                     "name": "변경이름",
@@ -158,13 +157,54 @@ class UserControllerTest {
                 }
                 """;
 
+        mockMvc.perform(put("/api/v1/users/{userId}", TestFixtures.USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body)
+                        .header("X-User-Id", TestFixtures.ADMIN_ID.toString())
+                        .header("X-User-Role", "HUB_MANAGER"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("유저 정보 수정 - MASTER 아닌 경우 → 403 (본인도 수정 불가)")
+    void updateUser_selfButNotMaster_forbidden() throws Exception {
+        String body = """
+                {
+                    "name": "변경이름",
+                    "email": "changed@example.com",
+                    "slackId": "U_NEW"
+                }
+                """;
+
+        mockMvc.perform(put("/api/v1/users/{userId}", TestFixtures.USER_ID)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body)
+                        .header("X-User-Id", TestFixtures.USER_ID.toString()) // 본인이지만
+                        .header("X-User-Role", "DELIVERY_MANAGER"))           // MASTER 아님
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("유저 정보 수정 - hubId 포함 - MASTER 가능")
+    void updateUser_withHubId_asMaster() throws Exception {
+        // given
+        UserResponse response = TestFixtures.userResponse();
+        given(userService.updateUser(eq(TestFixtures.USER_ID), any())).willReturn(response);
+
+        String body = """
+                {
+                    "name": "변경이름",
+                    "hubId": "%s"
+                }
+                """.formatted(TestFixtures.HUB_ID);
+
         // when & then
         mockMvc.perform(put("/api/v1/users/{userId}", TestFixtures.USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body)
-                        .header("X-User-Id", TestFixtures.ADMIN_ID.toString()) // 다른 사람
-                        .header("X-User-Role", "HUB_MANAGER"))
-                .andExpect(status().isForbidden());
+                        .header("X-User-Id", TestFixtures.ADMIN_ID.toString())
+                        .header("X-User-Role", "MASTER"))
+                .andExpect(status().isOk());
     }
 
     @Test

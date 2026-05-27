@@ -4,6 +4,7 @@ import com.msa.core_common.error.exception.CustomException;
 import com.msa.user_service.dto.ApproveUserRequest;
 import com.msa.user_service.entity.User;
 import com.msa.user_service.entity.UserApprovalHistory;
+import com.msa.user_service.entity.UserRole;
 import com.msa.user_service.entity.UserStatus;
 import com.msa.user_service.global.UserErrorCode;
 import com.msa.user_service.repository.UserApprovalHistoryRepository;
@@ -20,8 +21,6 @@ public class UserApprovalService {
 
     private final UserRepository userRepository;
     private final UserApprovalHistoryRepository approvalHistoryRepository;
-    private final HubManagerService hubManagerService;
-    private final CompanyManagerService companyManagerService;
     private final DeliveryManagerService deliveryManagerService;
 
     @Transactional
@@ -37,12 +36,17 @@ public class UserApprovalService {
         UserStatus previousStatus = user.getStatus();
 
         if (request.getStatus() == UserStatus.APPROVED) {
+
+            if (user.getRole() == UserRole.HUB_MANAGER) {
+                if (userRepository.findByHubIdAndRoleAndDeletedAtIsNull(user.getHubId(), UserRole.HUB_MANAGER).isPresent()) {
+                    throw new CustomException(UserErrorCode.HUB_MANAGER_ALREADY_EXISTS);
+                }
+            }
+
             user.approve();
 
-            switch (user.getRole()) {
-                case HUB_MANAGER -> hubManagerService.createOnApproval(user.getUserId(), user.getHubId());
-                case COMPANY_MANAGER -> companyManagerService.createOnApproval(user.getUserId(), user.getCompanyId());
-                case DELIVERY_MANAGER -> deliveryManagerService.createOnApproval(user.getUserId(), user.getHubId(),
+            if (user.getRole() == UserRole.DELIVERY_MANAGER) {
+                deliveryManagerService.createOnApproval(user.getUserId(), user.getHubId(),
                         request.getDeliveryManagerType(), user.getSlackId());
             }
         } else if (request.getStatus() == UserStatus.REJECTED) {

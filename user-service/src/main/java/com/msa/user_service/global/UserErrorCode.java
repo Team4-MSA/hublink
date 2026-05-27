@@ -36,7 +36,10 @@ public enum UserErrorCode implements ErrorCode {
 
     // 409 CONFLICT
     DUPLICATE_USERNAME("USER-409-1", "이미 사용중인 username입니다.", HttpStatus.CONFLICT),
-    DUPLICATE_EMAIL("USER-409-2", "이미 사용중인 email입니다.", HttpStatus.CONFLICT);
+    DUPLICATE_EMAIL("USER-409-2", "이미 사용중인 email입니다.", HttpStatus.CONFLICT),
+    HUB_MANAGER_ALREADY_EXISTS("USER-409-3", "해당 허브에 이미 승인된 허브 관리자가 존재합니다.", HttpStatus.CONFLICT),
+    HUB_DELIVERY_LIMIT_EXCEEDED("USER-409-4", "전체 HUB_DELIVERY 담당자는 최대 10명입니다.", HttpStatus.CONFLICT),
+    COMPANY_DELIVERY_LIMIT_EXCEEDED("USER-409-5", "해당 허브의 COMPANY_DELIVERY 담당자는 최대 10명입니다.", HttpStatus.CONFLICT);
 
     private final String code;
     private final String message;

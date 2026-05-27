@@ -5,9 +5,12 @@ import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Getter
 @NoArgsConstructor
 public class UpdateUserRequest {
+
     @NotBlank
     private String name;
 
@@ -18,4 +21,8 @@ public class UpdateUserRequest {
     private String email;
 
     private String slackId;
+
+    private UUID hubId;
+
+    private UUID companyId;
 }

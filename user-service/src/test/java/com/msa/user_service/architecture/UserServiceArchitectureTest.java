@@ -6,7 +6,7 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
 @AnalyzeClasses(packages = "com.msa.user_service")
-class OrderServiceArchitectureTest {
+class UserServiceArchitectureTest {
     @ArchTest
     static final ArchRule layerRule = HubLinkArchRules.LAYER_RULE;
 

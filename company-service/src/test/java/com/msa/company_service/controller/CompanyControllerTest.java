@@ -8,7 +8,7 @@ import com.msa.company_service.entity.CompanyType;
 import com.msa.company_service.service.CompanyService;
 import com.msa.core_common.auth.UserRole;
 import com.msa.core_common.response.paging.PageRes;
-import jakarta.ws.rs.core.MediaType;
+import org.springframework.http.MediaType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

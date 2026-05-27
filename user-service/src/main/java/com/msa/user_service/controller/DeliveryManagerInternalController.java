@@ -16,9 +16,9 @@ public class DeliveryManagerInternalController {
 
     private final DeliveryManagerService deliveryManagerService;
 
-    @GetMapping("/search")
+    @PostMapping("/search")
     public ResponseEntity<List<InternalDeliveryManagerResponse>> getDeliveryManagersByHubs(
-            @RequestParam List<UUID> hubIds
+            @RequestBody List<UUID> hubIds
     ) {
         return ResponseEntity.ok(deliveryManagerService.getDeliveryManagersByHubsForInternal(hubIds));
     }

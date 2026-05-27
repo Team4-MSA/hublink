@@ -128,12 +128,12 @@ public class UserService {
         if (request.getStatus() == UserStatus.APPROVED) {
             switch (user.getRole()) {
                 case HUB_MANAGER -> {
-                    if (!hubClient.checkHubExists(user.getHubId()).isExists()) {
+                    if (user.getHubId() == null || !hubClient.checkHubExists(user.getHubId()).isExists()) {
                         throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
                     }
                 }
                 case COMPANY_MANAGER -> {
-                    if (!companyClient.checkCompanyExists(user.getCompanyId()).isExists()) {
+                    if (user.getCompanyId() == null || !companyClient.checkCompanyExists(user.getCompanyId()).isExists()) {
                         throw new CustomException(UserErrorCode.COMPANY_NOT_FOUND);
                     }
                 }
@@ -141,7 +141,7 @@ public class UserService {
                     if (request.getDeliveryManagerType() == null) {
                         throw new CustomException(UserErrorCode.DELIVERY_TYPE_REQUIRED);
                     }
-                    if (!hubClient.checkHubExists(user.getHubId()).isExists()) {
+                    if (user.getHubId() == null || !hubClient.checkHubExists(user.getHubId()).isExists()) {
                         throw new CustomException(UserErrorCode.HUB_NOT_FOUND);
                     }
                 }

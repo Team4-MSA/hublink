@@ -50,6 +50,8 @@ dependencies {
 	implementation project(':core-common')
 	// 아크 유닛 설정
 	testImplementation testFixtures(project(':core-common'))
+
+	testRuntimeOnly 'com.h2database:h2'
 }
 
 dependencyManagement {

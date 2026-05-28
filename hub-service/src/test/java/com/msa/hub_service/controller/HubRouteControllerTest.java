@@ -48,6 +48,9 @@ class HubRouteControllerTest {
     private final UUID COMPANY_ID = UUID.randomUUID();
     private final BigDecimal DISTANCE = new BigDecimal("150.5");
     private final Integer DURATION = 120;
+    private final String DEP_HUB_NAME = "서울 센터 허브";
+    private final String ARR_HUB_NAME = "경기 북부 허브";
+    private final String ARR_COMP_NAME = "테스트 도착 업체";
 
     @Test
     @DisplayName("성공: 허브 경로 등록 (MASTER 권한)")
@@ -56,7 +59,7 @@ class HubRouteControllerTest {
         HubRouteRequest request = new HubRouteRequest(DEP_HUB_ID, ARR_HUB_ID);
 
         HubRouteResponse expectedResponse = new HubRouteResponse(
-                ROUTE_ID, DEP_HUB_ID, ARR_HUB_ID, null, DISTANCE, DURATION, RouteType.H2H, null
+                ROUTE_ID, DEP_HUB_ID, ARR_HUB_ID, null, null, null, null, DISTANCE, DURATION, RouteType.H2H, null
         );
 
         given(hubRouteService.createHubRoute(any(), any())).willReturn(expectedResponse);
@@ -78,7 +81,7 @@ class HubRouteControllerTest {
     void getHubRoute_Success() throws Exception {
         // given
         HubRouteResponse expectedResponse = new HubRouteResponse(
-                ROUTE_ID, DEP_HUB_ID, ARR_HUB_ID, null, DISTANCE, DURATION, RouteType.P2P, null
+                ROUTE_ID, DEP_HUB_ID, ARR_HUB_ID, null, null, null, null, DISTANCE, DURATION, RouteType.P2P, null
         );
 
         given(hubRouteService.getHubRoute(any())).willReturn(expectedResponse);
@@ -102,7 +105,7 @@ class HubRouteControllerTest {
         HubRouteUpdateRequest request = new HubRouteUpdateRequest(newDistance, newDuration);
 
         HubRouteResponse expectedResponse = new HubRouteResponse(
-                ROUTE_ID, DEP_HUB_ID, ARR_HUB_ID, null, newDistance, newDuration, RouteType.H2H, null
+                ROUTE_ID, DEP_HUB_ID, ARR_HUB_ID, null, null, null, null, newDistance, newDuration, RouteType.H2H, null
         );
 
         given(hubRouteService.updateHubRoute(any(), any())).willReturn(expectedResponse);
@@ -123,7 +126,7 @@ class HubRouteControllerTest {
     void deleteHubRoute_Success() throws Exception {
         // given
         HubRouteResponse expectedResponse = new HubRouteResponse(
-                ROUTE_ID, DEP_HUB_ID, ARR_HUB_ID, null, DISTANCE, DURATION, RouteType.H2H, null
+                ROUTE_ID, DEP_HUB_ID, ARR_HUB_ID, null, null, null, null, DISTANCE, DURATION, RouteType.H2H, null
         );
 
         given(hubRouteService.deleteHubRoute(any())).willReturn(expectedResponse);
@@ -141,10 +144,10 @@ class HubRouteControllerTest {
     void getHubRoutes_Success() throws Exception {
         // given
         HubRouteResponse response1 = new HubRouteResponse(
-                UUID.randomUUID(), DEP_HUB_ID, ARR_HUB_ID, null, new BigDecimal("100.0"), 60, RouteType.H2H, null
+                UUID.randomUUID(), DEP_HUB_ID, ARR_HUB_ID, null, null, null, null,  new BigDecimal("100.0"), 60, RouteType.H2H, null
         );
         HubRouteResponse response2 = new HubRouteResponse(
-                UUID.randomUUID(), DEP_HUB_ID, UUID.randomUUID(), null, new BigDecimal("200.0"), 120, RouteType.H2H, null
+                UUID.randomUUID(), DEP_HUB_ID, UUID.randomUUID(), null, null, null, null, new BigDecimal("200.0"), 120, RouteType.H2H, null
         );
 
         PageImpl<HubRouteResponse> page = new PageImpl<>(List.of(response1, response2), PageRequest.of(0, 10), 2);
@@ -172,10 +175,15 @@ class HubRouteControllerTest {
         UUID transitHubId = UUID.randomUUID();
 
         HubRouteResponse path1 = new HubRouteResponse(
-                UUID.randomUUID(), DEP_HUB_ID, transitHubId, COMPANY_ID, new BigDecimal("50.0"), 30, RouteType.H2H, 1
+                UUID.randomUUID(), DEP_HUB_ID, transitHubId, COMPANY_ID,
+                DEP_HUB_NAME, "경유 허브", ARR_COMP_NAME,
+                new BigDecimal("50.0"), 30, RouteType.H2H, 1
         );
+
         HubRouteResponse path2 = new HubRouteResponse(
-                UUID.randomUUID(), transitHubId, ARR_HUB_ID, COMPANY_ID, new BigDecimal("60.0"), 40, RouteType.H2H, 2
+                UUID.randomUUID(), transitHubId, ARR_HUB_ID, COMPANY_ID,
+                "경유 허브", ARR_HUB_NAME, ARR_COMP_NAME,
+                new BigDecimal("60.0"), 40, RouteType.H2H, 2
         );
 
         List<HubRouteResponse> expectedResponse = List.of(path1, path2);
@@ -191,7 +199,9 @@ class HubRouteControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].departureHub").value(DEP_HUB_ID.toString()))
-                .andExpect(jsonPath("$.data[0].arrivalHub").value(transitHubId.toString()))
+                .andExpect(jsonPath("$.data[0].departureHubName").value(DEP_HUB_NAME)) // 이름 검증
+                .andExpect(jsonPath("$.data[0].arrivalHubName").value("경유 허브")) // 이름 검증
+                .andExpect(jsonPath("$.data[0].arrivalCompanyName").value(ARR_COMP_NAME)) // 이름 검증
                 .andExpect(jsonPath("$.data[1].departureHub").value(transitHubId.toString()))
                 .andExpect(jsonPath("$.data[1].arrivalHub").value(ARR_HUB_ID.toString()));
     }

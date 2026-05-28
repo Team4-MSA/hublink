@@ -13,10 +13,10 @@ eureka:
       defaultZone: ${EUREKA_URL:http://localhost:19090/eureka/}
 
 kakao:
-  rest-api-key: ${KAKAO_REST_API_KEY}
+  rest-api-key: ${KAKAO_REST_API_KEY:dummy-kakao-key-for-test}
   base-url: "https://dapi.kakao.com"
 
 springdoc:
   servers:
-    - url: ${SWAGGER_GATEWAY_URL}
+    - url: ${SWAGGER_GATEWAY_URL:http://localhost:8080}
       description: API Gateway URL

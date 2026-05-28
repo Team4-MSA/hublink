@@ -21,7 +21,7 @@ eureka:
     enabled: false
 
 swagger:
-  gateway-url: http://localhost:8080
+  gateway-url: http://localhost:19091
 
 kakao:
   rest-api-key: "mock_kakao_rest_api_key_for_testing"

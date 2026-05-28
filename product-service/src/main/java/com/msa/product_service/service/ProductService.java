@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +29,9 @@ public class ProductService {
     @Transactional(readOnly = true)
     public PageRes<ProductResponseDto> getProducts(Pageable pageable, ProductSearchDto searchDto) {
         //검색 조건 및 정렬 조건에 맞게 상품 리스트를 반환.
-        return productRepository.searchProduct(searchDto, pageable);
+        Page<Product> pageProduct = productRepository.searchProduct(searchDto.getProductName(),searchDto.getMaxPrice(),searchDto.getMinPrice(),searchDto.getHubId(), pageable);
+
+        return new PageRes<>(pageProduct.map(ProductResponseDto::from));
     }
 
     /**
@@ -51,7 +54,7 @@ public class ProductService {
     @Transactional
     public Product modifyProduct(ProductRequestDto dto,UUID id){
         Product modifyProduct = productRepository.findById(id).orElseThrow(() -> new CustomException(ProductErrorCode.PRODUCT_NOT_FOUND));
-        return modifyProduct.modifyProduct(dto);
+        return modifyProduct.modifyProduct(dto.getCompanyId(), dto.getHubId(), dto.getName(), dto.getPrice(), dto.getDescription());
     }
 
 
@@ -64,7 +67,7 @@ public class ProductService {
     @Transactional
     public Product createProduct(ProductRequestDto dto) {
         //전달 받은 값으로 Product 객체를 생성 한 후
-        Product newProduct = Product.create(dto);
+        Product newProduct = Product.create(dto.getCompanyId(), dto.getHubId(), dto.getName(), dto.getPrice(), dto.getDescription());
         //DB에 저장.
         productRepository.save(newProduct);
         return newProduct;

@@ -1,8 +1,14 @@
 package com.msa.company_service.service;
 
 import com.msa.company_service.client.HubClient;
-import com.msa.company_service.dto.*;
+import com.msa.company_service.dto.CompanyDto;
+import com.msa.company_service.dto.CompanyNameResponse;
+import com.msa.company_service.dto.CompanyRequest;
+import com.msa.company_service.dto.CompanyResponse;
+import com.msa.company_service.dto.CompanyUpdateRequest;
+import com.msa.company_service.dto.CoordinateDto;
 import com.msa.company_service.entity.CompanyEntity;
+import com.msa.company_service.entity.CompanyInfo;
 import com.msa.company_service.entity.CompanyType;
 import com.msa.company_service.global.CompanyErrorCode;
 import com.msa.company_service.repository.CompanyRepository;
@@ -54,14 +60,23 @@ public class CompanyService {
 
         validateHubId(request.hubId());
 
-        CoordinateDto coordinateDto;
+        CoordinateDto coordinate;
         if (request.latitude() != null && request.longitude() != null) {
-            coordinateDto = new CoordinateDto(request.latitude(), request.longitude());
+            coordinate = new CoordinateDto(request.latitude(), request.longitude());
         } else {
-            coordinateDto = hubClient.getCoordinates(request.address());
+            coordinate = hubClient.getCoordinates(request.address());
         }
 
-        CompanyEntity company = CompanyEntity.create(request, coordinateDto);
+        CompanyInfo info = new CompanyInfo(
+                request.hubId(),
+                request.name(),
+                request.type(),
+                request.address(),
+                coordinate.latitude(),
+                coordinate.longitude()
+        );
+
+        CompanyEntity company = CompanyEntity.create(info);
 
         companyRepository.save(company);
         return CompanyResponse.from(company);
@@ -122,7 +137,16 @@ public class CompanyService {
 
         CoordinateDto coordinate = new CoordinateDto(targetLat, targetLon);
 
-        company.update(request, coordinate);
+        CompanyInfo info = new CompanyInfo(
+                request.hubId(),
+                request.name(),
+                request.type(),
+                request.address(),
+                coordinate.latitude(),
+                coordinate.longitude()
+        );
+
+        company.update(info);
 
         return CompanyResponse.from(company);
     }

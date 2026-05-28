@@ -1,21 +1,15 @@
 spring:
-  cloud:
-    config:
-      enabled: false
-  config:
-    import: ""
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/hublink_test}
-    username: ${DB_USERNAME:test}
-    password: ${DB_PASSWORD:test}
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:ai_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
+    show-sql: true
 
 eureka:
   client:

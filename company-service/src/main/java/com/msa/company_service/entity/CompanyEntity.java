@@ -66,10 +66,10 @@ public class CompanyEntity extends BaseEntity {
         if (request.address() != null) {
             this.address = request.address();
         }
-        if (latitude != null) {
+        if (request.latitude() != null) {
             this.latitude = request.latitude();
         }
-        if (longitude != null) {
+        if (request.longitude() != null) {
             this.longitude = request.longitude();
         }
     }

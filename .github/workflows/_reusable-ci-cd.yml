@@ -157,10 +157,24 @@ jobs:
             aws ecr get-login-password --region "$AWS_REGION" | \
               docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
+            # config-server / eureka-server healthy 대기 (최대 120초)
+            for CONTAINER in hublink-config-server hublink-eureka-server; do
+              echo "Waiting for $CONTAINER to be healthy..."
+              for i in $(seq 1 24); do
+                STATUS=$(docker inspect "$CONTAINER" --format='{{.State.Health.Status}}' 2>/dev/null || echo "not_found")
+                if [ "$STATUS" = "healthy" ]; then
+                  echo "$CONTAINER is healthy"
+                  break
+                fi
+                echo "  [$i/24] $CONTAINER status: $STATUS, waiting 5s..."
+                sleep 5
+              done
+            done
+
             # 새 이미지 Pull 후 해당 서비스만 재시작
             docker pull "$ECR_REGISTRY/hublink-$SERVICE:$IMAGE_TAG"
             ECR_REGISTRY="$ECR_REGISTRY" IMAGE_TAG="$IMAGE_TAG" \
             docker compose up -d --no-deps "$SERVICE"
 
-            # 오래된 이미지 정리
-            docker image prune -f
+            # 오래된 이미지 정리 (사용 중이지 않은 이미지 전체 삭제)
+            docker image prune -a -f

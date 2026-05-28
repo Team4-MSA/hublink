@@ -16,14 +16,11 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-
 eureka:
   client:
     enabled: false
-
 ai:
   api-url: http://localhost/test
   api-key: test-ai-api-key
-
 swagger:
   gateway-url: http://localhost:19091

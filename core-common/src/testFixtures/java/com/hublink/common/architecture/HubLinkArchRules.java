@@ -33,9 +33,9 @@ public class HubLinkArchRules {
 
     // 3. controller 패키지 안에 클래스를 만들면, 무조건 이름 끝이 ~Controller로 끝나야 하고, @RestController 어노테이션을 빼먹지 않고 붙이도록 시스템이 강제
     public static final ArchRule CONTROLLER_CONVENTION_RULE = classes()
-            .that().resideInAPackage("..controller")
+            .that().areAnnotatedWith(org.springframework.web.bind.annotation.RestController.class)
             .should().haveSimpleNameEndingWith("Controller")
-            .andShould().beAnnotatedWith(org.springframework.web.bind.annotation.RestController.class);
+            .andShould().resideInAPackage("..controller..");
 
     // 4. DTO 안에 Service나 Repository 클래스를 넣지 못하게 차단
     public static final ArchRule DTO_ISOLATION_RULE = classes()

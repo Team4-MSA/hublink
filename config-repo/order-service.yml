@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: order-service
+  datasource:
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1
 
 eureka:
   client:

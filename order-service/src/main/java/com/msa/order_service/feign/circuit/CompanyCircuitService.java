@@ -7,6 +7,8 @@ import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -40,7 +42,7 @@ public class CompanyCircuitService {
     public CompanyAddressResDto companyAddressFallback (UUID companyId, Throwable t) {
         log.error("[Company Service] 가 응답하지 않아 Fallback 로직이 실행됩니다. 원인: {}", t.getMessage());
 
-        return new CompanyAddressResDto("조회실패");
+        return new CompanyAddressResDto("조회실패", BigDecimal.valueOf(0.0), BigDecimal.valueOf(0.0));
     }
 
 }

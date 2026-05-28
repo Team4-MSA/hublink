@@ -48,6 +48,16 @@ public class OrderItems extends BaseEntity {
 
     private Status status;
 
+    public static OrderItems createPendingOrderItem(UUID productID, Integer quantity, UUID supplierCompanyId, String supplierCompanyName) {
+        OrderItems orderItems = new OrderItems();
+        orderItems.setProductId(productID);
+        orderItems.setQuantity(quantity);
+        orderItems.setSupplierCompanyId(supplierCompanyId);
+        orderItems.setSupplierCompanyName(supplierCompanyName);
+
+        return orderItems;
+    }
+
     public static OrderItems createOrderItem(
             Integer quantity,
             UUID supplierCompanyId,
@@ -96,5 +106,13 @@ public class OrderItems extends BaseEntity {
                 .totalPrice(0)
                 .status(Status.FAILED)
                 .build();
+    }
+
+    public void enrichProductDetails(String productName, Integer unitPrice, UUID hubId) {
+        this.productName = productName;
+        this.unitPrice = unitPrice;
+        this.hubId = hubId;
+
+        this.totalPrice = unitPrice * this.quantity;
     }
 }

@@ -3,6 +3,7 @@ package com.msa.company_service.service;
 import com.msa.company_service.client.HubClient;
 import com.msa.company_service.dto.*;
 import com.msa.company_service.entity.CompanyEntity;
+import com.msa.company_service.entity.CompanyInfo;
 import com.msa.company_service.entity.CompanyType;
 import com.msa.company_service.global.CompanyErrorCode;
 import com.msa.company_service.repository.CompanyRepository;
@@ -54,7 +55,17 @@ class CompanyServiceTest {
 
     private CompanyEntity createCompanyEntity(UUID id, UUID hubId, String name, String address) {
         CompanyRequest req = new CompanyRequest(hubId, name, CompanyType.SUPPLIER, address, LAT, LON);
-        CompanyEntity entity = CompanyEntity.create(req, new CoordinateDto(LAT, LON));
+
+        CompanyInfo info = new CompanyInfo(
+                req.hubId(),
+                req.name(),
+                req.type(),
+                req.address(),
+                req.latitude(),
+                req.longitude()
+        );
+
+        CompanyEntity entity = CompanyEntity.create(info);
         ReflectionTestUtils.setField(entity, "companyId", id);
         return entity;
     }

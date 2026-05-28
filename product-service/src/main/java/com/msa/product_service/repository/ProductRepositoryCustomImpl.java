@@ -27,17 +27,17 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public PageRes<ProductResponseDto> searchProduct(ProductSearchDto dto, Pageable pageable) {
+    public Page<Product> searchProduct(String productName, Integer minPrice, Integer maxPrice, UUID hubId,Pageable pageable) {
 
         List<OrderSpecifier<?>> orderSpecifiers = getAllOrderSpecifiers(pageable);
 
         QueryResults<Product> result = queryFactory
             .selectFrom(product)
             .where(
-                productNameContains(dto.getProductName()),
-                hubIdEq(dto.getHubId()),
-                priceGoe(dto.getMinPrice()),
-                priceLoe(dto.getMaxPrice()),
+                productNameContains(productName),
+                hubIdEq(hubId),
+                priceGoe(minPrice),
+                priceLoe(maxPrice),
                 isDeleted()
             )
             .orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]))
@@ -45,17 +45,7 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
             .limit(pageable.getPageSize())
             .fetchResults();
 
-        List<ProductResponseDto> content = result.getResults().stream()
-            .map(ProductResponseDto::from)
-            .collect(Collectors.toList());
-
-        long total = result.getTotal();
-
-        // 1. 먼저 표준 Page 객체를 만들고
-        Page<ProductResponseDto> page = new PageImpl<>(content, pageable, total);
-
-        // 2. 그 Page를 PageRes 생성자에 넘긴다
-        return new PageRes<>(page);
+        return new PageImpl<>(result.getResults(), pageable, result.getTotal());
     }
 
     // 상품명 부분 검색 (LIKE %productName%)

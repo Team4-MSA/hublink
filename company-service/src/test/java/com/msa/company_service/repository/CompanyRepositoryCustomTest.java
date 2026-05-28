@@ -4,6 +4,7 @@ import com.msa.company_service.config.QueryDslConfig;
 import com.msa.company_service.dto.CompanyRequest;
 import com.msa.company_service.dto.CoordinateDto;
 import com.msa.company_service.entity.CompanyEntity;
+import com.msa.company_service.entity.CompanyInfo;
 import com.msa.company_service.entity.CompanyType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +20,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.in;
 
 @DataJpaTest
 @Import(QueryDslConfig.class)
@@ -42,7 +44,17 @@ class CompanyRepositoryCustomTest {
     private void saveCompany(UUID hubId, String name, CompanyType type, String address) {
         CompanyRequest request = new CompanyRequest(hubId, name, type, address, new BigDecimal("37.0"), new BigDecimal("127.0"));
         CoordinateDto coordinate = new CoordinateDto(new BigDecimal("37.0"), new BigDecimal("127.0"));
-        companyRepository.save(CompanyEntity.create(request, coordinate));
+
+        CompanyInfo info = new CompanyInfo(
+                request.hubId(),
+                request.name(),
+                request.type(),
+                request.address(),
+                coordinate.latitude(),
+                coordinate.longitude()
+        );
+
+        companyRepository.save(CompanyEntity.create(info));
     }
 
     @Test

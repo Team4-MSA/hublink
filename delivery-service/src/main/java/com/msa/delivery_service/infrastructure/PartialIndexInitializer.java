@@ -19,6 +19,10 @@ public class PartialIndexInitializer {
     private final JdbcTemplate jdbcTemplate;
 
     @EventListener(ApplicationReadyEvent.class)
+    /*
+        단일 인스턴스 환경에서만 사용 가능
+        확장성 고려 시 마이그레이션 적용 및 배포 단계에서 처리 요망
+    */
     public void initializeIndexes() {
         jdbcTemplate.execute("""
                 CREATE UNIQUE INDEX IF NOT EXISTS uk_p_deliveries_active_order_id

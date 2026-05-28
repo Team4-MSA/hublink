@@ -41,8 +41,7 @@ public class DeliveryCreateKafkaConsumer {
     public void consume(ConsumerRecord<String, String> record) {
         String payload = record.value();
 
-        // 성공/실패 토픽에 같은 키를 태워 보내기 위해 orderId 기반 메시지 키를 담아둔다.
-        // 역직렬화 전에 실패할 수도 있어서 null로 시작한다.
+        // 메세지 키는 orderId + 미리 null 초기화
         String messageKey = null;
 
         try {

@@ -1,10 +1,10 @@
-package com.msa.order_service.feign.circuit;
+package com.msa.order_service.client.circuit;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.order_service.dto.req.MakeDeliveryReqDto;
 import com.msa.order_service.dto.res.MakeDeliveryResDto;
 import com.msa.order_service.error.OrderErrorCode;
-import com.msa.order_service.feign.DeliveryFeignClient;
+import com.msa.order_service.client.DeliveryFeignClient;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

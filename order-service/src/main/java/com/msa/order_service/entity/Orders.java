@@ -6,10 +6,7 @@ import com.msa.order_service.dto.req.OrderMakeReqDto;
 import com.msa.order_service.error.OrderErrorCode;
 import com.msa.order_service.type.Status;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.hibernate.annotations.BatchSize;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -20,6 +17,7 @@ import java.util.UUID;
 
 @Builder
 @Getter
+@Setter
 @Entity
 @Table(name = "p_orders")
 @EntityListeners(AuditingEntityListener.class)
@@ -40,6 +38,8 @@ public class Orders extends BaseEntity {
 
     private UUID orderedByUserId;
 
+    private String ordererEmail;
+
     @Enumerated(EnumType.STRING)
     private Status status;
 
@@ -57,14 +57,14 @@ public class Orders extends BaseEntity {
     @Builder.Default
     private List<OrderItems> orderItems = new ArrayList<>();
 
-    public static Orders createInitOrder(OrderMakeReqDto orderMakeReqDto, UUID userId) {
+    public static Orders createInitOrder(UUID supplierCompanyId,UUID receiverCompanyId, String requestMemo, LocalDateTime requestedDeliveryDeadline,UUID userId) {
         Orders order = new Orders();
-        order.supplierCompanyId = orderMakeReqDto.getSupplierCompanyId();
-        order.receiverCompanyId = orderMakeReqDto.getReceiverCompanyId();
-        order.requestMemo = orderMakeReqDto.getRequestMemo();
-        order.requestedDeliveryDeadline = orderMakeReqDto.getRequestedDeliveryDeadline();
+        order.supplierCompanyId = supplierCompanyId;
+        order.receiverCompanyId = receiverCompanyId;
+        order.requestMemo = requestMemo;
+        order.requestedDeliveryDeadline = requestedDeliveryDeadline;
         order.orderedByUserId = userId;
-        order.status = Status.CREATED;
+        order.status = Status.PENDING;
         return order;
     }
 
@@ -94,5 +94,9 @@ public class Orders extends BaseEntity {
                 item.cancel();
             }
         }
+    }
+
+    public void setZeroTotalPrice () {
+        this.totalPrice = 0;
     }
 }

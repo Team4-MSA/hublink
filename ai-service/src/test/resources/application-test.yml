@@ -1,0 +1,29 @@
+spring:
+  cloud:
+    config:
+      enabled: false
+  config:
+    import: ""
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/hublink_test}
+    username: ${DB_USERNAME:test}
+    password: ${DB_PASSWORD:test}
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: create-drop
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+eureka:
+  client:
+    enabled: false
+
+ai:
+  api-url: http://localhost/test
+  api-key: test-ai-api-key
+
+swagger:
+  gateway-url: http://localhost:19091

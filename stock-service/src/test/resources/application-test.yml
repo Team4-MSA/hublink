@@ -1,20 +1,15 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb
     driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:stock_test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
     username: sa
     password:
 
-  sql:
-    init:
-      mode: never
-
   jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
     show-sql: true
-    defer-datasource-initialization: true
-    properties:
-      hibernate:
-        format_sql: true
 
 eureka:
   client:

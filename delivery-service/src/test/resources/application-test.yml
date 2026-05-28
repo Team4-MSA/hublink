@@ -22,3 +22,6 @@ spring:
 eureka:
   client:
     enabled: false
+
+swagger:
+  gateway-url: http://localhost:19091

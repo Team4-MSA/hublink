@@ -1,7 +1,5 @@
 package com.msa.company_service.entity;
 
-import com.msa.company_service.dto.CompanyRequest;
-import com.msa.company_service.dto.CompanyUpdateRequest;
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;

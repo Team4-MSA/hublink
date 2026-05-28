@@ -1,7 +1,12 @@
 package com.msa.company_service.service;
 
 import com.msa.company_service.client.HubClient;
-import com.msa.company_service.dto.*;
+import com.msa.company_service.dto.CompanyDto;
+import com.msa.company_service.dto.CompanyNameResponse;
+import com.msa.company_service.dto.CompanyRequest;
+import com.msa.company_service.dto.CompanyResponse;
+import com.msa.company_service.dto.CompanyUpdateRequest;
+import com.msa.company_service.dto.CoordinateDto;
 import com.msa.company_service.entity.CompanyEntity;
 import com.msa.company_service.entity.CompanyInfo;
 import com.msa.company_service.entity.CompanyType;

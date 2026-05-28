@@ -1,0 +1,31 @@
+spring:
+  cloud:
+    config:
+      enabled: false
+  config:
+    import: ""
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/hublink_test}
+    username: ${DB_USERNAME:test}
+    password: ${DB_PASSWORD:test}
+    driver-class-name: org.postgresql.Driver
+  sql:
+    init:
+      mode: never
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: create-drop
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+eureka:
+  client:
+    enabled: false
+
+jwt:
+  secret: dGVzdC1qd3Qtc2VjcmV0LWtleS1mb3ItdGVzdGluZy1vbmx5LW11c3QtYmUtMjU2LWJpdHMtbG9uZyEh
+  access-expiration: 3600000
+  refresh-expiration: 86400000

@@ -1,0 +1,24 @@
+spring:
+  cloud:
+    config:
+      enabled: false
+  config:
+    import: ""
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/hublink_test}
+    username: ${DB_USERNAME:test}
+    password: ${DB_PASSWORD:test}
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+eureka:
+  client:
+    enabled: false
+
+kakao:
+  rest-api-key: test-kakao-key

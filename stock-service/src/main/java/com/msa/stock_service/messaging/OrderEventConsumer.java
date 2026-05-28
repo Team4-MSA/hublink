@@ -71,7 +71,7 @@ public class OrderEventConsumer {
             eventPublisher.publish(
                 "stock.decrease.failed",
                 orderId,
-                Map.of("reason", e.getMessage())
+                Map.of("reason", e.getMessage() != null ? e.getMessage() : "Unknown Error")
             );
 
         } catch (Exception e) {

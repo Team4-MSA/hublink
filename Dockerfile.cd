@@ -1,6 +1,8 @@
 # CI에서 미리 빌드된 JAR를 복사만 하는 경량 Dockerfile
 # 로컬 개발은 기존 Dockerfile 사용
 FROM eclipse-temurin:17-jre
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY app.jar app.jar
 ENTRYPOINT ["java", "-jar", "app.jar"]

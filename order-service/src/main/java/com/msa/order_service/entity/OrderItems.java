@@ -46,36 +46,47 @@ public class OrderItems extends BaseEntity {
     //수량*단가
     private Integer totalPrice;
 
+    @Enumerated(EnumType.STRING)
     private Status status;
 
-    public static OrderItems createOrderItem(
-            Integer quantity,
-            UUID supplierCompanyId,
-            String supplierCompanyName,
-            ProductNPAResDto productDto
-    ) {
-        OrderItems orderItem = new OrderItems();
-        orderItem.productId = productDto.productId();
-        orderItem.quantity = quantity;
-        orderItem.supplierCompanyId = supplierCompanyId;
-        orderItem.supplierCompanyName = supplierCompanyName;
+    public static OrderItems createPendingOrderItem(UUID productID, Integer quantity, UUID supplierCompanyId, String supplierCompanyName) {
+        OrderItems orderItems = new OrderItems();
+        orderItems.setProductId(productID);
+        orderItems.setQuantity(quantity);
+        orderItems.setSupplierCompanyId(supplierCompanyId);
+        orderItems.setSupplierCompanyName(supplierCompanyName);
 
-        if (productDto != null && productDto.isSuccess()) {
-            orderItem.productName = productDto.name();
-            orderItem.hubId = productDto.hubId();
-            orderItem.unitPrice = productDto.price();
-            orderItem.totalPrice = productDto.price() * quantity;
-            orderItem.status = Status.COMPLETED;
-        } else {
-            orderItem.productName = productDto != null ? productDto.name() : "존재하지 않는 상품";
-            orderItem.hubId = productDto != null ? productDto.hubId() : null;
-            orderItem.unitPrice = productDto != null ? productDto.price() : 0;
-            orderItem.totalPrice = productDto != null ? productDto.price() * quantity : 0;
-            orderItem.status = Status.FAILED;
-        }
-
-        return orderItem;
+        return orderItems;
     }
+
+//    public static OrderItems createOrderItem(
+//            Integer quantity,
+//            UUID supplierCompanyId,
+//            String supplierCompanyName,
+//            ProductNPAResDto productDto
+//    ) {
+//        OrderItems orderItem = new OrderItems();
+//        orderItem.productId = productDto.productId();
+//        orderItem.quantity = quantity;
+//        orderItem.supplierCompanyId = supplierCompanyId;
+//        orderItem.supplierCompanyName = supplierCompanyName;
+//
+//        if (productDto != null && productDto.isSuccess()) {
+//            orderItem.productName = productDto.name();
+//            orderItem.hubId = productDto.hubId();
+//            orderItem.unitPrice = productDto.price();
+//            orderItem.totalPrice = productDto.price() * quantity;
+//            orderItem.status = Status.COMPLETED;
+//        } else {
+//            orderItem.productName = productDto != null ? productDto.name() : "존재하지 않는 상품";
+//            orderItem.hubId = productDto != null ? productDto.hubId() : null;
+//            orderItem.unitPrice = productDto != null ? productDto.price() : 0;
+//            orderItem.totalPrice = productDto != null ? productDto.price() * quantity : 0;
+//            orderItem.status = Status.FAILED;
+//        }
+//
+//        return orderItem;
+//    }
 
     public void cancel() {
 
@@ -96,5 +107,13 @@ public class OrderItems extends BaseEntity {
                 .totalPrice(0)
                 .status(Status.FAILED)
                 .build();
+    }
+
+    public void enrichProductDetails(String productName, Integer unitPrice, UUID hubId) {
+        this.productName = productName;
+        this.unitPrice = unitPrice;
+        this.hubId = hubId;
+
+        this.totalPrice = unitPrice * this.quantity;
     }
 }

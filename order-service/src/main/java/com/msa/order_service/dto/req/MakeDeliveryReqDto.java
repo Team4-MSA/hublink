@@ -41,11 +41,11 @@ public class MakeDeliveryReqDto {
         public Integer quantity;
     }
 
-    public static MakeDeliveryReqDto from(Orders order, UsernameResDto orderer, String deliveryAddress, String receiverName) {
+    public static MakeDeliveryReqDto from(Orders order, String ordererName, String ordererEmail, String deliveryAddress, String receiverName) {
         MakeDeliveryReqDto dto = new MakeDeliveryReqDto();
         dto.setOrderId(order.getId());
-        dto.setOrdererName(orderer.name());
-        dto.setOrdererEmail(orderer.email());
+        dto.setOrdererName(ordererName);
+        dto.setOrdererEmail(ordererEmail);
         dto.setOrderedAt(order.getCreatedAt());
         dto.setRequestMessage(order.getRequestMemo());
         dto.setSupplyCompanyId(order.getSupplierCompanyId());

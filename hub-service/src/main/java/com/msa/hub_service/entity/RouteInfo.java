@@ -1,10 +1,8 @@
-package com.msa.hub_service.dto;
-
-import com.msa.hub_service.entity.RouteType;
+package com.msa.hub_service.entity;
 
 import java.math.BigDecimal;
 
-public record RouteCalculationResult(
+public record RouteInfo(
         BigDecimal distanceKm,
         int durationMin,
         RouteType routeType

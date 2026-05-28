@@ -81,7 +81,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          dockerfile: Dockerfile.cd
+          file: Dockerfile.cd
           push: true
           tags: |
             ${{ secrets.ECR_REGISTRY }}/hublink-${{ inputs.service_name }}:latest

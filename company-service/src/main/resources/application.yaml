@@ -14,5 +14,5 @@ eureka:
 
 springdoc:
   servers:
-    - url: ${SWAGGER_GATEWAY_URL}
+    - url: ${SWAGGER_GATEWAY_URL:http://localhost:8080}
       description: API Gateway URL

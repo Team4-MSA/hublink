@@ -19,3 +19,10 @@ spring:
 eureka:
   client:
     enabled: false
+
+swagger:
+  gateway-url: http://localhost:8080
+
+kakao:
+  rest-api-key: "mock_kakao_rest_api_key_for_testing"
+  base-url: "https://dapi.kakao.com"

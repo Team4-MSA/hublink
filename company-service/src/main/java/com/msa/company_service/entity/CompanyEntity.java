@@ -2,7 +2,6 @@ package com.msa.company_service.entity;
 
 import com.msa.company_service.dto.CompanyRequest;
 import com.msa.company_service.dto.CompanyUpdateRequest;
-import com.msa.company_service.dto.CoordinateDto;
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -43,18 +42,18 @@ public class CompanyEntity extends BaseEntity {
     @Column(precision = 10, scale = 7)
     private BigDecimal longitude;
 
-    public static CompanyEntity create(CompanyRequest request, CoordinateDto coordinateDto) {
+    public static CompanyEntity create(CompanyInfo request) {
         return CompanyEntity.builder()
                 .hubId(request.hubId())
                 .name(request.name())
                 .type(request.type())
                 .address(request.address())
-                .latitude(coordinateDto.latitude())
-                .longitude(coordinateDto.longitude())
+                .latitude(request.latitude())
+                .longitude(request.longitude())
                 .build();
     }
 
-    public void update(CompanyUpdateRequest request, CoordinateDto coordinateDto) {
+    public void update(CompanyInfo request) {
         if (request.hubId() != null) {
             this.hubId = request.hubId();
         }
@@ -67,9 +66,11 @@ public class CompanyEntity extends BaseEntity {
         if (request.address() != null) {
             this.address = request.address();
         }
-        if (coordinateDto != null) {
-            this.latitude = coordinateDto.latitude();
-            this.longitude = coordinateDto.longitude();
+        if (latitude != null) {
+            this.latitude = request.latitude();
+        }
+        if (longitude != null) {
+            this.longitude = request.longitude();
         }
     }
 }

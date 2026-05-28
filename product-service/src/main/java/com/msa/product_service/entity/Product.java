@@ -47,23 +47,23 @@ public class Product extends BaseEntity {
     @Version
     private Integer version;
 
-    public static Product create (ProductRequestDto dto) {
+    public static Product create (UUID companyId, UUID hubId, String name, Integer price, String description) {
         return Product.builder()
-            .companyId(dto.getCompanyId())
-            .hubId(dto.getHubId())
-            .name(dto.getName())
-            .description(dto.getDescription())
-            .price(dto.getPrice())
+            .companyId(companyId)
+            .hubId(hubId)
+            .name(name)
+            .description(description)
+            .price(price)
             .build();
     }
 
     //상품 수정
-    public Product modifyProduct(ProductRequestDto dto) {
-        this.companyId = dto.getCompanyId();
-        this.hubId = dto.getHubId();
-        this.price = dto.getPrice();
-        this.name = dto.getName();
-        this.description = dto.getDescription();
+    public Product modifyProduct(UUID companyId, UUID hubId, String name, Integer price, String description) {
+        this.companyId = companyId;
+        this.hubId = hubId;
+        this.price = price;
+        this.name = name;
+        this.description = description;
         return this;
     }
 }

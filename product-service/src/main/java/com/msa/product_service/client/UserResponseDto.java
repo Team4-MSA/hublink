@@ -4,8 +4,10 @@ import com.msa.core_common.auth.UserRole;
 import java.util.UUID;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
+@Setter
 @NoArgsConstructor
 public class UserResponseDto {
     private UUID userId;

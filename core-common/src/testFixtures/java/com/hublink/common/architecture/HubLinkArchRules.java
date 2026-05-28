@@ -23,7 +23,9 @@ public class HubLinkArchRules {
             .whereLayer("Service").mayOnlyBeAccessedByLayers("Controller", "Service", "Message")
             .whereLayer("Repository").mayOnlyBeAccessedByLayers("Service")
             .whereLayer("Client").mayOnlyBeAccessedByLayers("Service")
-            .whereLayer("Message").mayOnlyBeAccessedByLayers("Service");
+            .whereLayer("Message").mayOnlyBeAccessedByLayers("Service")
+            .whereLayer("Entity").mayOnlyBeAccessedByLayers("Service", "Repository", "Controller")
+            .withOptionalLayers(true);
 
     // 2. Entity 안에 Controller, Service, Client 관련 코드가 섞이지 않게 차단
     public static final ArchRule ENTITY_ISOLATION_RULE = classes()

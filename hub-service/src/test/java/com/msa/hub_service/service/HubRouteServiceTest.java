@@ -4,6 +4,7 @@ import com.msa.core_common.error.exception.CustomException;
 import com.msa.hub_service.client.AddressGeocodingPort;
 import com.msa.hub_service.client.CompanyClient;
 import com.msa.hub_service.dto.CompanyDto;
+import com.msa.hub_service.dto.CompanyNameResponse;
 import com.msa.hub_service.dto.HubRouteResponse;
 import com.msa.hub_service.dto.HubRouteUpdateRequest;
 import com.msa.hub_service.entity.RouteInfo;
@@ -167,7 +168,7 @@ class HubRouteServiceTest {
     class CompanyToCompanyPathTest {
 
         @Test
-        @DisplayName("성공: 최신 HubRouteResponse 필드명(departureHub) 스펙에 맞추어 올바른 경로 리스트를 반환한다")
+        @DisplayName("성공: 경로 리스트를 반환한다")
         void getCompanyToCompanyPath_Success() {
             // given
             UUID depCompanyId = UUID.randomUUID();
@@ -178,20 +179,26 @@ class HubRouteServiceTest {
             CompanyDto depCompany = new CompanyDto("출발지 주소", new BigDecimal("37.1"), new BigDecimal("126.1"), depHubId);
             CompanyDto arrCompany = new CompanyDto("도착지 주소", new BigDecimal("37.9"), new BigDecimal("126.9"), null);
 
+            HubEntity depHub = createHub(depHubId, "출발허브", new BigDecimal("37"), new BigDecimal("126"));
             HubEntity closeHub = createHub(arrHubId, "가장 가까운 허브", new BigDecimal("37.85"), new BigDecimal("126.85"));
             HubEntity farHub = createHub(UUID.randomUUID(), "멀리 있는 허브", new BigDecimal("35.0"), new BigDecimal("129.0"));
 
             HubRouteEntity mockDirectRoute = createRoute(
                     UUID.randomUUID(),
-                    createHub(depHubId, "출발허브", new BigDecimal("37"), new BigDecimal("126")),
+                    depHub,
                     closeHub,
                     BigDecimal.valueOf(60), 45, RouteType.P2P
             );
 
+            String expectedCompanyName = "도착 테스트 업체";
+            when(companyClient.getCompanyNames(List.of(arrCompanyId)))
+                    .thenReturn(List.of(new CompanyNameResponse(arrCompanyId, expectedCompanyName)));
+
             when(companyClient.getCompanyLocation(depCompanyId)).thenReturn(depCompany);
             when(companyClient.getCompanyLocation(arrCompanyId)).thenReturn(arrCompany);
-            when(hubRepository.findAll()).thenReturn(List.of(farHub, closeHub));
-            when(hubRouteRepository.findByDepartureHub_HubIdAndArrivalHub_HubId(depHubId, arrHubId)).thenReturn(Optional.of(mockDirectRoute));
+            when(hubRepository.findAll()).thenReturn(List.of(depHub, farHub, closeHub));
+            when(hubRouteRepository.findByDepartureHub_HubIdAndArrivalHub_HubId(any(UUID.class), any(UUID.class)))
+                    .thenReturn(Optional.of(mockDirectRoute));
 
             try (MockedStatic<Util.DistanceCalculator> mockedDistance = mockStatic(Util.DistanceCalculator.class);
                  MockedStatic<Util.RouteCalculator> mockedRoute = mockStatic(Util.RouteCalculator.class)) {
@@ -207,8 +214,15 @@ class HubRouteServiceTest {
 
                 // then
                 assertThat(result).hasSize(2);
-                assertThat(result.get(0).departureHub()).isEqualTo(depHubId); // departureHubId -> departureHub 수정 반영
+
+                // 첫 번째 경로 (허브 -> 허브) 검증
+                assertThat(result.get(0).departureHub()).isEqualTo(depHubId);
+                assertThat(result.get(0).departureHubName()).isEqualTo("출발허브");
+                assertThat(result.get(0).arrivalHubName()).isEqualTo("가장 가까운 허브");
+
+                // 두 번째 경로 (마지막 허브 -> 도착 업체) 검증
                 assertThat(result.get(1).arrivalCompanyId()).isEqualTo(arrCompanyId);
+                assertThat(result.get(1).arrivalCompanyName()).isEqualTo(expectedCompanyName);
                 assertThat(result.get(1).estimatedDistanceKm()).isEqualTo(BigDecimal.valueOf(11.2));
             }
         }

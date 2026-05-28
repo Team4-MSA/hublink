@@ -34,6 +34,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -223,7 +224,11 @@ public class HubRouteService {
         List<HubEntity> allHubs = hubRepository.findAll();
         UUID arrivalHubId = findClosestHub(allHubs, arrivalCoords[0], arrivalCoords[1]);
 
-        return getHubPath(departureHubId, arrivalHubId, arrivalCompanyId);
+        // 이름 추가 전
+        List<HubRouteResponse> rawPath = getHubPath(departureHubId, arrivalHubId, arrivalCompanyId);
+
+        // 이름 추가 후 리턴
+        return enrichRouteNames(rawPath, allHubs, arrivalCompanyId);
     }
 
     // 자동 생성
@@ -313,6 +318,45 @@ public class HubRouteService {
         }
     }
 
+    // 이름 설정
+    private List<HubRouteResponse> enrichRouteNames(List<HubRouteResponse> rawPath, List<HubEntity> allHubs, UUID arrivalCompanyId) {
+        if (rawPath == null || rawPath.isEmpty()) {
+            return rawPath;
+        }
+
+        Map<UUID, String> hubNameMap = allHubs.stream()
+                .collect(Collectors.toMap(HubEntity::getHubId, HubEntity::getName));
+
+        // 업체 이름
+        String arrivalCompanyName = null;
+        try {
+            List<CompanyNameResponse> companyNames = companyClient.getCompanyNames(List.of(arrivalCompanyId));
+            if (companyNames != null && !companyNames.isEmpty()) {
+                arrivalCompanyName = companyNames.get(0).name();
+            }
+        } catch (Exception e) {
+            log.error("업체 이름을 가져오는데 실패했습니다. companyId: {}", arrivalCompanyId, e);
+        }
+
+        final String finalArrivalCompanyName = arrivalCompanyName;
+
+        return rawPath.stream()
+                .map(route -> new HubRouteResponse(
+                        route.hubRouteId(),
+                        route.departureHub(),
+                        route.arrivalHub(),
+                        route.arrivalCompanyId(),
+                        hubNameMap.get(route.departureHub()),
+                        hubNameMap.get(route.arrivalHub()),
+                        route.arrivalCompanyId() != null ? finalArrivalCompanyName : null,
+                        route.estimatedDistanceKm(),
+                        route.estimatedDurationMin(),
+                        route.routeType(),
+                        route.sequence()
+                ))
+                .collect(Collectors.toList());
+    }
+
     // 컴퍼니 주소랑 가까운 허브 찾기
     private UUID findClosestHub(List<HubEntity> hubs, BigDecimal targetLat, BigDecimal targetLon) {
         UUID closestHubId = null;
@@ -358,6 +402,9 @@ public class HubRouteService {
                 arrivalHub.getHubId(),
                 null,
                 companyId,
+                null,
+                null,
+                null,
                 calcResult.distanceKm(),
                 calcResult.durationMin(),
                 RouteType.P2P,
@@ -388,6 +435,9 @@ public class HubRouteService {
                 entity.getHubRouteId(),
                 entity.getDepartureHub().getHubId(),
                 entity.getArrivalHub().getHubId(),
+                null,
+                null,
+                null,
                 null,
                 entity.getEstimatedDistanceKm(),
                 entity.getEstimatedDurationMin(),

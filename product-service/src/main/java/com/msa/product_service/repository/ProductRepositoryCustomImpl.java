@@ -27,7 +27,7 @@ public class ProductRepositoryCustomImpl implements ProductRepositoryCustom {
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public Page<Product> searchProduct(String productName, Integer maxPrice, Integer minPrice, UUID hubId,Pageable pageable) {
+    public Page<Product> searchProduct(String productName, Integer minPrice, Integer maxPrice, UUID hubId,Pageable pageable) {
 
         List<OrderSpecifier<?>> orderSpecifiers = getAllOrderSpecifiers(pageable);
 

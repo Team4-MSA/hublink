@@ -38,7 +38,7 @@ public class HubLinkArchRules {
     public static final ArchRule ENTITY_ISOLATION_RULE = classes()
             .that().resideInAPackage("..entity..")
             .should().onlyDependOnClassesThat()
-            .resideOutsideOfPackages("..controller..", "..service..", "..dto..", "..client..", "..message..");
+            .resideOutsideOfPackages("..controller..", "..service..", "..client..", "..message..");
 
     // 3. controller 패키지 안에 클래스를 만들면, 무조건 이름 끝이 ~Controller로 끝나야 하고, @RestController 어노테이션을 빼먹지 않고 붙이도록 시스템이 강제
     public static final ArchRule CONTROLLER_CONVENTION_RULE = classes()

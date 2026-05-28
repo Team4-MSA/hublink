@@ -3,11 +3,13 @@ package com.msa.delivery_service.global;
 import com.msa.core_common.error.ErrorResponse;
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.GlobalResponse;
+import com.msa.delivery_service.domain.enums.DeliveryErrorCode;
 import feign.FeignException;
-import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -22,7 +24,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CustomException.class)
     public ResponseEntity<GlobalResponse<?>> handleCustomException(CustomException e) {
-        // 도메인에서 정의한 ErrorCode를 그대로 HTTP 응답으로 변환한다.
+        // 도메인에서 정의한 ErrorCode를 그대로 HTTP 응답으로 변환
         ErrorResponse errorResponse = ErrorResponse.of(e.getErrorCode().getCode(), e.getMessage());
         GlobalResponse<?> response = GlobalResponse.failure(
                 e.getErrorCode().getStatus().value(),
@@ -49,6 +51,26 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler({
+            ObjectOptimisticLockingFailureException.class,
+            OptimisticLockException.class
+    })
+    public ResponseEntity<GlobalResponse<?>> handleOptimisticLockException(Exception e) {
+        log.warn("동시성 충돌이 발생했습니다. message={}", e.getMessage());
+
+        ErrorResponse errorResponse = ErrorResponse.of(
+                DeliveryErrorCode.CONCURRENT_DELIVERY_UPDATE.getCode(),
+                DeliveryErrorCode.CONCURRENT_DELIVERY_UPDATE.getMessage()
+        );
+        GlobalResponse<?> response = GlobalResponse.failure(
+                DeliveryErrorCode.CONCURRENT_DELIVERY_UPDATE.getStatus().value(),
+                DeliveryErrorCode.CONCURRENT_DELIVERY_UPDATE.getCode(),
+                errorResponse
+        );
+
+        return ResponseEntity.status(DeliveryErrorCode.CONCURRENT_DELIVERY_UPDATE.getStatus()).body(response);
     }
 
     // 4xx/5xx 응답은 FeignException 발생

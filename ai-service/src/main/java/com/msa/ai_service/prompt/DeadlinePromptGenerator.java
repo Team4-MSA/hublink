@@ -18,12 +18,16 @@ public class DeadlinePromptGenerator {
                 .collect(Collectors.joining(", "));
 
         String routeInfo = event.getRouteInfo().stream()
-                .map(route ->
-                        "- " + route.getDepartureHubName()
-                                + " → " + route.getArrivalHubName()
-                                + ", 거리: " + route.getEstimatedDistanceKm() + "km"
-                                + ", 예상 시간: " + route.getEstimatedDurationMin() + "분"
-                                + ", 유형: " + route.getRouteType())
+                .map(route -> {
+                    String arrivalName = route.getArrivalHubName() != null && !route.getArrivalHubName().isBlank()
+                            ? route.getArrivalHubName() : route.getArrivalCompanyName();
+
+                    return "- " + route.getDepartureHubName()
+                            + " -> " + arrivalName
+                            + ", 거리: " + route.getEstimatedDistanceKm() + "km"
+                            + ", 예상 시간: " + route.getEstimatedDurationMin() + "분"
+                            + ", 유형: " + route.getRouteType();
+                })
                 .collect(Collectors.joining("\n"));
 
         int totalDuration = event.getRouteInfo().stream()

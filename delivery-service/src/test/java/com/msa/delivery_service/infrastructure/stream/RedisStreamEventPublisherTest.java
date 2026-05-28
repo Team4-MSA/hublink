@@ -1,112 +1,79 @@
 package com.msa.delivery_service.infrastructure.stream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.msa.delivery_service.presentation.dto.DeliveryRequest;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
-import org.springframework.data.domain.Range;
-import org.springframework.data.redis.connection.RedisPassword;
-import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
-import org.springframework.data.redis.connection.stream.MapRecord;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StreamOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.util.StringUtils;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-@SpringBootTest(classes = RedisStreamEventPublisherTest.TestRedisConfig.class)
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 class RedisStreamEventPublisherTest {
 
-    @Autowired
-    private RedisStreamEventPublisher redisStreamEventPublisher;
-
-    @Autowired
+    @Mock
     private StringRedisTemplate stringRedisTemplate;
 
-    @Autowired
+    @Mock
+    private StreamOperations<String, Object, Object> streamOperations;
+
     private ObjectMapper objectMapper;
+    private RedisStreamEventPublisher publisher;
 
-    @Test
-    void publishEventStream() throws Exception {
-        DeliveryRequest.Product product = objectMapper.convertValue(
-                Map.of("productName", "keyboard", "quantity", 2),
-                DeliveryRequest.Product.class
-        );
+    @BeforeEach
+    void setUp() {
+        objectMapper = new ObjectMapper().findAndRegisterModules();
+        publisher = new RedisStreamEventPublisher(stringRedisTemplate, objectMapper);
+    }
 
-        DeadlineRequestedEvent event = DeadlineRequestedEvent.builder()
-                .eventId(UUID.randomUUID())
-                .deliveryId(UUID.randomUUID())
-                .orderId(UUID.randomUUID())
-                .ordererName("tester")
-                .ordererEmail("tester@hublink.com")
-                .orderedAt(LocalDateTime.now())
-                .requestMessage("deliver fast")
-                .receiverUserId(UUID.randomUUID())
-                .receiverSlackId("U123456")
-                .products(List.of(product))
-                .requestedArrivalAt(LocalDateTime.now())
-                .destinationAddress("Seoul")
-                .deliveryManagerName("manager")
-                .deliveryManagerEmail("manager@hublink.com")
-                .routeInfo(List.of())
-                .workStartTime("09:00")
-                .workEndTime("18:00")
-                .build();
-        String streamKey = "test:deadline:requested:stream:" + UUID.randomUUID();
-        String expectedPayload = objectMapper.writeValueAsString(event);
-
-        try {
-            redisStreamEventPublisher.publishAfterCommit(streamKey, event);
-
-            List<MapRecord<String, Object, Object>> records =
-                    stringRedisTemplate.opsForStream().range(streamKey, Range.unbounded());
-
-            assertEquals(1, records.size());
-            assertEquals(expectedPayload, records.get(0).getValue().get("payload"));
-        } finally {
-            stringRedisTemplate.delete(streamKey);
+    @AfterEach
+    void tearDown() {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization();
         }
     }
 
-    @TestConfiguration
-    @Import(RedisStreamEventPublisher.class)
-    static class TestRedisConfig {
+    @Test
+    @DisplayName("이벤트 발행: commit 이후 payload 저장 검증")
+    void publishAfterCommit() throws Exception {
+        // given
+        String streamKey = "deadline:requested:stream";
+        TestEvent event = new TestEvent("delivery-1");
+        TransactionSynchronizationManager.initSynchronization();
 
-        @Bean
-        ObjectMapper objectMapper() {
-            return new ObjectMapper().findAndRegisterModules();
+        // when
+
+        // commit 이전 지연 검증
+        publisher.publishAfterCommit(streamKey, event);
+        verify(stringRedisTemplate, never()).opsForStream();
+
+        when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
+        for (TransactionSynchronization synchronization : TransactionSynchronizationManager.getSynchronizations()) {
+            synchronization.afterCommit();
         }
 
-        @Bean
-        LettuceConnectionFactory redisConnectionFactory(
-                @Value("${spring.data.redis.host}") String host,
-                @Value("${spring.data.redis.port}") int port,
-                @Value("${spring.data.redis.username}") String username,
-                @Value("${spring.data.redis.password:}") String password
-        ) {
-            RedisStandaloneConfiguration configuration = new RedisStandaloneConfiguration(host, port);
+        // then
 
-            if (StringUtils.hasText(username)) configuration.setUsername(username);
-            if (StringUtils.hasText(password)) configuration.setPassword(RedisPassword.of(password));
+        // payload 저장 검증
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Map<String, String>> payloadCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(streamOperations).add(org.mockito.ArgumentMatchers.eq(streamKey), payloadCaptor.capture());
+        assertThat(payloadCaptor.getValue()).containsEntry("payload", objectMapper.writeValueAsString(event));
+    }
 
-            return new LettuceConnectionFactory(configuration);
-        }
-
-        @Bean
-        StringRedisTemplate stringRedisTemplate(LettuceConnectionFactory redisConnectionFactory) {
-            return new StringRedisTemplate(redisConnectionFactory);
-        }
+    private record TestEvent(String deliveryId) {
     }
 }

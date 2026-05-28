@@ -17,6 +17,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.*;
 import org.hibernate.annotations.SQLRestriction;
 
@@ -37,6 +38,10 @@ public class DeliveryRouteHistory extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "delivery_route_history_id", nullable = false)
     private UUID deliveryRouteHistoryId;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "delivery_id", nullable = false)

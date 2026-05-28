@@ -1,5 +1,6 @@
 package com.msa.delivery_service.infrastructure.client.hub.dto;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.msa.delivery_service.domain.entity.Delivery;
 import com.msa.delivery_service.domain.entity.DeliveryRouteHistory;
 import com.msa.delivery_service.domain.enums.DeliveryLocationType;
@@ -19,10 +20,18 @@ public class HubRouteResponse {
 
     private UUID hubRouteId;
     private Integer sequence;
+
+    @JsonAlias("departureHub")
     private UUID departureHubId;
+
     private String departureHubName;
+
+    @JsonAlias("arrivalHub")
     private UUID arrivalHubId;
+
     private String arrivalHubName;
+    private UUID arrivalCompanyId;
+    private String arrivalCompanyName;
     private BigDecimal estimatedDistanceKm;
     private Integer estimatedDurationMin;
     private String routeType;
@@ -35,11 +44,15 @@ public class HubRouteResponse {
     ) {
         List<DeliveryRouteHistory> routeHistories = new ArrayList<>();
 
-        for (HubRouteResponse hubRoute : hubRoutes) {
+        for (int i = 0; i < hubRoutes.size(); i++) {
+            HubRouteResponse hubRoute = hubRoutes.get(i);
+            boolean companyRoute = i == hubRoutes.size() - 1;
+
             routeHistories.add(hubRoute.toDeliveryRouteHistory(
                     delivery,
                     companyDeliveryManagerId,
-                    hubDeliveryManagerIds.get(hubRoute.getHubRouteId())
+                    hubDeliveryManagerIds.get(hubRoute.getHubRouteId()),
+                    companyRoute
             ));
         }
 
@@ -49,15 +62,19 @@ public class HubRouteResponse {
     public DeliveryRouteHistory toDeliveryRouteHistory(
             Delivery delivery,
             UUID companyDeliveryManagerId,
-            UUID hubDeliveryManagerId
+            UUID hubDeliveryManagerId,
+            boolean companyRoute
     ) {
-        DeliveryRouteType deliveryRouteType = DeliveryRouteType.valueOf(routeType);
-        UUID deliveryManagerId = deliveryRouteType == DeliveryRouteType.HUB_TO_COMPANY
+        DeliveryRouteType deliveryRouteType = companyRoute
+                ? DeliveryRouteType.HUB_TO_COMPANY
+                : DeliveryRouteType.HUB_TO_HUB;
+        UUID deliveryManagerId = companyRoute
                 ? companyDeliveryManagerId
                 : hubDeliveryManagerId;
-        DeliveryLocationType arrivalLocationType = deliveryRouteType == DeliveryRouteType.HUB_TO_COMPANY
+        DeliveryLocationType arrivalLocationType = companyRoute
                 ? DeliveryLocationType.COMPANY
                 : DeliveryLocationType.HUB;
+        UUID arrivalId = companyRoute ? arrivalCompanyId : arrivalHubId;
 
         return DeliveryRouteHistory.create(
                 delivery,
@@ -67,7 +84,7 @@ public class HubRouteResponse {
                 DeliveryLocationType.HUB,
                 departureHubId,
                 arrivalLocationType,
-                arrivalHubId,
+                arrivalId,
                 estimatedDistanceKm,
                 estimatedDurationMin
         );

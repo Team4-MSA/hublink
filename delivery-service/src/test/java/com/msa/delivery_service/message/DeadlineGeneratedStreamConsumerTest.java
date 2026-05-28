@@ -1,0 +1,214 @@
+package com.msa.delivery_service.message;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.msa.core_common.stream.DeadlineStreamConstants;
+import com.msa.delivery_service.service.DeliveryService;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Range;
+import org.springframework.data.redis.connection.stream.Consumer;
+import org.springframework.data.redis.connection.stream.MapRecord;
+import org.springframework.data.redis.connection.stream.PendingMessage;
+import org.springframework.data.redis.connection.stream.PendingMessages;
+import org.springframework.data.redis.connection.stream.RecordId;
+import org.springframework.data.redis.core.StreamOperations;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class DeadlineGeneratedStreamConsumerTest {
+
+    @Mock
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Mock
+    private StreamOperations<String, Object, Object> streamOperations;
+
+    @Mock
+    private DeliveryService deliveryService;
+
+    @Mock
+    private DeadlineGeneratedStreamConsumer retryStreamConsumer;
+
+    private DeadlineGeneratedStreamConsumer streamConsumer;
+    private DeadlineGeneratedPendingRetryConsumer pendingRetryConsumer;
+    private ObjectMapper objectMapper;
+
+    @BeforeEach
+    void setUp() {
+        objectMapper = new ObjectMapper().findAndRegisterModules();
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+        streamConsumer = new DeadlineGeneratedStreamConsumer(
+                stringRedisTemplate,
+                objectMapper,
+                validator,
+                deliveryService
+        );
+        pendingRetryConsumer = new DeadlineGeneratedPendingRetryConsumer(
+                stringRedisTemplate,
+                retryStreamConsumer
+        );
+    }
+
+    @Test
+    @DisplayName("Consume valid payload and ack")
+    void consumeValidPayload() throws Exception {
+        UUID deliveryId = UUID.randomUUID();
+        LocalDateTime deadline = LocalDateTime.of(2026, 5, 25, 9, 0);
+        DeadlineGeneratedEvent event = new DeadlineGeneratedEvent(
+                UUID.randomUUID(),
+                deliveryId,
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "U123456",
+                deadline,
+                "DELIVERY_DEADLINE",
+                "message"
+        );
+        MapRecord<String, String, String> record = streamRecord(objectMapper.writeValueAsString(event));
+        when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
+
+        streamConsumer.onMessage(record);
+
+        ArgumentCaptor<DeadlineGeneratedEvent> eventCaptor = ArgumentCaptor.forClass(DeadlineGeneratedEvent.class);
+        verify(deliveryService).updateFinalDepartureDeadline(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().getDeliveryId()).isEqualTo(deliveryId);
+        assertThat(eventCaptor.getValue().getFinalDepartureDeadline()).isEqualTo(deadline);
+        verifyAck(record.getId());
+    }
+
+    @Test
+    @DisplayName("Ack invalid payload")
+    void ackInvalidPayload() throws Exception {
+        String invalidPayload = objectMapper.writeValueAsString(Map.of(
+                "eventId", UUID.randomUUID(),
+                "message", "missing required fields"
+        ));
+        MapRecord<String, String, String> record = streamRecord(invalidPayload);
+        when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
+
+        streamConsumer.onMessage(record);
+
+        verify(deliveryService, never()).updateFinalDepartureDeadline(any());
+        verifyAck(record.getId());
+    }
+
+    @Test
+    @DisplayName("Retry pending record and ack")
+    void retryPendingRecord() throws Exception {
+        MapRecord<String, Object, Object> record = pendingRecord("1-0");
+        when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
+        whenPending(pending("1-0", 1));
+        whenRange(List.of(record));
+
+        pendingRetryConsumer.retryPendingMessages();
+
+        verify(retryStreamConsumer).process(record);
+        verifyAck(record.getId());
+    }
+
+    @Test
+    @DisplayName("Move exceeded pending record to DLQ")
+    void moveExceededPendingToDlq() throws Exception {
+        MapRecord<String, Object, Object> record = pendingRecord("1-0");
+        when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
+        whenPending(pending("1-0", 5));
+        whenRange(List.of(record));
+
+        pendingRetryConsumer.retryPendingMessages();
+
+        verify(retryStreamConsumer, never()).process(any());
+        verify(streamOperations).add(
+                eq(DeadlineStreamConstants.DEADLINE_GENERATED_DELIVERY_DLQ_STREAM),
+                any(Map.class)
+        );
+        verifyAck(record.getId());
+    }
+
+    @Test
+    @DisplayName("Skip recent pending record")
+    void skipRecentPendingRecord() throws Exception {
+        when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
+        whenPending(pending("1-0", Duration.ofSeconds(30), 1));
+
+        pendingRetryConsumer.retryPendingMessages();
+
+        verify(retryStreamConsumer, never()).process(any());
+        verify(streamOperations, never()).acknowledge(
+                any(String.class),
+                any(String.class),
+                any(RecordId.class)
+        );
+    }
+
+    private void whenPending(PendingMessage pendingMessage) {
+        when(streamOperations.pending(
+                eq(DeadlineStreamConstants.DEADLINE_GENERATED_STREAM),
+                any(Consumer.class),
+                any(Range.class),
+                eq(100L)
+        )).thenReturn(new PendingMessages(DeadlineStreamConstants.DELIVERY_SERVICE_GROUP, List.of(pendingMessage)));
+    }
+
+    private void whenRange(List<MapRecord<String, Object, Object>> records) {
+        when(streamOperations.range(
+                eq(DeadlineStreamConstants.DEADLINE_GENERATED_STREAM),
+                any(Range.class)
+        )).thenReturn(records);
+    }
+
+    private void verifyAck(RecordId recordId) {
+        verify(streamOperations).acknowledge(
+                eq(DeadlineStreamConstants.DEADLINE_GENERATED_STREAM),
+                eq(DeadlineStreamConstants.DELIVERY_SERVICE_GROUP),
+                eq(recordId)
+        );
+    }
+
+    private PendingMessage pending(String recordId, long deliveryCount) {
+        return pending(recordId, Duration.ofMinutes(2), deliveryCount);
+    }
+
+    private PendingMessage pending(String recordId, Duration idleTime, long deliveryCount) {
+        return new PendingMessage(
+                RecordId.of(recordId),
+                Consumer.from(
+                        DeadlineStreamConstants.DELIVERY_SERVICE_GROUP,
+                        DeadlineStreamConstants.DELIVERY_SERVICE_CONSUMER
+                ),
+                idleTime,
+                deliveryCount
+        );
+    }
+
+    private MapRecord<String, String, String> streamRecord(String payload) {
+        return MapRecord
+                .create(DeadlineStreamConstants.DEADLINE_GENERATED_STREAM, Map.of("payload", payload))
+                .withId(RecordId.of("1-0"));
+    }
+
+    private MapRecord<String, Object, Object> pendingRecord(String recordId) {
+        return MapRecord
+                .create(DeadlineStreamConstants.DEADLINE_GENERATED_STREAM, Map.<Object, Object>of("payload", "{}"))
+                .withId(RecordId.of(recordId));
+    }
+}

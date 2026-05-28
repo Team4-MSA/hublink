@@ -1,11 +1,12 @@
 package com.msa.stock_service.service;
 
+import com.msa.core_common.error.exception.CustomException;
 import com.msa.stock_service.client.ProductClient;
 import com.msa.stock_service.client.ProductResponse;
 import com.msa.stock_service.dto.StockDecreaRequestDto;
 import com.msa.stock_service.dto.StockHistoryResponseDto;
-import com.msa.stock_service.entity.StockChangeReason;
 import com.msa.stock_service.entity.StockHistory;
+import com.msa.stock_service.global.StockError;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -18,39 +19,64 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class StockOrchestrator {
+
     private final ProductClient productClient;
     private final StockService stockService;
 
     /**
-     * 재고 감소 -> 재고 이력 생성
-     * 이 재고에 해당하는 가격과 이름을 달아 반환한다.
+     * 재고 감소 -> 재고 이력 생성 이 재고에 해당하는 가격과 이름을 달아 반환한다.
      * @param listDto
      * @return
      */
-    public List<StockHistoryResponseDto> decreaseStock (List<StockDecreaRequestDto> listDto){
-        // 재고 감소를 하고, 그에 대한 재고 이력을 만든 다음, 재고 이력 리스트를 가져온다.
-         List<StockHistory> histories = stockService.decreaseStock(listDto);
+    public List<StockHistoryResponseDto> decreaseStock(List<StockDecreaRequestDto> listDto) {
 
-        //외부 서비스로 productId 리스트에 해당하는 상품 리스트를 가져온다.
-         List<UUID> productIdList = histories.stream().map(StockHistory::getProductId).collect(Collectors.toList());
+        Map<UUID, StockDecreaRequestDto> mapDto = new HashMap<>();
+        for (StockDecreaRequestDto dto : listDto) {
+            mapDto.put(dto.getId(), dto);
+        }
+
+        // 재고 감소 -> 재고 이력 작성 -> 재고 이력 리스트 반환.
+        List<StockHistory> histories = stockService.decreaseStock(listDto);
+
+        //재고 이력 리스트 안의 상품 ID를 추출하여 리스트로 변환 후,
+        List<UUID> productIdList = histories.stream().map(StockHistory::getProductId)
+            .collect(Collectors.toList());
+        //이 상품 ID 리스트를 이용하여, 상품 목록을 가져온다. (외부 서비스 호출)
         List<ProductResponse> productList = productClient.getProductsById(productIdList);
 
         //이 상품 목록을 Map으로 변환한다.
-        Map<UUID, ProductResponse> productMap = productList.stream().collect(Collectors.toMap(ProductResponse::getProductId, product -> product));
+        Map<UUID, ProductResponse> productMap = productList.stream()
+            .collect(Collectors.toMap(ProductResponse::getProductId, product -> product));
 
         //반환할 StockHistoryResponseDto 리스트를 만든다.
         List<StockHistoryResponseDto> stockHistoryResponseDtos = new ArrayList<>();
 
-        //StockHistory 리스트를 반복해서,
-        for(StockHistory  history: histories) {
-            //먼저 특정 history에 해당하는 ProductResponse(상품 정보)를 가져온다.
+        //재고 이력목록을 반복해서,
+        for (StockHistory history : histories) {
+            //그 재고 이력에 해당하는 상품 정보를 가져온다.
             ProductResponse productResponse = productMap.get(history.getProductId());
-            //StockHistoryResponseDto에 넣을 재고 감소 성공 여부를 만든다.
+
+            //상품이 null인 경우 방어
+            if(productResponse == null) {
+                throw new CustomException(StockError.PRODUCT_INFO_NOT_FOUND);
+            }
+
+            //이 상품 정보들은 전부 성공 여부가 true인 것들이고,
             boolean isSuccess = true;
+            //요청 값으로 날린 Order 정보들을 그대로 다시 응답해야하므로, dto 객체 다시 가져옴.
+            StockDecreaRequestDto dto = mapDto.get(history.getProductId());
+
+            //그 dto가 null인 경우에도 다시 방어
+            if(dto == null) {
+                throw new CustomException(StockError.ORDER_DTO_NOT_MATCHED);
+            }
 
             //이제 반환할 StockHistoryResponseDto(상품 정보가 포함된 이력)를 하나씩 만든다.
-            StockHistoryResponseDto result = StockHistoryResponseDto.from(history,isSuccess,productResponse.getName(),productResponse.getPrice());
-            //만든 StockHistoryResponseDto을 StockHistoryResponseDto 리스트에 저장한다.
+            StockHistoryResponseDto result = StockHistoryResponseDto.from(history, isSuccess,
+                productResponse.getName(), productResponse.getPrice(),
+                dto);
+
+            //만든 StockHistoryResponseDto을 StockHistoryResponseDto 리스트에 저장
             stockHistoryResponseDtos.add(result);
         }
         return stockHistoryResponseDtos;

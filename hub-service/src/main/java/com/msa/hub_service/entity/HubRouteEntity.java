@@ -2,7 +2,6 @@ package com.msa.hub_service.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
 import com.msa.core_common.error.exception.CustomException;
-import com.msa.hub_service.dto.RouteCalculationResult;
 import com.msa.hub_service.global.HubErrorCode;
 import com.msa.hub_service.global.Util;
 import jakarta.persistence.*;
@@ -47,7 +46,7 @@ public class HubRouteEntity extends BaseEntity {
     public static HubRouteEntity create(HubEntity departureHub, HubEntity arrivalHub) {
         validateHubs(departureHub, arrivalHub);
 
-        RouteCalculationResult routeInfo = Util.RouteCalculator.calculate(departureHub.getLatitude(), departureHub.getLongitude(), arrivalHub.getLatitude(), arrivalHub.getLongitude());
+        RouteInfo routeInfo = Util.RouteCalculator.calculate(departureHub.getLatitude(), departureHub.getLongitude(), arrivalHub.getLatitude(), arrivalHub.getLongitude());
 
         return HubRouteEntity.builder().departureHub(departureHub).arrivalHub(arrivalHub).estimatedDistanceKm(routeInfo.distanceKm()).estimatedDurationMin(routeInfo.durationMin()).routeType(routeInfo.routeType()).build();
     }
@@ -59,7 +58,7 @@ public class HubRouteEntity extends BaseEntity {
     }
 
     public void recalculateRouteInfo() {
-        RouteCalculationResult routeInfo = Util.RouteCalculator.calculate(departureHub.getLatitude(), departureHub.getLongitude(), arrivalHub.getLatitude(), arrivalHub.getLongitude());
+        RouteInfo routeInfo = Util.RouteCalculator.calculate(departureHub.getLatitude(), departureHub.getLongitude(), arrivalHub.getLatitude(), arrivalHub.getLongitude());
 
         this.estimatedDistanceKm = routeInfo.distanceKm();
         this.estimatedDurationMin = routeInfo.durationMin();

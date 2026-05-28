@@ -7,6 +7,7 @@ import lombok.Getter;
 @Getter
 public enum Status {
 
+    PENDING("생성 대기"),
     CREATED("생성"),
     CANCELED("취소"),
     COMPLETED("완료"),

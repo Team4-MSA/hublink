@@ -1,7 +1,7 @@
-package com.msa.order_service.feign.circuit;
+package com.msa.order_service.client.circuit;
 
 import com.msa.order_service.dto.res.UsernameResDto;
-import com.msa.order_service.feign.UserFeignClient;
+import com.msa.order_service.client.UserFeignClient;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

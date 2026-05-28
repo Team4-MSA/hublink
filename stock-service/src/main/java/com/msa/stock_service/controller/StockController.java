@@ -8,12 +8,9 @@ import com.msa.stock_service.dto.StockHistorySearchResponseDto;
 import com.msa.stock_service.dto.StockRequestDto;
 import com.msa.stock_service.dto.StockResponseDto;
 import com.msa.stock_service.entity.Stock;
-import com.msa.stock_service.entity.StockHistory;
 import com.msa.stock_service.service.StockOrchestrator;
 import com.msa.stock_service.service.StockService;
 import jakarta.validation.Valid;
-import jakarta.ws.rs.PATCH;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +31,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class StockController {
     private final StockService stockService;
     private final StockOrchestrator stockOrchestrator;
-
     /**
      * 특정 상품에 대한 재고
      * @param dto

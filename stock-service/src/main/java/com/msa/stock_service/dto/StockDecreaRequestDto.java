@@ -9,6 +9,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StockDecreaRequestDto {
-    private UUID productId;
+    private UUID id;
     private Integer quantity;
+
+    private UUID orderId;
+    private String orderName;
+    private String orderEmail;
+    private String deliveryAddress;
+    private String receiverCompanyName;
 }

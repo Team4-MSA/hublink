@@ -40,6 +40,9 @@ class InternalHubControllerTest {
     private final UUID ARR_COMPANY_ID = UUID.randomUUID();
     private final BigDecimal LATITUDE = new BigDecimal("37.5");
     private final BigDecimal LONGITUDE = new BigDecimal("127.0");
+    private final String DEP_HUB_NAME = "출발 허브 센터";
+    private final String ARR_HUB_NAME = "도착 허브 센터";
+    private final String ARR_COMP_NAME = "도착 업체명";
 
     @Test
     @DisplayName("성공: 허브 존재 여부 확인 (Internal)")
@@ -82,10 +85,14 @@ class InternalHubControllerTest {
         UUID arrHubId = UUID.randomUUID();
 
         HubRouteResponse path1 = new HubRouteResponse(
-                UUID.randomUUID(), depHubId, arrHubId, DEP_COMPANY_ID, new BigDecimal("50.0"), 30, RouteType.H2H, 1
+                UUID.randomUUID(), depHubId, arrHubId, DEP_COMPANY_ID,
+                DEP_HUB_NAME, ARR_HUB_NAME, null,
+                new BigDecimal("50.0"), 30, RouteType.H2H, 1
         );
         HubRouteResponse path2 = new HubRouteResponse(
-                UUID.randomUUID(), depHubId, arrHubId, ARR_COMPANY_ID, new BigDecimal("60.0"), 40, RouteType.H2H, 2
+                UUID.randomUUID(), depHubId, arrHubId, ARR_COMPANY_ID,
+                DEP_HUB_NAME, ARR_HUB_NAME, ARR_COMP_NAME,
+                new BigDecimal("60.0"), 40, RouteType.H2H, 2
         );
 
         List<HubRouteResponse> expectedResponse = List.of(path1, path2);
@@ -100,8 +107,10 @@ class InternalHubControllerTest {
                 .andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].arrivalCompanyId").value(DEP_COMPANY_ID.toString()))
+                .andExpect(jsonPath("$[0].departureHubName").value(DEP_HUB_NAME)) // 🌟 이름 검증
                 .andExpect(jsonPath("$[0].sequence").value(1))
                 .andExpect(jsonPath("$[1].arrivalCompanyId").value(ARR_COMPANY_ID.toString()))
+                .andExpect(jsonPath("$[1].arrivalCompanyName").value(ARR_COMP_NAME)) // 🌟 이름 검증
                 .andExpect(jsonPath("$[1].sequence").value(2));
     }
 }

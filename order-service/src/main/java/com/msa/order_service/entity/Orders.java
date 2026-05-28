@@ -57,12 +57,12 @@ public class Orders extends BaseEntity {
     @Builder.Default
     private List<OrderItems> orderItems = new ArrayList<>();
 
-    public static Orders createInitOrder(OrderMakeReqDto orderMakeReqDto, UUID userId) {
+    public static Orders createInitOrder(UUID supplierCompanyId,UUID receiverCompanyId, String requestMemo, LocalDateTime requestedDeliveryDeadline,UUID userId) {
         Orders order = new Orders();
-        order.supplierCompanyId = orderMakeReqDto.getSupplierCompanyId();
-        order.receiverCompanyId = orderMakeReqDto.getReceiverCompanyId();
-        order.requestMemo = orderMakeReqDto.getRequestMemo();
-        order.requestedDeliveryDeadline = orderMakeReqDto.getRequestedDeliveryDeadline();
+        order.supplierCompanyId = supplierCompanyId;
+        order.receiverCompanyId = receiverCompanyId;
+        order.requestMemo = requestMemo;
+        order.requestedDeliveryDeadline = requestedDeliveryDeadline;
         order.orderedByUserId = userId;
         order.status = Status.PENDING;
         return order;

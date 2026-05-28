@@ -1,4 +1,4 @@
-package com.msa.order_service.feign;
+package com.msa.order_service.client;
 
 import com.msa.order_service.dto.res.UsernameResDto;
 import org.springframework.cloud.openfeign.FeignClient;

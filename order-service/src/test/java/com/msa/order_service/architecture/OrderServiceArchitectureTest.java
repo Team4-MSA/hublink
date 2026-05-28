@@ -5,7 +5,10 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
-@AnalyzeClasses(packages = "com.msa.order_service")
+@AnalyzeClasses(
+        packages = "com.msa.order_service",
+        importOptions = com.tngtech.archunit.core.importer.ImportOption.DoNotIncludeTests.class
+)
 class OrderServiceArchitectureTest {
     @ArchTest
     static final ArchRule layerRule = HubLinkArchRules.LAYER_RULE;

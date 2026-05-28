@@ -1,7 +1,7 @@
-package com.msa.order_service.feign.circuit;
+package com.msa.order_service.client.circuit;
 import com.msa.order_service.dto.res.CompanyAddressResDto;
 import com.msa.order_service.dto.res.CompanyNameResDto;
-import com.msa.order_service.feign.CompanyFeignClient;
+import com.msa.order_service.client.CompanyFeignClient;
 
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Component

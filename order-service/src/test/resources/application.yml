@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: order-service-test
+
+  # 테스트할 때는 외부 유레카나 컨피그 서버를 찾지 않도록 차단
+  config:
+    import: ""
+  eureka:
+    client:
+      register-with-eureka: false
+      fetch-registry: false
+
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:order_db;MODE=PostgreSQL
+    username: sa
+    password:
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+swagger:
+  gateway-url: http://localhost:19092

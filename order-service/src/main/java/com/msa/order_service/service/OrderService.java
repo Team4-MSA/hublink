@@ -11,11 +11,11 @@ import com.msa.order_service.entity.OrderItems;
 import com.msa.order_service.entity.Orders;
 import com.msa.order_service.entity.Outbox;
 import com.msa.order_service.error.OrderErrorCode;
-import com.msa.order_service.feign.circuit.DeliveryCircuitService;
-import com.msa.order_service.feign.circuit.ProductCircuitService;
+import com.msa.order_service.client.circuit.DeliveryCircuitService;
+import com.msa.order_service.client.circuit.ProductCircuitService;
 import com.msa.order_service.repository.OrderJpaRepository;
-import com.msa.order_service.feign.circuit.CompanyCircuitService;
-import com.msa.order_service.feign.circuit.UserCircuitService;
+import com.msa.order_service.client.circuit.CompanyCircuitService;
+import com.msa.order_service.client.circuit.UserCircuitService;
 import com.msa.order_service.repository.OutboxRepository;
 import com.msa.order_service.type.Status;
 import lombok.RequiredArgsConstructor;
@@ -283,7 +283,7 @@ public class OrderService {
         String receiverCompanyName = companyNameMap.getOrDefault(orderMakeReqDto.getReceiverCompanyId(), "알 수 없는 수령사");
 
         // 초기 Orders 생성 (PENDING)
-        Orders initOrder = Orders.createInitOrder(orderMakeReqDto, userId);
+        Orders initOrder = Orders.createInitOrder(orderMakeReqDto.getSupplierCompanyId(), orderMakeReqDto.getReceiverCompanyId(), orderMakeReqDto.getRequestMemo(), orderMakeReqDto.getRequestedDeliveryDeadline(), userId);
 
         for(OrderMakeReqDto.Items item : items) {
             //초기 OrderItems 생성 (PENDING) -> 나머지 필드는 재고 차감 성공후 채워주기
@@ -397,6 +397,88 @@ public class OrderService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markOutboxProcessed(UUID outboxId) {
         outboxRepository.findById(outboxId).ifPresent(Outbox::markProcessed);
+    }
+
+    @Transactional
+    public void processStockSuccess(StockResultDto result) {
+        UUID orderId = result.getOrderId();
+        Orders order = orderJpaRepository.findById(orderId)
+                .orElseThrow(() -> new CustomException(OrderErrorCode.NOT_EXIST_ORDER));
+
+        if (order.getStatus() != Status.PENDING) {
+            log.warn("이미 처리 완료된 재고 신호 스킵. 주문 ID: {}", orderId);
+            return;
+        }
+
+        Map<UUID, ProductNPAResDto> productMap = result.getProducts().stream()
+                .collect(Collectors.toMap(ProductNPAResDto::productId, Function.identity()));
+
+        order.getOrderItems().forEach(item -> {
+            ProductNPAResDto info = productMap.get(item.getProductId());
+            if (info != null) {
+                item.enrichProductDetails(info.name(), info.price(), info.hubId());
+                item.setStatus(Status.COMPLETED);
+            }
+        });
+
+        order.updateTotalPrice();
+        order.setStatus(Status.CREATED);
+
+        MakeDeliveryReqDto deliveryReqDto = MakeDeliveryReqDto.from(
+                order,
+                result.getOrdererName(),
+                result.getOrdererEmail(),
+                result.getDeliveryAddress(),
+                result.getReceiverCompanyName()
+        );
+
+        this.publishMakeDeliveryEvent(deliveryReqDto);
+    }
+
+    @Transactional
+    public void processStockFailed(UUID orderId) {
+        Orders order = orderJpaRepository.findById(orderId).orElse(null);
+        if (order != null) {
+            order.setStatus(Status.FAILED);
+            order.getOrderItems().forEach(item -> item.setStatus(Status.FAILED));
+        }
+    }
+
+    @Transactional
+    public void processDeliverySuccess(UUID orderId) {
+        Orders order = orderJpaRepository.findById(orderId).orElse(null);
+        if (order != null) {
+            order.setStatus(Status.COMPLETED);
+        }
+    }
+
+    @Transactional
+    public void processDeliveryFailed(UUID orderId) throws com.fasterxml.jackson.core.JsonProcessingException {
+        Orders order = orderJpaRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 주문입니다. ID: " + orderId));
+
+        if (order.getStatus() == Status.FAILED) {
+            return;
+        }
+
+        order.setStatus(Status.FAILED);
+        order.getOrderItems().forEach(item -> item.setStatus(Status.FAILED));
+
+        List<com.msa.order_service.dto.req.OrderMakeReqDto.Items> rollbackItems = order.getOrderItems().stream()
+                .map(item -> new com.msa.order_service.dto.req.OrderMakeReqDto.Items(item.getProductId(), item.getQuantity()))
+                .toList();
+
+        String rollbackPayload = objectMapper.writeValueAsString(rollbackItems);
+        Outbox stockRollbackOutbox = Outbox.builder()
+                .aggregateType("ORDER")
+                .aggregateId(orderId.toString())
+                .topic("stock.increase")
+                .payload(rollbackPayload)
+                .processed(false)
+                .createdAt(java.time.LocalDateTime.now())
+                .build();
+
+        outboxRepository.save(stockRollbackOutbox);
     }
 
 }

@@ -9,6 +9,7 @@ spring:
     username: ${DB_USERNAME:test}
     password: ${DB_PASSWORD:test}
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: create-drop
 

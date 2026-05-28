@@ -9,6 +9,7 @@ spring:
     username: ${DB_USERNAME:test}
     password: ${DB_PASSWORD:test}
   jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: create-drop
   data:
@@ -20,10 +21,9 @@ eureka:
   client:
     enabled: false
 
-gemini:
-  api:
-    url: http://localhost/test
-    key: test-ai-api-key
+ai:
+  api-url: http://localhost/test
+  api-key: test-ai-api-key
 
 swagger:
   gateway-url: http://localhost:19091

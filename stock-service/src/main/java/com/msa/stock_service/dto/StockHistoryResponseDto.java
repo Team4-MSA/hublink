@@ -23,7 +23,13 @@ public class StockHistoryResponseDto {
     private String name;
     private Integer price;
 
-    public static StockHistoryResponseDto from(StockHistory stockHistory,boolean isSuccess,String name, Integer price) {
+    private UUID orderId;
+    private String orderName;
+    private String orderEmail;
+    private String deliveryAddress;
+    private String receiverCompanyName;
+
+    public static StockHistoryResponseDto from(StockHistory stockHistory,boolean isSuccess,String name, Integer price,StockDecreaRequestDto listDto) {
         return StockHistoryResponseDto.builder().
             productId(stockHistory.getProductId()).
             stockId(stockHistory.getId()).
@@ -33,6 +39,11 @@ public class StockHistoryResponseDto {
             isSuccess(isSuccess).
             name(name).
             price(price).
+            orderId(listDto.getOrderId()).
+            orderName(listDto.getOrderName()).
+            deliveryAddress(listDto.getDeliveryAddress()).
+            receiverCompanyName(listDto.getReceiverCompanyName()).
+            orderEmail(listDto.getOrderEmail()).
             build();
     }
 }

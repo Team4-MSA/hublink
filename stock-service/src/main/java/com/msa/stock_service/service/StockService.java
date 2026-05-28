@@ -1,14 +1,14 @@
 package com.msa.stock_service.service;
 
+import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.stock_service.dto.StockDecreaRequestDto;
 import com.msa.stock_service.dto.StockHistoryModifyDto;
-import com.msa.stock_service.dto.StockHistoryResponseDto;
 import com.msa.stock_service.dto.StockHistorySearchResponseDto;
 import com.msa.stock_service.dto.StockRequestDto;
-import com.msa.stock_service.dto.StockResponseDto;
 import com.msa.stock_service.entity.Stock;
 import com.msa.stock_service.entity.StockHistory;
+import com.msa.stock_service.global.StockError;
 import com.msa.stock_service.repository.StockHistoryRepository;
 import com.msa.stock_service.repository.StockRepository;
 import java.util.ArrayList;
@@ -26,6 +26,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class StockService {
     private final StockRepository stockRepository;
     private final StockHistoryRepository stockHistoryRepository;
+
+    /**
+     * 재고 조정
+     * @param dto
+     * @return
+     */
     @Transactional
     public StockHistoryModifyDto modifyStock(StockRequestDto dto){
         //상품아이디로 재고를 조회한다.
@@ -52,7 +58,12 @@ public class StockService {
         return StockHistoryModifyDto.from(newHistory);
     }
 
-     //재고 이력 조회
+    /**
+     * 재고 목록 조회
+     * @param productId
+     * @param pageable
+     * @return
+     */
     @Transactional(readOnly = true)
     public PageRes<StockHistorySearchResponseDto> getStockhistories(UUID productId, Pageable pageable) {
         return stockHistoryRepository.searchHistoriesByproductId(productId, pageable);
@@ -67,7 +78,7 @@ public class StockService {
         //전달 받은 데이터 리스트를 map으로 변환한다.
         // 한번 요청에 동일한 productId가 올 수 있으므로, 아래와 같이 수량을 합산.
         Map<UUID,Integer> restoreQuantityMap = listDto.stream().collect(Collectors.toMap(
-            StockDecreaRequestDto :: getProductId,
+            StockDecreaRequestDto :: getId,
             StockDecreaRequestDto :: getQuantity,
             Integer::sum
         ));
@@ -110,30 +121,32 @@ public class StockService {
      */
     @Transactional
     public List<StockHistory> decreaseStock (List<StockDecreaRequestDto> listDto){
-        // 전달 받은 데이터를 Map으로 변환, 동일한 productId일 경우 수량을 합산한다.
+       //listDto에서는 id와 quantity만 사용하므로 이 둘의 값을 가진 Map을 만든다.
         Map<UUID, Integer> requestQuantityMap = listDto.stream()
             .collect(Collectors.toMap(
-                StockDecreaRequestDto::getProductId,
+                StockDecreaRequestDto::getId,
                 StockDecreaRequestDto::getQuantity,
                 Integer::sum
             ));
-        //변환된 Map에서 ProductId를 추출한다.
+
+        //변환된 Map에서 상품 id를 추출한다.
         List<UUID> productIdList = new ArrayList<>(requestQuantityMap.keySet());
-        //비관락을 사용하여 재고 리스트를 가져온다.
+
+        //상품 ID와 비관적 락을 사용하여, 각 상품별 재고 리스트를 가져온다.
         List<Stock> stockList = stockRepository.findAllByProductIdInForUpdate(productIdList);
 
-        //해당 재고리스트의 크기와 전달받은 데이터의 사이즈가 동일하지 않다면,
+        //조회된 이 재고 리스트와, 전달 받은 데이터의 수가 동일해야지, 재고 차감을 진행할 수 있다.
         if (stockList.size() != requestQuantityMap.size()) {
-            //DB에 없는 상품을 주문한 것으로 간주하여 에러 발생.
-            throw new IllegalArgumentException("요청한 상품 중 일부 재고 정보를 찾을 수 없습니다.");
+            //만일 동일하지 않다면, 일부 재고가 잘못 등록된 것으로 간주하여, 에러를 내보낸다.
+            throw new CustomException(StockError.STOCK_NOT_FOUND);
         }
 
         //DB에 등록할 재고 이력 리스트를 새롭게 생성
         List<StockHistory> newStockHistory = new ArrayList<>();
 
-        //재고리스트를 순회하며
+        //재고 리스트를 순회하며
         for (Stock stock : stockList) {
-            //전달받은 데이터 중 주문한 수량을 꺼내서
+            //전달받은 데이터 중 주문 수량을 꺼내서
             Integer requestQuantity = requestQuantityMap.get(stock.getProductId());
 
             //현재 재고의 수량이 주문한 수량보다 더 크다면

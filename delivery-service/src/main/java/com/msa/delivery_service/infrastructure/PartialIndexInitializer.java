@@ -1,4 +1,4 @@
-package com.msa.delivery_service.infrastructure.persistence;
+package com.msa.delivery_service.infrastructure;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

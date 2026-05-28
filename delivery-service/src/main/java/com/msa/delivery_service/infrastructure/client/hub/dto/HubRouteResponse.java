@@ -31,6 +31,7 @@ public class HubRouteResponse {
 
     private String arrivalHubName;
     private UUID arrivalCompanyId;
+    private String arrivalCompanyName;
     private BigDecimal estimatedDistanceKm;
     private Integer estimatedDurationMin;
     private String routeType;

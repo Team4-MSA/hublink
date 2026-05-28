@@ -29,7 +29,7 @@ public class ProductService {
     @Transactional(readOnly = true)
     public PageRes<ProductResponseDto> getProducts(Pageable pageable, ProductSearchDto searchDto) {
         //검색 조건 및 정렬 조건에 맞게 상품 리스트를 반환.
-        Page<Product> pageProduct = productRepository.searchProduct(searchDto.getProductName(),searchDto.getMaxPrice(),searchDto.getMinPrice(),searchDto.getHubId(), pageable);
+        Page<Product> pageProduct = productRepository.searchProduct(searchDto.getProductName(),searchDto.getMinPrice(),searchDto.getMaxPrice(),searchDto.getHubId(), pageable);
 
         return new PageRes<>(pageProduct.map(ProductResponseDto::from));
     }

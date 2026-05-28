@@ -1,10 +1,20 @@
 services:
+
+  # ── 인프라 ──────────────────────────────────────────────
+  # DB는 RDS 사용 (postgres 컨테이너 불필요)
+
   redis:
     image: redis:7.2
     container_name: hublink-redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ── MSA 핵심 인프라 ──────────────────────────────────────
   eureka-server:
     image: ${ECR_REGISTRY}/hublink-eureka-server:latest
     container_name: hublink-eureka-server
@@ -12,17 +22,12 @@ services:
       - .env
     ports:
       - "19090:19090"
-
-  api-gateway:
-    image: ${ECR_REGISTRY}/hublink-api-gateway:latest
-    container_name: hublink-api-gateway
-    ports:
-      - "19091:19091"
-    env_file:
-      - .env
-    depends_on:
-      - eureka-server
-      - config-server
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:19090/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   config-server:
     image: ${ECR_REGISTRY}/hublink-config-server:latest
@@ -32,10 +37,31 @@ services:
     env_file:
       - .env
     depends_on:
-      - eureka-server
+      eureka-server:
+        condition: service_healthy
     volumes:
       - ./config-repo:/config-repo
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:19092/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
+  api-gateway:
+    image: ${ECR_REGISTRY}/hublink-api-gateway:latest
+    container_name: hublink-api-gateway
+    ports:
+      - "19091:19091"
+    env_file:
+      - .env
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  # ── 비즈니스 서비스 ──────────────────────────────────────
   user-service:
     image: ${ECR_REGISTRY}/hublink-user-service:latest
     container_name: hublink-user-service
@@ -44,8 +70,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   order-service:
     image: ${ECR_REGISTRY}/hublink-order-service:latest
@@ -55,8 +83,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   hub-service:
     image: ${ECR_REGISTRY}/hublink-hub-service:latest
@@ -66,8 +96,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   company-service:
     image: ${ECR_REGISTRY}/hublink-company-service:latest
@@ -77,8 +109,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   product-service:
     image: ${ECR_REGISTRY}/hublink-product-service:latest
@@ -88,8 +122,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   stock-service:
     image: ${ECR_REGISTRY}/hublink-stock-service:latest
@@ -99,8 +135,10 @@ services:
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   delivery-service:
     image: ${ECR_REGISTRY}/hublink-delivery-service:latest
@@ -110,9 +148,12 @@ services:
     env_file:
       - .env
     depends_on:
-      - redis
-      - eureka-server
-      - config-server
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   slack-service:
     image: ${ECR_REGISTRY}/hublink-slack-service:latest
@@ -122,9 +163,12 @@ services:
     env_file:
       - .env
     depends_on:
-      - redis
-      - eureka-server
-      - config-server
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   ai-service:
     image: ${ECR_REGISTRY}/hublink-ai-service:latest
@@ -134,10 +178,14 @@ services:
     env_file:
       - .env
     depends_on:
-      - redis
-      - eureka-server
-      - config-server
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
+  # ── 모니터링 ─────────────────────────────────────────────
   zipkin:
     image: openzipkin/zipkin:3.6.1
     container_name: hublink-zipkin
@@ -147,6 +195,8 @@ services:
   prometheus:
     image: prom/prometheus:v3.11.3
     container_name: hublink-prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "9090:9090"
     volumes:

@@ -24,7 +24,7 @@ on:
 
 # 같은 서비스에 새 push가 오면 이전 실행 취소 (자원 절약)
 concurrency:
-  group: ${{ github.workflow }}-${{ inputs.service_name }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -52,7 +52,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      # 테스트 포함 빌드
       - name: Build & Test
         run: ./gradlew :${{ inputs.service_name }}:clean :${{ inputs.service_name }}:build
 
@@ -82,9 +81,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          dockerfile: Dockerfile.cd          # JAR 복사만 하는 경량 Dockerfile
+          dockerfile: Dockerfile.cd
           push: true
-          build-args: SERVICE_NAME=${{ inputs.service_name }}
           tags: |
             ${{ secrets.ECR_REGISTRY }}/hublink-${{ inputs.service_name }}:latest
             ${{ secrets.ECR_REGISTRY }}/hublink-${{ inputs.service_name }}:${{ github.sha }}
@@ -114,7 +112,8 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: SERVICE=${{ inputs.service_name }},ECR_REGISTRY=${{ secrets.ECR_REGISTRY }},AWS_REGION=${{ secrets.AWS_REGION }}
+          # AWS 자격증명도 서버에 전달 (ECR 로그인에 필요)
+          envs: SERVICE=${{ inputs.service_name }},ECR_REGISTRY=${{ secrets.ECR_REGISTRY }},AWS_REGION=${{ secrets.AWS_REGION }},AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }},AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
           script: |
             cd ~/hublink
 
@@ -124,7 +123,7 @@ jobs:
 
             # 새 이미지 Pull 후 해당 서비스만 재시작
             docker pull $ECR_REGISTRY/hublink-$SERVICE:latest
-            ECR_REGISTRY=$ECR_REGISTRY docker-compose up -d --no-deps $SERVICE
+            ECR_REGISTRY=$ECR_REGISTRY docker compose up -d --no-deps $SERVICE
 
             # 오래된 이미지 정리
             docker image prune -f

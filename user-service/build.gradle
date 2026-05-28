@@ -39,6 +39,7 @@ dependencies {
 	implementation project(':core-common')
 	runtimeOnly 'org.postgresql:postgresql'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	testRuntimeOnly 'com.h2database:h2'
 
 	// Security
 	implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -61,6 +62,8 @@ dependencies {
 	implementation 'io.micrometer:micrometer-tracing-bridge-brave'
 	implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
+	// 아크 유닛 설정
+	testImplementation testFixtures(project(':core-common'))
 }
 
 dependencyManagement {

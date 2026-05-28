@@ -41,12 +41,20 @@ public class HubService {
 
     // Hub 생성
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    public HubResponse createHub(String name, String address) {
+    public HubResponse createHub(String name, String address, BigDecimal latitude, BigDecimal longitude) {
 
         validateDuplicateHub(name, address);
 
-        CoordinateDto coordinate = getCoordinate(address);
-        HubEntity hub = HubEntity.create(name, address, coordinate.latitude(), coordinate.longitude());
+        BigDecimal finalLat = latitude;
+        BigDecimal finalLon = longitude;
+
+        if (finalLat == null || finalLon == null) {
+            CoordinateDto coordinate = getCoordinate(address);
+            finalLat = coordinate.latitude();
+            finalLon = coordinate.longitude();
+        }
+
+        HubEntity hub = HubEntity.create(name, address, finalLat, finalLon);
 
         hubRepository.save(hub);
 

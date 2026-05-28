@@ -58,6 +58,10 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     testAnnotationProcessor 'org.projectlombok:lombok'
+    testRuntimeOnly 'com.h2database:h2'
+
+    // 아크 유닛 설정
+    testImplementation testFixtures(project(':core-common'))
 }
 
 dependencyManagement {

@@ -16,7 +16,9 @@ public enum OrderErrorCode implements ErrorCode {
     ALREADY_CANCELED("ORDER_003", HttpStatus.BAD_REQUEST, "이미 취소된 주문입니다"),
     FAIL_INCREASE_STOCK("ORDER_004", HttpStatus.BAD_REQUEST, "재고 복구에 실패하여 주문 취소가 실패하였습니다"),
     ALREADY_EXIST_ORDER("ORDER_005", HttpStatus.BAD_REQUEST, "이미 존재하는 주문입니다."),
-    FAIL_DELIVERY("ORDER_006", HttpStatus.BAD_REQUEST, "배송 생성에 실패하였습니다.");
+    FAIL_DELIVERY("ORDER_006", HttpStatus.BAD_REQUEST, "배송 생성에 실패하였습니다."),
+    FAIL_OUTBOX("ORDER_007", HttpStatus.BAD_REQUEST, "아웃박스 생성에 실패하였습니다."),
+    FAIL_STOCK("ORDER_008", HttpStatus.BAD_REQUEST, "재고 감소 성공 메시지 수신 로직을 실패하였습니다.");
 
     private final String code;
     private final HttpStatus status;

@@ -1,143 +1,191 @@
 services:
+
+  # ── 인프라 ──────────────────────────────────────────────
+  # DB는 RDS 사용 (postgres 컨테이너 불필요)
+
   redis:
     image: redis:7.2
     container_name: hublink-redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
+  # ── MSA 핵심 인프라 ──────────────────────────────────────
   eureka-server:
-    image: ${ECR_REGISTRY}/hublink-eureka-server:latest
+    image: ${ECR_REGISTRY}/hublink-eureka-server:${IMAGE_TAG:-latest}
     container_name: hublink-eureka-server
     env_file:
       - .env
     ports:
       - "19090:19090"
-
-  api-gateway:
-    image: ${ECR_REGISTRY}/hublink-api-gateway:latest
-    container_name: hublink-api-gateway
-    ports:
-      - "19091:19091"
-    env_file:
-      - .env
-    depends_on:
-      - eureka-server
-      - config-server
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:19090/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
   config-server:
-    image: ${ECR_REGISTRY}/hublink-config-server:latest
+    image: ${ECR_REGISTRY}/hublink-config-server:${IMAGE_TAG:-latest}
     container_name: hublink-config-server
     ports:
       - "19092:19092"
     env_file:
       - .env
     depends_on:
-      - eureka-server
+      eureka-server:
+        condition: service_healthy
     volumes:
       - ./config-repo:/config-repo
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:19092/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
+  api-gateway:
+    image: ${ECR_REGISTRY}/hublink-api-gateway:${IMAGE_TAG:-latest}
+    container_name: hublink-api-gateway
+    ports:
+      - "19091:19091"
+    env_file:
+      - .env
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+
+  # ── 비즈니스 서비스 ──────────────────────────────────────
   user-service:
-    image: ${ECR_REGISTRY}/hublink-user-service:latest
+    image: ${ECR_REGISTRY}/hublink-user-service:${IMAGE_TAG:-latest}
     container_name: hublink-user-service
     expose:
       - "19093"
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   order-service:
-    image: ${ECR_REGISTRY}/hublink-order-service:latest
+    image: ${ECR_REGISTRY}/hublink-order-service:${IMAGE_TAG:-latest}
     container_name: hublink-order-service
     expose:
       - "19094"
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   hub-service:
-    image: ${ECR_REGISTRY}/hublink-hub-service:latest
+    image: ${ECR_REGISTRY}/hublink-hub-service:${IMAGE_TAG:-latest}
     container_name: hublink-hub-service
     expose:
       - "19095"
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   company-service:
-    image: ${ECR_REGISTRY}/hublink-company-service:latest
+    image: ${ECR_REGISTRY}/hublink-company-service:${IMAGE_TAG:-latest}
     container_name: hublink-company-service
     expose:
       - "19096"
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   product-service:
-    image: ${ECR_REGISTRY}/hublink-product-service:latest
+    image: ${ECR_REGISTRY}/hublink-product-service:${IMAGE_TAG:-latest}
     container_name: hublink-product-service
     expose:
       - "19097"
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   stock-service:
-    image: ${ECR_REGISTRY}/hublink-stock-service:latest
+    image: ${ECR_REGISTRY}/hublink-stock-service:${IMAGE_TAG:-latest}
     container_name: hublink-stock-service
     expose:
       - "19098"
     env_file:
       - .env
     depends_on:
-      - eureka-server
-      - config-server
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   delivery-service:
-    image: ${ECR_REGISTRY}/hublink-delivery-service:latest
+    image: ${ECR_REGISTRY}/hublink-delivery-service:${IMAGE_TAG:-latest}
     container_name: hublink-delivery-service
     expose:
       - "19099"
     env_file:
       - .env
     depends_on:
-      - redis
-      - eureka-server
-      - config-server
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   slack-service:
-    image: ${ECR_REGISTRY}/hublink-slack-service:latest
+    image: ${ECR_REGISTRY}/hublink-slack-service:${IMAGE_TAG:-latest}
     container_name: hublink-slack-service
     expose:
       - "19100"
     env_file:
       - .env
     depends_on:
-      - redis
-      - eureka-server
-      - config-server
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
   ai-service:
-    image: ${ECR_REGISTRY}/hublink-ai-service:latest
+    image: ${ECR_REGISTRY}/hublink-ai-service:${IMAGE_TAG:-latest}
     container_name: hublink-ai-service
     expose:
       - "19101"
     env_file:
       - .env
     depends_on:
-      - redis
-      - eureka-server
-      - config-server
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
 
+  # ── 모니터링 ─────────────────────────────────────────────
   zipkin:
     image: openzipkin/zipkin:3.6.1
     container_name: hublink-zipkin
@@ -147,6 +195,8 @@ services:
   prometheus:
     image: prom/prometheus:v3.11.3
     container_name: hublink-prometheus
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "9090:9090"
     volumes:

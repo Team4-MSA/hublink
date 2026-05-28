@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  sql:
+    init:
+      mode: never
+
+  jpa:
+    show-sql: true
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        format_sql: true
+
+eureka:
+  client:
+    enabled: false
+
+swagger:
+  gateway-url: http://localhost:19091
+
+kakao:
+  rest-api-key: "mock_kakao_rest_api_key_for_testing"
+  base-url: "https://dapi.kakao.com"

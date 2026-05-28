@@ -3,4 +3,4 @@ spring:
     name: hub-service
 
   config:
-    import: "configserver:${CONFIG_SERVER_URL:http://localhost:19092}"
+    import: "optional:configserver:${CONFIG_SERVER_URL:http://localhost:19092}"

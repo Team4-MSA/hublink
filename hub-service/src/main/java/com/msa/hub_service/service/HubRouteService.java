@@ -7,6 +7,7 @@ import com.msa.hub_service.client.CompanyClient;
 import com.msa.hub_service.dto.*;
 import com.msa.hub_service.entity.HubEntity;
 import com.msa.hub_service.entity.HubRouteEntity;
+import com.msa.hub_service.entity.RouteInfo;
 import com.msa.hub_service.entity.RouteType;
 import com.msa.hub_service.global.HubErrorCode;
 import com.msa.hub_service.global.Util;
@@ -345,7 +346,7 @@ public class HubRouteService {
 
         BigDecimal[] arrivalCoords = getValidCoordinates(company);
 
-        RouteCalculationResult calcResult = calculate(
+        RouteInfo calcResult = calculate(
                 arrivalHub.getLatitude(),
                 arrivalHub.getLongitude(),
                 arrivalCoords[0],

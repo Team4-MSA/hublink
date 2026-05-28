@@ -1,7 +1,7 @@
 package com.msa.hub_service.global;
 
 import com.msa.core_common.error.exception.CustomException;
-import com.msa.hub_service.dto.RouteCalculationResult;
+import com.msa.hub_service.entity.RouteInfo;
 import com.msa.hub_service.entity.RouteType;
 
 import java.math.BigDecimal;
@@ -55,7 +55,7 @@ public class Util {
         private static final double ROAD_CURVATURE_WEIGHT = 1.3;
         private static final double H2H_DISTANCE_THRESHOLD_KM = 200.0;
 
-        public static RouteCalculationResult calculate(BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
+        public static RouteInfo calculate(BigDecimal lat1, BigDecimal lon1, BigDecimal lat2, BigDecimal lon2) {
             // 위경도 상 거리
             double straightDistance = Util.DistanceCalculator.getDistance(lat1, lon1, lat2, lon2);
 
@@ -69,7 +69,7 @@ public class Util {
             // 거리에 따른 루트 타입
             RouteType type = determineRouteType(actualDistance);
 
-            return new RouteCalculationResult(distanceKm, durationMin, type);
+            return new RouteInfo(distanceKm, durationMin, type);
         }
 
         public static RouteType determineRouteType(double km) {

@@ -6,7 +6,7 @@ import com.msa.hub_service.client.CompanyClient;
 import com.msa.hub_service.dto.CompanyDto;
 import com.msa.hub_service.dto.HubRouteResponse;
 import com.msa.hub_service.dto.HubRouteUpdateRequest;
-import com.msa.hub_service.dto.RouteCalculationResult;
+import com.msa.hub_service.entity.RouteInfo;
 import com.msa.hub_service.entity.HubEntity;
 import com.msa.hub_service.entity.HubRouteEntity;
 import com.msa.hub_service.entity.RouteType;
@@ -199,7 +199,7 @@ class HubRouteServiceTest {
                 mockedDistance.when(() -> Util.DistanceCalculator.getDistance(farHub.getLatitude(), farHub.getLongitude(), arrCompany.latitude(), arrCompany.longitude())).thenReturn(450.0);
                 mockedDistance.when(() -> Util.DistanceCalculator.getDistance(closeHub.getLatitude(), closeHub.getLongitude(), arrCompany.latitude(), arrCompany.longitude())).thenReturn(8.5);
 
-                RouteCalculationResult mockCalcResult = new RouteCalculationResult(BigDecimal.valueOf(11.2), 15, RouteType.P2P);
+                RouteInfo mockCalcResult = new RouteInfo(BigDecimal.valueOf(11.2), 15, RouteType.P2P);
                 mockedRoute.when(() -> Util.RouteCalculator.calculate(any(), any(), any(), any())).thenReturn(mockCalcResult);
 
                 // when

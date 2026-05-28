@@ -24,7 +24,7 @@ public class StockHistoryRepositoryCustomImpl implements StockHistoryRepositoryC
     private final JPAQueryFactory queryFactory;
 
     @Override
-    public PageRes<StockHistorySearchResponseDto> searchHistoriesByproductId(UUID productId, Pageable pageable) {
+    public Page<StockHistory> searchHistoriesByproductId(UUID productId, Pageable pageable) {
         List<OrderSpecifier<?>> orders = getAllOrderSpecifiers(pageable);
         QueryResults<StockHistory> result = queryFactory
             .selectFrom(stockHistory)
@@ -34,14 +34,8 @@ public class StockHistoryRepositoryCustomImpl implements StockHistoryRepositoryC
             .limit(pageable.getPageSize())
             .fetchResults();
 
-        List<StockHistorySearchResponseDto> stockResponseDtos = result.getResults().stream().map(StockHistorySearchResponseDto::from).collect(
-            Collectors.toList());
 
-        long total = result.getTotal();
-
-        Page<StockHistorySearchResponseDto> page = new PageImpl<>(stockResponseDtos, pageable, total);
-
-        return new PageRes<>(page);
+        return new PageImpl<>(result.getResults(), pageable, result.getTotal());
     }
     //productId는 반드시 필요.
     private BooleanExpression productIdEq(UUID  productId) {

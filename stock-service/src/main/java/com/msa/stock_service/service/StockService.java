@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -66,7 +67,9 @@ public class StockService {
      */
     @Transactional(readOnly = true)
     public PageRes<StockHistorySearchResponseDto> getStockhistories(UUID productId, Pageable pageable) {
-        return stockHistoryRepository.searchHistoriesByproductId(productId, pageable);
+        Page<StockHistory> stockHistoryPage = stockHistoryRepository.searchHistoriesByproductId(productId, pageable);
+
+        return new PageRes<>(stockHistoryPage.map(StockHistorySearchResponseDto::from));
     }
 
     /**

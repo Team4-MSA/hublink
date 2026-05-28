@@ -4,6 +4,7 @@ import com.msa.company_service.config.QueryDslConfig;
 import com.msa.company_service.dto.CompanyRequest;
 import com.msa.company_service.dto.CoordinateDto;
 import com.msa.company_service.entity.CompanyEntity;
+import com.msa.company_service.entity.CompanyInfo;
 import com.msa.company_service.entity.CompanyType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,7 +45,16 @@ class CompanyRepositoryTest {
         CompanyRequest request = new CompanyRequest(HUB_ID, NAME, TYPE, ADDRESS, LAT, LON);
         CoordinateDto coordinate = new CoordinateDto(LAT, LON);
 
-        CompanyEntity company = CompanyEntity.create(request, coordinate);
+        CompanyInfo info = new CompanyInfo(
+                request.hubId(),
+                request.name(),
+                request.type(),
+                request.address(),
+                coordinate.latitude(),
+                coordinate.longitude()
+        );
+
+        CompanyEntity company = CompanyEntity.create(info);
         companyRepository.save(company);
 
         // when
@@ -63,7 +73,16 @@ class CompanyRepositoryTest {
         CompanyRequest request = new CompanyRequest(HUB_ID, NAME, TYPE, ADDRESS, LAT, LON);
         CoordinateDto coordinate = new CoordinateDto(LAT, LON);
 
-        CompanyEntity company = CompanyEntity.create(request, coordinate);
+        CompanyInfo info = new CompanyInfo(
+                request.hubId(),
+                request.name(),
+                request.type(),
+                request.address(),
+                coordinate.latitude(),
+                coordinate.longitude()
+        );
+
+        CompanyEntity company = CompanyEntity.create(info);
         companyRepository.save(company);
 
         // when & then

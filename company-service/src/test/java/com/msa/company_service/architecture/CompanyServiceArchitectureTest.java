@@ -8,11 +8,15 @@ import com.tngtech.archunit.lang.ArchRule;
 
 @AnalyzeClasses(
         packages = "com.msa.company_service",
-        importOptions = ImportOption.DoNotIncludeTests.class
+        importOptions = {
+                ImportOption.DoNotIncludeTests.class,
+                ImportOption.DoNotIncludeArchives.class
+        }
 )
 class CompanyServiceArchitectureTest {
     @ArchTest
-    static final ArchRule layerRule = HubLinkArchRules.LAYER_RULE;
+    static final ArchRule layerRule = HubLinkArchRules.LAYER_RULE
+            .because("규칙 위반 클래스 목록");
 
     @ArchTest
     static final ArchRule entityIsolationRule = HubLinkArchRules.ENTITY_ISOLATION_RULE;

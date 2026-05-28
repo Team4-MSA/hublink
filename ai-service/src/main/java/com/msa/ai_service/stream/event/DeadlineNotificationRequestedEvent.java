@@ -99,8 +99,8 @@ public class DeadlineNotificationRequestedEvent {
         @NotBlank(message = "출발 허브명은 필수입니다.")
         private String departureHubName;
 
-        @NotBlank(message = "도착 허브명은 필수입니다.")
         private String arrivalHubName;
+        private String arrivalCompanyName;
 
         @NotNull(message = "예상 이동 거리는 필수입니다.")
         @PositiveOrZero(message = "예상 이동 거리는 0 이상이어야 합니다.")

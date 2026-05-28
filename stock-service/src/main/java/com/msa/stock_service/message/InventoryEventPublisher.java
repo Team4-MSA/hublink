@@ -1,4 +1,4 @@
-package com.msa.stock_service.messaging;
+package com.msa.stock_service.message;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.UUID;

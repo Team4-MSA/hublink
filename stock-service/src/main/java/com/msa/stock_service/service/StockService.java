@@ -174,7 +174,7 @@ public class StockService {
     @Transactional
     public Stock createStock(StockRequestDto dto){
         // 재고를 DB에 생성한다.
-        Stock newStock = Stock.create(dto);
+        Stock newStock = Stock.create(dto.getProductId(),dto.getHubId(),dto.getQuantity());
         stockRepository.save(newStock);
 
         // 재고 이력을 DB에 생성한다.

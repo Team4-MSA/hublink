@@ -45,11 +45,11 @@ public class Stock extends BaseEntity {
     private Integer version;
 
     //재고 생성
-    public static Stock create(StockRequestDto dto){
+    public static Stock create(UUID productId, UUID hubId, Integer quantity) {
         return com.msa.stock_service.entity.Stock.builder()
-            .productId(dto.getProductId())
-            .hubId(dto.getHubId())
-            .quantity(dto.getQuantity())
+            .productId(productId)
+            .hubId(hubId)
+            .quantity(quantity)
             .build();
     }
 

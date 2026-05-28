@@ -8,7 +8,6 @@ import com.msa.stock_service.dto.StockHistorySearchResponseDto;
 import com.msa.stock_service.dto.StockRequestDto;
 import com.msa.stock_service.dto.StockResponseDto;
 import com.msa.stock_service.entity.Stock;
-import com.msa.stock_service.messaging.InventoryEventPublisher;
 import com.msa.stock_service.service.StockOrchestrator;
 import com.msa.stock_service.service.StockService;
 import jakarta.validation.Valid;

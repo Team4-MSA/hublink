@@ -17,6 +17,7 @@ public class HubLinkArchRules {
             .layer("Client").definedBy("..client..")
             .layer("Message").definedBy("..message..")
             .layer("Entity").definedBy("..entity..")
+            .layer("Common").definedBy("com.msa.core_common..")
 
             // 규칙 정의
             .whereLayer("Controller").mayNotBeAccessedByAnyLayer()

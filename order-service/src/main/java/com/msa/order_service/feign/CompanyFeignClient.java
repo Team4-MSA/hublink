@@ -1,5 +1,6 @@
 package com.msa.order_service.feign;
 
+import com.msa.order_service.dto.res.CompanyAddressResDto;
 import com.msa.order_service.dto.res.CompanyNameResDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,5 +14,8 @@ public interface CompanyFeignClient {
 
     @GetMapping("/names")
     public List<CompanyNameResDto> getCompanyNames(@RequestParam List<UUID> companyIds);
+
+    @GetMapping("/address")
+    public CompanyAddressResDto getCompanyAddress (@RequestParam UUID companyId);
 
 }

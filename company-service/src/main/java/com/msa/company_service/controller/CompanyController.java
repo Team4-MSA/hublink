@@ -76,4 +76,13 @@ public class CompanyController {
     ) {
         return companyService.getCompanies(hubId, name, type, address, pageable);
     }
+
+    // 담당자 전용 담당 업체 정보 조회
+    @RequireRole({UserRole.COMPANY_MANAGER})
+    @GetMapping("/me")
+    public CompanyResponse getMyCompany(
+            @RequestHeader(value = "X-Company-Id", required = true) UUID userCompanyId
+    ) {
+        return companyService.getCompany(userCompanyId);
+    }
 }

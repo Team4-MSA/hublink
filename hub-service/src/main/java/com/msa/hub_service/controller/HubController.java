@@ -25,7 +25,7 @@ public class HubController {
     @RequireRole(UserRole.MASTER)
     @PostMapping
     public HubResponse createHub(@Valid @RequestBody HubRequest request) {
-        return hubService.createHub(request.name(), request.address());
+        return hubService.createHub(request.name(), request.address(), request.latitude(), request.longitude());
     }
 
     //허브 상세 조회

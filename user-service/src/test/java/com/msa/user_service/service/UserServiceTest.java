@@ -1,0 +1,411 @@
+package com.msa.user_service.service;
+
+import com.msa.core_common.error.exception.CustomException;
+import com.msa.user_service.client.CompanyClient;
+import com.msa.user_service.client.HubClient;
+import com.msa.user_service.dto.ApproveUserRequest;
+import com.msa.user_service.dto.CompanyExistsResponse;
+import com.msa.user_service.dto.HubExistsResponse;
+import com.msa.user_service.dto.InternalHubManagerResponse;
+import com.msa.user_service.entity.UserRole;
+import com.msa.user_service.dto.SignUpRequest;
+import com.msa.user_service.dto.UpdateUserRequest;
+import com.msa.user_service.dto.UserResponse;
+import com.msa.user_service.entity.DeliveryManagerType;
+import com.msa.user_service.entity.User;
+import com.msa.user_service.entity.UserRole;
+import com.msa.user_service.entity.UserStatus;
+import com.msa.user_service.fixture.TestFixtures;
+import com.msa.user_service.global.UserErrorCode;
+import com.msa.user_service.repository.UserRepository;
+import com.msa.user_service.util.RedisUtil;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.test.util.ReflectionTestUtils;
+
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.never;
+
+@ExtendWith(MockitoExtension.class)
+@DisplayName("UserService 테스트")
+class UserServiceTest {
+
+    @Mock private UserRepository userRepository;
+    @Mock private UserApprovalService userApprovalService;
+    @Mock private DeliveryManagerService deliveryManagerService;
+    @Mock private HubClient hubClient;
+    @Mock private CompanyClient companyClient;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private RedisUtil redisUtil;
+
+    @InjectMocks
+    private UserService userService;
+
+    @Test
+    @DisplayName("회원가입 성공")
+    void signUp_success() {
+        // given
+        SignUpRequest request = signUpRequest("newuser1", "NewPass1!", "새유저", "new@example.com");
+        User savedUser = TestFixtures.approvedMasterUser();
+
+        given(userRepository.existsByUsername("newuser1")).willReturn(false);
+        given(userRepository.existsByEmail("new@example.com")).willReturn(false);
+        given(passwordEncoder.encode(anyString())).willReturn("encoded");
+        given(userRepository.save(any(User.class))).willReturn(savedUser);
+
+        // when
+        UserResponse response = userService.signUp(request);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getUsername()).isEqualTo("masteruser");
+    }
+
+    @Test
+    @DisplayName("회원가입 실패 - 중복 username")
+    void signUp_duplicateUsername() {
+        // given
+        SignUpRequest request = signUpRequest("masteruser", "Pass1!", "이름", "other@example.com");
+        given(userRepository.existsByUsername("masteruser")).willReturn(true);
+
+        // then
+        assertThatThrownBy(() -> userService.signUp(request))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.DUPLICATE_USERNAME));
+
+        then(userRepository).should(never()).save(any());
+    }
+
+    @Test
+    @DisplayName("회원가입 실패 - 중복 email")
+    void signUp_duplicateEmail() {
+        // given
+        SignUpRequest request = signUpRequest("uniqueuser", "Pass1!", "이름", "master@example.com");
+        given(userRepository.existsByUsername("uniqueuser")).willReturn(false);
+        given(userRepository.existsByEmail("master@example.com")).willReturn(true);
+
+        // then
+        assertThatThrownBy(() -> userService.signUp(request))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.DUPLICATE_EMAIL));
+    }
+
+    @Test
+    @DisplayName("유저 단건 조회 성공")
+    void getUser_success() {
+        // given
+        User user = TestFixtures.approvedMasterUser();
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // when
+        UserResponse response = userService.getUser(TestFixtures.USER_ID);
+
+        // then
+        assertThat(response.getUserId()).isEqualTo(TestFixtures.USER_ID);
+        assertThat(response.getUsername()).isEqualTo("masteruser");
+    }
+
+    @Test
+    @DisplayName("유저 단건 조회 실패 - 존재하지 않는 유저")
+    void getUser_notFound() {
+        // given
+        UUID unknownId = UUID.randomUUID();
+        given(userRepository.findByUserIdAndDeletedAtIsNull(unknownId)).willReturn(Optional.empty());
+
+        // then
+        assertThatThrownBy(() -> userService.getUser(unknownId))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.USER_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("유저 정보 수정 성공")
+    void updateUser_success() {
+        // given
+        User user = TestFixtures.approvedMasterUser();
+        UpdateUserRequest request = updateUserRequest("변경이름", "changed@example.com", "U_NEW");
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // when
+        UserResponse response = userService.updateUser(TestFixtures.USER_ID, request);
+
+        // then
+        assertThat(response.getName()).isEqualTo("변경이름");
+        assertThat(response.getEmail()).isEqualTo("changed@example.com");
+        then(deliveryManagerService).shouldHaveNoInteractions(); // MASTER 역할이므로 전파 없음
+    }
+
+    @Test
+    @DisplayName("유저 정보 수정 - DELIVERY_MANAGER: slackId 변경 시 전파")
+    void updateUser_deliveryManager_syncSlackId() {
+        // given
+        User user = TestFixtures.pendingDeliveryManagerUser();
+        UpdateUserRequest request = updateUserRequest("배송매니저", "deliv@example.com", "U_NEW_SLACK");
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // when
+        userService.updateUser(TestFixtures.USER_ID, request);
+
+        // then
+        then(deliveryManagerService).should().updateSlackId(TestFixtures.USER_ID, "U_NEW_SLACK");
+    }
+
+    @Test
+    @DisplayName("유저 정보 수정 - DELIVERY_MANAGER: hubId 변경 시 DM에도 전파")
+    void updateUser_deliveryManager_syncHubId() {
+        // given
+        UUID newHubId = UUID.randomUUID();
+        User user = TestFixtures.pendingDeliveryManagerUser();
+        UpdateUserRequest request = updateUserRequestFull("배송매니저", "deliv@example.com", "U_DELIV", newHubId, null);
+
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // when
+        userService.updateUser(TestFixtures.USER_ID, request);
+
+        // then
+        then(deliveryManagerService).should().syncHubId(TestFixtures.USER_ID, newHubId);
+    }
+
+    @Test
+    @DisplayName("유저 정보 수정 - DELIVERY_MANAGER: 동일 hubId 전달 시 순번 재계산 없음")
+    void updateUser_deliveryManager_sameHubId_noSync() {
+        // given
+        User user = TestFixtures.pendingDeliveryManagerUser();
+        UpdateUserRequest request = updateUserRequestFull("배송매니저", "deliv@example.com", "U_DELIV",
+                TestFixtures.HUB_ID, null);
+
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // when
+        userService.updateUser(TestFixtures.USER_ID, request);
+
+        // then
+        then(deliveryManagerService).should(never()).syncHubId(any(), any());
+    }
+
+    @Test
+    @DisplayName("사전 검증 실패 - 존재하지 않는 hubId")
+    void validateUpdateResources_hubNotFound() {
+        // given
+        UUID unknownHubId = UUID.randomUUID();
+        UpdateUserRequest request = updateUserRequestFull("이름", "test@test.com", "U_X", unknownHubId, null);
+        given(hubClient.checkHubExists(unknownHubId)).willReturn(hubExistsResponse(false));
+
+        // then
+        assertThatThrownBy(() -> userService.validateUpdateResources(request))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("사전 검증 실패 - 존재하지 않는 companyId")
+    void validateUpdateResources_companyNotFound() {
+        // given
+        UUID unknownCompanyId = UUID.randomUUID();
+        UpdateUserRequest request = updateUserRequestFull("이름", "test@test.com", "U_X", null, unknownCompanyId);
+        given(companyClient.checkCompanyExists(unknownCompanyId)).willReturn(companyExistsResponse(false));
+
+        // then
+        assertThatThrownBy(() -> userService.validateUpdateResources(request))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.COMPANY_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("유저 삭제 성공 - Redis 무효화 콜백 등록")
+    void deleteUser_success() {
+        // given
+        User user = TestFixtures.approvedMasterUser();
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            // when
+            userService.deleteUser(TestFixtures.USER_ID, "admin");
+
+            // then
+            assertThat(user.getDeletedAt()).isNotNull();
+
+            TransactionSynchronizationManager.getSynchronizations()
+                    .forEach(TransactionSynchronization::afterCommit);
+            then(redisUtil).should().invalidateUser(eq(TestFixtures.USER_ID.toString()), anyLong());
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    @DisplayName("유저 승인 - HUB_MANAGER: hubClient로 허브 존재 검증 후 executeApproval 호출")
+    void approveUser_hubManager_success() {
+        // given
+        User user = TestFixtures.pendingHubManagerUser();
+        ApproveUserRequest request = approveRequest(UserStatus.APPROVED, null);
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+        given(hubClient.checkHubExists(TestFixtures.HUB_ID)).willReturn(hubExistsResponse(true));
+
+        // when
+        userService.approveUser(TestFixtures.USER_ID, request, TestFixtures.ADMIN_ID);
+
+        // then
+        then(hubClient).should().checkHubExists(TestFixtures.HUB_ID);
+        then(userApprovalService).should().executeApproval(TestFixtures.USER_ID, request, TestFixtures.ADMIN_ID);
+    }
+
+    @Test
+    @DisplayName("유저 승인 - DELIVERY_MANAGER: deliveryManagerType 없으면 예외")
+    void approveUser_deliveryManager_missingType() {
+        // given
+        User user = TestFixtures.pendingDeliveryManagerUser();
+        ApproveUserRequest request = approveRequest(UserStatus.APPROVED, null); // type 없음
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // then
+        assertThatThrownBy(() -> userService.approveUser(TestFixtures.USER_ID, request, TestFixtures.ADMIN_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.DELIVERY_TYPE_REQUIRED));
+    }
+
+    @Test
+    @DisplayName("유저 승인 실패 - PENDING이 아닌 상태")
+    void approveUser_notPendingStatus() {
+        // given
+        User user = TestFixtures.approvedMasterUser(); // 이미 APPROVED
+        ApproveUserRequest request = approveRequest(UserStatus.APPROVED, null);
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+
+        // then
+        assertThatThrownBy(() -> userService.approveUser(TestFixtures.USER_ID, request, TestFixtures.ADMIN_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.NOT_PENDING_STATUS));
+    }
+
+    @Test
+    @DisplayName("유저 수정 실패 - HUB_MANAGER 허브 변경 시 새 허브에 이미 담당자 존재")
+    void updateUser_hubManager_hubAlreadyHasManager() {
+        // given
+        UUID newHubId = UUID.randomUUID();
+        User user = TestFixtures.pendingHubManagerUser(); // HUB_ID 소속
+        UpdateUserRequest request = updateUserRequestFull("이름", "email@test.com", "U_HUB", newHubId, null);
+
+        given(userRepository.findByUserIdAndDeletedAtIsNull(TestFixtures.USER_ID))
+                .willReturn(Optional.of(user));
+        given(userRepository.findByHubIdAndRoleAndDeletedAtIsNull(newHubId, UserRole.HUB_MANAGER))
+                .willReturn(Optional.of(TestFixtures.approvedHubManagerUser())); // 이미 존재
+
+        // then
+        assertThatThrownBy(() -> userService.updateUser(TestFixtures.USER_ID, request))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_MANAGER_ALREADY_EXISTS));
+    }
+
+    @Test
+    @DisplayName("허브 매니저 단건 조회 성공")
+    void getHubManagerByHubId_success() {
+        // given
+        User manager = TestFixtures.approvedHubManagerUser();
+        given(userRepository.findByHubIdAndRoleAndDeletedAtIsNull(TestFixtures.HUB_ID, UserRole.HUB_MANAGER))
+                .willReturn(Optional.of(manager));
+
+        // when
+        InternalHubManagerResponse result = userService.getHubManagerByHubId(TestFixtures.HUB_ID);
+
+        // then
+        assertThat(result.getHubId()).isEqualTo(TestFixtures.HUB_ID);
+        assertThat(result.getHubManagerSlackId()).isEqualTo("U_HUB_ADMIN");
+    }
+
+    @Test
+    @DisplayName("허브 매니저 단건 조회 실패 - 없으면 HUB_MANAGER_NOT_FOUND")
+    void getHubManagerByHubId_notFound() {
+        // given
+        given(userRepository.findByHubIdAndRoleAndDeletedAtIsNull(TestFixtures.HUB_ID, UserRole.HUB_MANAGER))
+                .willReturn(Optional.empty());
+
+        // then
+        assertThatThrownBy(() -> userService.getHubManagerByHubId(TestFixtures.HUB_ID))
+                .isInstanceOf(CustomException.class)
+                .satisfies(e -> assertThat(((CustomException) e).getErrorCode())
+                        .isEqualTo(UserErrorCode.HUB_MANAGER_NOT_FOUND));
+    }
+
+
+    private SignUpRequest signUpRequest(String username, String password, String name, String email) {
+        SignUpRequest req = new SignUpRequest();
+        ReflectionTestUtils.setField(req, "username", username);
+        ReflectionTestUtils.setField(req, "password", password);
+        ReflectionTestUtils.setField(req, "name", name);
+        ReflectionTestUtils.setField(req, "email", email);
+        ReflectionTestUtils.setField(req, "slackId", "U_TEST");
+        ReflectionTestUtils.setField(req, "role", UserRole.MASTER);
+        return req;
+    }
+
+    private UpdateUserRequest updateUserRequest(String name, String email, String slackId) {
+        return updateUserRequestFull(name, email, slackId, null, null);
+    }
+
+    private UpdateUserRequest updateUserRequestFull(String name, String email, String slackId,
+                                                     UUID hubId, UUID companyId) {
+        UpdateUserRequest req = new UpdateUserRequest();
+        ReflectionTestUtils.setField(req, "name", name);
+        ReflectionTestUtils.setField(req, "email", email);
+        ReflectionTestUtils.setField(req, "slackId", slackId);
+        ReflectionTestUtils.setField(req, "hubId", hubId);
+        ReflectionTestUtils.setField(req, "companyId", companyId);
+        return req;
+    }
+
+    private ApproveUserRequest approveRequest(UserStatus status, DeliveryManagerType type) {
+        ApproveUserRequest req = new ApproveUserRequest();
+        ReflectionTestUtils.setField(req, "status", status);
+        ReflectionTestUtils.setField(req, "deliveryManagerType", type);
+        return req;
+    }
+
+    private HubExistsResponse hubExistsResponse(boolean exists) {
+        HubExistsResponse res = new HubExistsResponse();
+        ReflectionTestUtils.setField(res, "exists", exists);
+        return res;
+    }
+
+    private CompanyExistsResponse companyExistsResponse(boolean exists) {
+        CompanyExistsResponse res = new CompanyExistsResponse();
+        ReflectionTestUtils.setField(res, "exists", exists);
+        return res;
+    }
+}

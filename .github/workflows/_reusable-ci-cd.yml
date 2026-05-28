@@ -176,5 +176,5 @@ jobs:
             ECR_REGISTRY="$ECR_REGISTRY" IMAGE_TAG="$IMAGE_TAG" \
             docker compose up -d --no-deps "$SERVICE"
 
-            # 오래된 이미지 정리
-            docker image prune -f
+            # 오래된 이미지 정리 (사용 중이지 않은 이미지 전체 삭제)
+            docker image prune -a -f

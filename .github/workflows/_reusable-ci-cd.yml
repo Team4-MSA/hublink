@@ -142,19 +142,25 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # AWS 자격증명도 서버에 전달 (ECR 로그인에 필요)
-          envs: SERVICE=${{ inputs.service_name }},IMAGE_TAG=${{ github.sha }},ECR_REGISTRY=${{ secrets.ECR_REGISTRY }},AWS_REGION=${{ secrets.AWS_REGION }},AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }},AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
           script: |
+            export SERVICE="${{ inputs.service_name }}"
+            export IMAGE_TAG="${{ github.sha }}"
+            export ECR_REGISTRY="${{ secrets.ECR_REGISTRY }}"
+            export AWS_REGION="${{ secrets.AWS_REGION }}"
+            export AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}"
+            export AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}"
+
             cd ~/hublink
 
             # ECR 로그인
-            aws ecr get-login-password --region $AWS_REGION | \
-              docker login --username AWS --password-stdin $ECR_REGISTRY
+            aws ecr get-login-password --region "$AWS_REGION" | \
+              docker login --username AWS --password-stdin "$ECR_REGISTRY"
 
             # 새 이미지 Pull 후 해당 서비스만 재시작
-            docker pull $ECR_REGISTRY/hublink-$SERVICE:$IMAGE_TAG
-            ECR_REGISTRY=$ECR_REGISTRY IMAGE_TAG=$IMAGE_TAG \
-            docker compose up -d --no-deps $SERVICE
+            docker pull "$ECR_REGISTRY/hublink-$SERVICE:$IMAGE_TAG"
+            ECR_REGISTRY="$ECR_REGISTRY" IMAGE_TAG="$IMAGE_TAG" \
+            docker compose up -d --no-deps "$SERVICE"
 
             # 오래된 이미지 정리
             docker image prune -f

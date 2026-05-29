@@ -63,7 +63,15 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }
 
         if (PUBLIC_PATHS.stream().anyMatch(path::equals)) {
-            return chain.filter(exchange);
+            ServerHttpRequest sanitized = exchange.getRequest().mutate()
+                    .headers(headers -> {
+                        headers.remove("X-User-Id");
+                        headers.remove("X-User-Role");
+                        headers.remove("X-Hub-Id");
+                        headers.remove("X-Company-Id");
+                    })
+                    .build();
+            return chain.filter(exchange.mutate().request(sanitized).build());
         }
 
          if (PUBLIC_PREFIXES.stream().anyMatch(path::startsWith) || path.contains("/v3/api-docs")) {
@@ -76,6 +84,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }
 
         String token = authHeader.substring(7);
+        if (token.isBlank()) {
+            return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.UNAUTHORIZED, "인증 토큰이 없습니다.");
+        }
 
         Claims claims;
         try {
@@ -127,12 +138,11 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                     if (hubId != null) requestMutator.header("X-Hub-Id", hubId);
                     if (companyId != null) requestMutator.header("X-Company-Id", companyId);
 
+                    exchange.getAttributes().put("isAuthenticated", true);
+
                     ServerWebExchange mutatedExchange = exchange.mutate()
                             .request(requestMutator.build())
                             .build();
-
-                    // Rate Limiting KeyResolver에서 인증 여부를 신뢰할 수 있도록 attribute 설정
-                    mutatedExchange.getAttributes().put("isAuthenticated", true);
 
                     return chain.filter(mutatedExchange);
                 })

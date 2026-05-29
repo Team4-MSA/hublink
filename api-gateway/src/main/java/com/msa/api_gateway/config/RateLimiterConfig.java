@@ -27,15 +27,21 @@ public class RateLimiterConfig {
             String xff = exchange.getRequest().getHeaders().getFirst("X-Forwarded-For");
             if (xff != null && !xff.isBlank()) {
                 String[] parts = xff.split(",");
-                return Mono.just("ip:" + parts[parts.length - 1].trim());
+                if (parts.length > 0) {
+                    String clientIp = parts[parts.length - 1].trim();
+                    if (!clientIp.isEmpty()) {
+                        return Mono.just("ip:" + clientIp);
+                    }
+                }
             }
 
             // X-Forwarded-For 없을 경우 소켓 주소에서 직접 추출 (로컬 개발 환경 등)
-            // getHostString() 사용 — getAddress()는 unresolved 주소일 때 null 반환 가능
-            String remoteAddr = exchange.getRequest().getRemoteAddress() != null
-                    ? exchange.getRequest().getRemoteAddress().getHostString()
-                    : "unknown";
-            return Mono.just("ip:" + remoteAddr);
+            if (exchange.getRequest().getRemoteAddress() != null) {
+                return Mono.just("ip:" + exchange.getRequest().getRemoteAddress().getHostString());
+            }
+
+            // IP를 특정할 수 없는 경우 Rate Limiting skip
+            return Mono.empty();
         };
     }
 }

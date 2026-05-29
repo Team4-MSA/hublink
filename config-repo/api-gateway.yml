@@ -9,6 +9,9 @@ spring:
       password: ${REDIS_PASSWORD:}
   cloud:
     gateway:
+      filter:
+        request-rate-limiter:
+          deny-empty-key: false
       server:
         webflux:
           globalcors:

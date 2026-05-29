@@ -16,8 +16,7 @@ spring:
               '[/**]':
                 # 허용할 Origin 목록 — 운영 시 실제 프론트엔드 도메인으로 교체
                 allowedOrigins:
-                  - "http://hublink-alb-1495218755.ap-northeast-2.elb.amazonaws.com"
-                  - "http://localhost:3000"
+                  - "${CORS_ALLOWED_ORIGIN:http://localhost:3000}"
                   - "http://localhost:8080"
                 allowedMethods:
                   - GET

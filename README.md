@@ -209,7 +209,7 @@ hotfix/*
 | 환경     | Swagger URL                                                                          |
 | ------ | ------------------------------------------------------------------------------------ |
 | Local  | http://localhost:19091/swagger-ui/index.html                                         |
-| Deploy | http://hublink-alb-1495218755.ap-northeast-2.elb.amazonaws.com/swagger-ui/index.html |
+| Deploy | http://{ALB-DNS}/swagger-ui/index.html |
 ---
 
 # 🔐 환경 변수

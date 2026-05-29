@@ -29,6 +29,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     private static final String INTERNAL_PATH_PREFIX = "/internal/";
     private static final String BL_PREFIX = "BL:";
     private static final String BL_USER_PREFIX = "BL:USER:";
+    private static final List<String> INTERNAL_HEADERS = List.of("X-User-Id", "X-User-Role", "X-Hub-Id", "X-Company-Id");
 
     private static final List<String> PUBLIC_PATHS = List.of(
             "/api/v1/auth/signup",
@@ -62,11 +63,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
             return WebFluxResponseUtils.writeErrorResponse(exchange, HttpStatus.FORBIDDEN, "접근이 거부되었습니다.");
         }
 
-        if (PUBLIC_PATHS.stream().anyMatch(path::equals)) {
-            return chain.filter(sanitizeHeaders(exchange));
-        }
-
-        if (PUBLIC_PREFIXES.stream().anyMatch(path::startsWith) || path.contains("/v3/api-docs")) {
+        if (PUBLIC_PATHS.stream().anyMatch(path::equals) ||
+                PUBLIC_PREFIXES.stream().anyMatch(path::startsWith) ||
+                path.contains("/v3/api-docs")) {
             return chain.filter(sanitizeHeaders(exchange));
         }
 
@@ -117,12 +116,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
 
                     // 헤더 스푸핑 방지: 클라이언트가 임의로 삽입한 헤더를 먼저 제거 후 JWT 기반 값으로 덮어씀
                     ServerHttpRequest.Builder requestMutator = exchange.getRequest().mutate()
-                            .headers(headers -> {
-                                headers.remove("X-User-Id");
-                                headers.remove("X-User-Role");
-                                headers.remove("X-Hub-Id");
-                                headers.remove("X-Company-Id");
-                            })
+                            .headers(headers -> INTERNAL_HEADERS.forEach(headers::remove))
                             .header("X-User-Id", userId)
                             .header("X-User-Role", role);
 
@@ -150,12 +144,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     // 클라이언트가 임의로 삽입한 내부 헤더를 제거 (헤더 스푸핑 방지)
     private ServerWebExchange sanitizeHeaders(ServerWebExchange exchange) {
         ServerHttpRequest sanitized = exchange.getRequest().mutate()
-                .headers(headers -> {
-                    headers.remove("X-User-Id");
-                    headers.remove("X-User-Role");
-                    headers.remove("X-Hub-Id");
-                    headers.remove("X-Company-Id");
-                })
+                .headers(headers -> INTERNAL_HEADERS.forEach(headers::remove))
                 .build();
         return exchange.mutate().request(sanitized).build();
     }

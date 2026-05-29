@@ -32,51 +32,44 @@ public class DeliveryCreateKafkaConsumer {
     private final ObjectMapper objectMapper;
     private final Validator validator;
 
+    // delivery.create 토픽에서 문자열 payload를 받아 배송 생성
+    // String payload + ObjectMapper 방식으로 DTO 변환
     @KafkaListener(
             topics = CREATE_TOPIC,
             groupId = "${spring.kafka.consumer.group-id:delivery-service}"
     )
     public void consume(ConsumerRecord<String, String> record) {
-        // 카프카 메시지에서 원본 payload 추출
         String payload = record.value();
-        // 성공/실패 이벤트 전송 시 사용할 메시지 키
+
+        // 메세지 키는 orderId + 미리 null 초기화
         String messageKey = null;
 
         try {
-            // payload 역직렬화 후 유효성 검증
+            // DeliveryRequest DTO 역직렬화 및 검증
             DeliveryRequest request = objectMapper.readValue(payload, DeliveryRequest.class);
             validate(request);
 
-            // 같은 주문은 같은 키를 쓰도록 orderId를 메시지 키로 사용
             messageKey = toMessageKey(request.getOrderId());
 
-            // 배송 생성 후 성공 이벤트 발행
             DeliveryResponse response = deliveryService.createDelivery(request);
             publish(messageKey, response);
 
-            log.info(
-                    "delivery.create 이벤트를 정상 처리했습니다. orderId={}, deliveryId={}",
+            log.info("배송 생성 이벤트 처리 성공. orderId={}, deliveryId={}",
                     request.getOrderId(),
                     response.getDeliveryId()
             );
         } catch (Exception e) {
-            // 역직렬화 단계에서 실패한 경우를 대비해 offset 기반 임시 키 사용
+            // 실패 시 키에 오프셋을 임시로 넣고 요청 데이터를 그대로 전달
             if (messageKey == null) {
                 messageKey = "offset-" + record.offset();
             }
-            log.error(
-                    "delivery.create 이벤트 처리에 실패했습니다. key={}, offset={}",
-                    messageKey,
-                    record.offset(),
-                    e
-            );
-            // 원본 payload를 실패 토픽으로 그대로 전송
+            log.error("배송 생성 이벤트 처리 실패. key={}, offset={}", messageKey, record.offset(), e);
             publishFailed(messageKey, payload);
         }
     }
 
     private void validate(DeliveryRequest request) {
-        // Bean Validation으로 필수값 누락 여부 검사
+        // 검증 실패도 실패 토픽으로 보내기 위해 예외 발생
         Set<ConstraintViolation<DeliveryRequest>> violations = validator.validate(request);
         if (!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
@@ -84,17 +77,14 @@ public class DeliveryCreateKafkaConsumer {
     }
 
     private void publish(String key, Object payload) throws JsonProcessingException {
-        // 성공 결과를 JSON으로 직렬화해 success 토픽으로 전송
         kafkaTemplate.send(CREATE_SUCCEED_TOPIC, key, objectMapper.writeValueAsString(payload));
     }
 
     private void publishFailed(String key, String originalPayload) {
-        // 실패 시 원본 payload를 그대로 failed 토픽으로 전송
         kafkaTemplate.send(CREATE_FAILED_TOPIC, key, originalPayload);
     }
 
     private String toMessageKey(UUID orderId) {
-        // orderId가 있으면 메시지 키로 사용
         return orderId == null ? null : orderId.toString();
     }
 }

@@ -50,17 +50,17 @@ public class DeadlineGeneratedStreamConsumer implements StreamListener<String, M
         // 데이터 검증
         Set<ConstraintViolation<DeadlineGeneratedEvent>> violations = validator.validate(event);
         if (!violations.isEmpty()) {
-            log.warn(
-                    "배송 최종시한 이벤트 검증에 실패했습니다. recordId={}, violations={}",
+            log.warn("배송 최종시한 이벤트 검증에 실패했습니다. recordId={}, violations={}",
                     record.getId(),
-                    violations.stream().map(ConstraintViolation::getMessage).toList()
+                    violations.stream()
+                            .map(ConstraintViolation::getMessage)
+                            .toList()
             );
             return;
         }
 
         deliveryService.updateFinalDepartureDeadline(event);
-        log.info(
-                "배송 최종 출발시한을 반영했습니다. deliveryId={}, eventId={}",
+        log.info("배송 최종 출발시한을 반영했습니다. deliveryId={}, eventId={}",
                 event.getDeliveryId(),
                 event.getEventId()
         );

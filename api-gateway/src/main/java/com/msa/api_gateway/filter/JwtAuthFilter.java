@@ -63,19 +63,11 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }
 
         if (PUBLIC_PATHS.stream().anyMatch(path::equals)) {
-            ServerHttpRequest sanitized = exchange.getRequest().mutate()
-                    .headers(headers -> {
-                        headers.remove("X-User-Id");
-                        headers.remove("X-User-Role");
-                        headers.remove("X-Hub-Id");
-                        headers.remove("X-Company-Id");
-                    })
-                    .build();
-            return chain.filter(exchange.mutate().request(sanitized).build());
+            return chain.filter(sanitizeHeaders(exchange));
         }
 
-         if (PUBLIC_PREFIXES.stream().anyMatch(path::startsWith) || path.contains("/v3/api-docs")) {
-            return chain.filter(exchange);
+        if (PUBLIC_PREFIXES.stream().anyMatch(path::startsWith) || path.contains("/v3/api-docs")) {
+            return chain.filter(sanitizeHeaders(exchange));
         }
 
         String authHeader = exchange.getRequest().getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
@@ -153,5 +145,18 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     @Override
     public int getOrder() {
         return -1;
+    }
+
+    // 클라이언트가 임의로 삽입한 내부 헤더를 제거 (헤더 스푸핑 방지)
+    private ServerWebExchange sanitizeHeaders(ServerWebExchange exchange) {
+        ServerHttpRequest sanitized = exchange.getRequest().mutate()
+                .headers(headers -> {
+                    headers.remove("X-User-Id");
+                    headers.remove("X-User-Role");
+                    headers.remove("X-Hub-Id");
+                    headers.remove("X-Company-Id");
+                })
+                .build();
+        return exchange.mutate().request(sanitized).build();
     }
 }

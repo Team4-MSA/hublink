@@ -114,7 +114,7 @@ spring:
             - id: hub-service
               uri: lb://hub-service
               predicates:
-                - Path=/api/v1/hubs/**, /api/v1/hub-routes/**
+                - Path=/api/v1/hubs/**,/api/v1/hub-routes/**
               filters:
                 - name: RequestRateLimiter
                   args:

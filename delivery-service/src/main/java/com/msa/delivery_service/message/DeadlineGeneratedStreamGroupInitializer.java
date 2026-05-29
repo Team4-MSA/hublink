@@ -41,6 +41,11 @@ public class DeadlineGeneratedStreamGroupInitializer {
                 );
                 return;
             }
+            log.error("Redis Stream consumer group 생성에 실패했습니다. stream={}, group={}",
+                    DeadlineStreamConstants.DEADLINE_GENERATED_STREAM,
+                    DeadlineStreamConstants.DELIVERY_SERVICE_GROUP,
+                    e
+            );
             throw e;
         }
     }

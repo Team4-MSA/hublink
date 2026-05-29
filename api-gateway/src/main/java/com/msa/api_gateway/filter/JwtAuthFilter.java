@@ -131,6 +131,9 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
                             .request(requestMutator.build())
                             .build();
 
+                    // Rate Limiting KeyResolver에서 인증 여부를 신뢰할 수 있도록 attribute 설정
+                    mutatedExchange.getAttributes().put("isAuthenticated", true);
+
                     return chain.filter(mutatedExchange);
                 })
                 .onErrorResume(RedisUnavailableException.class, e ->

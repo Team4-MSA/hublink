@@ -19,10 +19,10 @@ public interface DeliveryRepository extends JpaRepository<Delivery, UUID> {
 
     Optional<Delivery> findByOrderId(UUID orderId);
 
-    // ?뱀젙 ?낆껜 諛곗넚 ?대떦?먯뿉寃?諛곗젙??諛곗넚 紐⑸줉 議고쉶
+    // 특정 업체 배송 담당자에게 배정된 배송 목록 조회
     Page<Delivery> findAllByCompanyDeliveryManagerId(UUID companyDeliveryManagerId, Pageable pageable);
 
-    // ?꾩쭅 諛곗넚 以묒씤 ?낆껜 諛곗넚 ?대떦??ID 紐⑸줉 議고쉶
+    // 아직 배송 중인 업체 배송 담당자 ID 목록 조회
     @Query("""
         select distinct d.companyDeliveryManagerId
         from Delivery d

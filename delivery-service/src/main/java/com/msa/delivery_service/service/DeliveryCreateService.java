@@ -35,8 +35,8 @@ public class DeliveryCreateService {
             "uk_p_delivery_route_histories_active_delivery_manager";
 
     /*
-        ?몃? ?쒕퉬???몄텧怨?DB 而ㅻ꽖?섏쓣 遺꾨━?섍린 ?꾪빐 ?몃옖??뀡???몃?濡?遺꾨━
-        Self-Invocation 諛⑹?瑜??꾪빐 ?곕줈 ?대옒???묒꽦
+        외부 서비스 호출과 DB 커밋션을 분리하기 위해 트랜잭션을 별도로 분리
+        Self-Invocation 방지를 위해 별도 클래스로 작성
     */
     private final DeliveryRepository deliveryRepository;
     private final DeliveryRouteHistoryRepository deliveryRouteHistoryRepository;
@@ -77,7 +77,7 @@ public class DeliveryCreateService {
             );
             deliveryRouteHistoryRepository.saveAllAndFlush(routeHistories);
 
-            // 而ㅻ컠???꾨즺?섎㈃ 肄쒕갚?쇰줈 ?대깽??諛쒗뻾
+            // 커밋이 완료되면 콜백으로 이벤트 발행
             redisStreamEventPublisher.publishAfterCommit(
                     RedisStreamEventPublisher.DEADLINE_REQUESTED_STREAM,
                     DeadlineRequestedEvent.of(
@@ -110,9 +110,10 @@ public class DeliveryCreateService {
         return hubRoutes.get(hubRoutes.size() - 1).getDepartureHubId();
     }
 
-    // ?꾩옱 ?좊땲???쒖빟??珥?3怨녹뿉 ?곸슜?섏뼱 ?덉쑝誘濡?援щ텇?섍린 ?꾪븳 硫붿꽌??    // Delivery 以묐났 ?쒖빟
-    // ?낆껜 諛곗넚 ?대떦 湲곗궗 ?쒖빟
-    // ?덈툕 諛곗넚 ?대떦 湲곗궗 ?쒖빟
+    // 현재 유니크 제약은 총 3곳에 적용되어 있으므로 구분하기 위한 메서드
+    // Delivery 중복 제약
+    // 업체 배송 담당 기사 제약
+    // 허브 배송 담당 기사 제약
     private DeliveryErrorCode translateIntegrityException(DataIntegrityViolationException e) {
         Throwable cause = e;
         while (cause != null) {

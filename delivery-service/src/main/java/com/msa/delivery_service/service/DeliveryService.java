@@ -42,15 +42,15 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DeliveryService {
 
-    // 諛곗넚 ?대떦??洹쇰Т ?쒓컙 怨좎젙
+    // 배송 담당자 근무 시간 고정
     private static final String WORK_START_TIME = "09:00";
     private static final String WORK_END_TIME = "18:00";
 
-    // 諛곗넚 ?대떦?????援щ텇
+    // 배송 담당자 타입 구분
     private static final String COMPANY_DELIVERY_MANAGER_TYPE = "COMPANY_DELIVERY";
     private static final String HUB_DELIVERY_MANAGER_TYPE = "HUB_DELIVERY";
 
-    // USER 沅뚰븳
+    // USER 권한
     private static final String MASTER = "MASTER";
     private static final String HUB_MANAGER = "HUB_MANAGER";
     private static final String DELIVERY_MANAGER = "DELIVERY_MANAGER";
@@ -65,8 +65,8 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public PageRes<DeliveryResponse> getDeliveries(String role, Pageable pageable) {
-        // MASTER: ?꾩껜 諛곗넚 紐⑸줉 議고쉶 媛??
-        // 洹???沅뚰븳: ?묎렐 遺덇?
+        // MASTER: 전체 배송 목록 조회 가능
+        // 그 외 권한: 접근 불가
         Page<DeliveryResponse> deliveries = switch (role) {
             case MASTER -> deliveryRepository.findAll(pageable)
                     .map(DeliveryResponse::from);
@@ -78,8 +78,7 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public PageRes<DeliveryResponse> getMyDeliveries(UUID userId, String role, Pageable pageable) {
-        // DELIVERY_MANAGER: 蹂몄씤?먭쾶 諛곗젙??諛곗넚 紐⑸줉 議고쉶 媛??
-        // 洹???沅뚰븳: ?묎렐 遺덇?
+        // DELIVERY_MANAGER: 본인에게 배정된 배송 목록 조회 가능
         Page<DeliveryResponse> deliveries = switch (role) {
             case DELIVERY_MANAGER -> deliveryRepository.findAllByCompanyDeliveryManagerId(userId, pageable)
                     .map(DeliveryResponse::from);
@@ -96,8 +95,8 @@ public class DeliveryService {
         List<DeliveryRouteHistory> routeHistories = deliveryRouteHistoryRepository
                 .findByDeliveryDeliveryIdOrderBySequenceAsc(deliveryId);
 
-        // MASTER, HUB_MANAGER, SUPPLIER_MANAGER: 諛곗넚 ?곸꽭 議고쉶 媛??
-        // DELIVERY_MANAGER: 蹂몄씤?먭쾶 諛곗젙??諛곗넚留?議고쉶 媛??(寃쎈줈瑜??ы븿?섍린 ?뚮Ц???덈툕 諛곗넚 ?대떦?먮룄 議고쉶 媛??
+        // MASTER, HUB_MANAGER, SUPPLIER_MANAGER: 배송 상세 조회 가능
+        // DELIVERY_MANAGER: 본인에게 배정된 배송만 조회 가능 (경로를 포함하기 때문에 허브 배송 담당자도 조회 가능)
         return switch (role) {
             case MASTER, HUB_MANAGER, SUPPLIER_MANAGER -> DeliveryDetailResponse.of(delivery, routeHistories);
             case DELIVERY_MANAGER -> {
@@ -119,8 +118,7 @@ public class DeliveryService {
         Delivery delivery = deliveryRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
-        // MASTER, HUB_MANAGER, SUPPLIER_MANAGER: 二쇰Ц 湲곗? 諛곗넚 議고쉶 媛??
-        // 洹???沅뚰븳: ?묎렐 遺덇?
+        // MASTER, HUB_MANAGER, SUPPLIER_MANAGER: 주문 기준 배송 조회 가능
         return switch (role) {
             case MASTER, HUB_MANAGER, SUPPLIER_MANAGER -> DeliveryResponse.from(delivery);
             default -> throw new CustomException(DeliveryErrorCode.ACCESS_DENIED);
@@ -137,9 +135,8 @@ public class DeliveryService {
         Delivery delivery = deliveryRepository.findById(deliveryId)
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
-        // MASTER, HUB_MANAGER: ???諛곗넚 ?곹깭 蹂寃?媛??
-        // DELIVERY_MANAGER: ?낆껜 諛곗넚 ?대떦?먯씤 寃쎌슦留?蹂寃?媛??
-        // 洹???沅뚰븳: ?묎렐 遺덇?
+        // MASTER, HUB_MANAGER: 대표 배송 상태 변경 가능
+        // DELIVERY_MANAGER: 업체 배송 담당자인 경우만 변경 가능
         switch (role) {
             case MASTER, HUB_MANAGER -> {}
             case DELIVERY_MANAGER -> {
@@ -171,9 +168,8 @@ public class DeliveryService {
         DeliveryRouteHistory routeHistory = deliveryRouteHistoryRepository.findById(routeHistoryId)
                 .orElseThrow(() -> new CustomException(DeliveryErrorCode.DELIVERY_ROUTE_HISTORY_NOT_FOUND));
 
-        // MASTER, HUB_MANAGER: 寃쎈줈 ?곹깭 蹂寃?媛??
-        // DELIVERY_MANAGER: 蹂몄씤?먭쾶 諛곗젙??寃쎈줈留?蹂寃?媛??
-        // 洹???沅뚰븳: ?묎렐 遺덇?
+        // MASTER, HUB_MANAGER: 경로 상태 변경 가능
+        // DELIVERY_MANAGER: 본인에게 배정된 경로만 변경 가능
         switch (role) {
             case MASTER, HUB_MANAGER -> {}
             case DELIVERY_MANAGER -> {
@@ -200,7 +196,7 @@ public class DeliveryService {
     }
 
     /*
-        ?대? ?몄텧 API
+        내부 호출 API
     */
 
     public DeliveryResponse createDelivery(DeliveryRequest request) {
@@ -211,10 +207,10 @@ public class DeliveryService {
         List<HubRouteResponse> hubRoutes = getHubRoutes(request);
         HubManagerResponse hubManager = getHubManager(getDepartureHubId(hubRoutes));
         List<DeliveryManagerResponse> deliveryManagers = getDeliveryManagers(hubRoutes);
-        // ?낆껜 諛곗넚 湲곗궗 Lock ??1媛?+ ?덈툕 諛곗넚 湲곗궗 Lock ??N媛?
+        // 업체 배송 기사 Lock 키 1개 + 허브 배송 기사 Lock 키 N개
         List<String> lockKeys = buildAssignmentLockKeys(hubRoutes);
 
-        // Lock???꾨? ?↔퀬 ?몄옄濡??ㅼ뼱媛?function???섑뻾
+        // Lock을 전부 잡고 인자로 들어간 function을 수행
         return deliveryAssignmentLockService.executeWithLocks(lockKeys, () -> {
             DeliveryManagerResponse companyDeliveryManager = assignCompanyDeliveryManager(
                     deliveryManagers,
@@ -237,11 +233,11 @@ public class DeliveryService {
     private List<String> buildAssignmentLockKeys(List<HubRouteResponse> hubRoutes) {
         List<String> lockKeys = new ArrayList<>();
 
-        // 留덉?留??덈툕媛 ?낆껜 諛곗넚 ?덈툕?대?濡??곕줈 Lock ???앹꽦
+        // 마지막 허브가 업체 배송 허브이므로 따로 Lock 키 생성
         UUID destinationHubId = getDestinationHubId(hubRoutes);
         lockKeys.add("lock:delivery:company:" + destinationHubId);
 
-        // 留덉?留?寃쎈줈瑜??쒖쇅?섍퀬???꾨? ?덈툕-?덈툕 寃쎈줈
+        // 마지막 경로를 제외하고는 전부 허브-허브 경로
         for (int i = 0; i < hubRoutes.size() - 1; i++) {
             lockKeys.add("lock:delivery:hub:" + hubRoutes.get(i).getDepartureHubId());
         }
@@ -290,7 +286,7 @@ public class DeliveryService {
         }
     }
 
-    // 諛곗넚 寃쎈줈???꾩슂???덈툕?ㅼ쓽 諛곗넚 ?대떦??紐⑸줉 議고쉶
+    // 배송 경로에 필요한 허브들의 배송 담당자 목록 조회
     private List<DeliveryManagerResponse> getDeliveryManagers(List<HubRouteResponse> hubRoutes) {
         Set<UUID> hubIds = new LinkedHashSet<>();
         for (HubRouteResponse hubRoute : hubRoutes) {
@@ -310,7 +306,7 @@ public class DeliveryService {
         }
     }
 
-    // 留덉?留??낆껜 諛곗넚???대떦??諛곗넚 ?대떦??諛곗젙
+    // 마지막 업체 배송을 담당할 배송 담당자 배정
     private DeliveryManagerResponse assignCompanyDeliveryManager(
             List<DeliveryManagerResponse> deliveryManagers,
             UUID destinationHubId
@@ -345,14 +341,14 @@ public class DeliveryService {
         );
     }
 
-    // ?덈툕 媛??대룞 寃쎈줈留덈떎 ?덈툕 諛곗넚 ?대떦??諛곗젙 - <?덈툕 ID, 諛곗넚 ?대떦??ID> 諛섑솚
+    // 허브 간 이동 경로마다 허브 배송 담당자 배정 - <허브 ID, 배송 담당자 ID> 반환
     private Map<UUID, UUID> assignHubDeliveryManagers(
             List<HubRouteResponse> hubRoutes,
             List<DeliveryManagerResponse> deliveryManagers
     ) {
         Map<UUID, UUID> hubDeliveryManagerIds = new HashMap<>();
-        // 媛??덈툕???대떦 ?섎뒗 ?대떦 留ㅻ땲?瑜??곕줈 議고쉶?댁꽌 諛쒖깮?섎뜕 N+1 臾몄젣 諛⑹?
-        // 泥섏쓬遺??紐⑤뱺 寃쎈줈???덈툕 諛곗넚 ?대떦?먮뱾???꾨? 誘몃━ 議고쉶
+        // 각 허브에 해당 하는 담당 매니저를 따로 조회해서 발생하던 N+1 문제 방지
+        // 처음부터 모든 경로의 허브 배송 담당자들을 전부 미리 조회
         List<DeliveryManagerResponse> hubDeliveryManagers = deliveryManagers.stream()
                 .filter(deliveryManager -> HUB_DELIVERY_MANAGER_TYPE.equals(deliveryManager.getType()))
                 .toList();
@@ -378,7 +374,7 @@ public class DeliveryService {
         return hubDeliveryManagerIds;
     }
 
-    // ?뱀젙 異쒕컻 ?덈툕 援ш컙???대떦???덈툕 諛곗넚 ?대떦???좏깮
+    // 특정 출발 허브 구간을 담당할 허브 배송 담당자 선택
     private DeliveryManagerResponse selectHubDeliveryManager(
             List<DeliveryManagerResponse> deliveryManagers,
             UUID departureHubId,
@@ -407,7 +403,7 @@ public class DeliveryService {
         );
     }
 
-    // 異쒕컻 ?덈툕? ?꾩갑 ?덈툕 湲곗??쇰줈 諛곗넚 寃쎈줈 議고쉶
+    // 출발 허브와 도착 허브 기준으로 배송 경로 조회
     private List<HubRouteResponse> getHubRoutes(DeliveryRequest request) {
         try {
             List<HubRouteResponse> hubRoutes = hubClient.getRoutes(
@@ -429,7 +425,7 @@ public class DeliveryService {
         return hubRoutes.get(0).getDepartureHubId();
     }
 
-    // Hub-Hub 寃쎈줈媛 ?꾨땶 ?먯냼??寃쎌슦 Hub-Company?대?濡??대떦 寃쎈줈??異쒕컻 hub媛 留덉?留?hub
+    // Hub-Hub 경로가 아닌 원소의 경우 Hub-Company이므로 해당 경로의 출발 hub가 마지막 hub
     private UUID getDestinationHubId(List<HubRouteResponse> hubRoutes) {
         return hubRoutes.get(hubRoutes.size() - 1).getDepartureHubId();
     }

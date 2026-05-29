@@ -47,7 +47,7 @@ class RedisStreamEventPublisherTest {
     }
 
     @Test
-    @DisplayName("Publish payload after commit")
+    @DisplayName("커밋 이후 payload 발행 검증")
     void publishAfterCommit() throws Exception {
         String streamKey = "deadline:requested:stream";
         TestEvent event = new TestEvent("delivery-1");

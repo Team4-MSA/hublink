@@ -70,8 +70,9 @@ class DeadlineGeneratedStreamConsumerTest {
     }
 
     @Test
-    @DisplayName("Consume valid payload and ack")
+    @DisplayName("스트림 소비: 정상 payload 배송 마감시간 갱신과 ack 검증")
     void consumeValidPayload() throws Exception {
+        // given
         UUID deliveryId = UUID.randomUUID();
         LocalDateTime deadline = LocalDateTime.of(2026, 5, 25, 9, 0);
         DeadlineGeneratedEvent event = new DeadlineGeneratedEvent(
@@ -87,18 +88,25 @@ class DeadlineGeneratedStreamConsumerTest {
         MapRecord<String, String, String> record = streamRecord(objectMapper.writeValueAsString(event));
         when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
 
+        // when
         streamConsumer.onMessage(record);
 
+        // then
+
+        // 배송 마감시간 갱신 검증
         ArgumentCaptor<DeadlineGeneratedEvent> eventCaptor = ArgumentCaptor.forClass(DeadlineGeneratedEvent.class);
         verify(deliveryService).updateFinalDepartureDeadline(eventCaptor.capture());
         assertThat(eventCaptor.getValue().getDeliveryId()).isEqualTo(deliveryId);
         assertThat(eventCaptor.getValue().getFinalDepartureDeadline()).isEqualTo(deadline);
+
+        // ack 검증
         verifyAck(record.getId());
     }
 
     @Test
-    @DisplayName("Ack invalid payload")
+    @DisplayName("스트림 소비: 잘못된 payload ack 검증")
     void ackInvalidPayload() throws Exception {
+        // given
         String invalidPayload = objectMapper.writeValueAsString(Map.of(
                 "eventId", UUID.randomUUID(),
                 "message", "missing required fields"
@@ -106,52 +114,79 @@ class DeadlineGeneratedStreamConsumerTest {
         MapRecord<String, String, String> record = streamRecord(invalidPayload);
         when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
 
+        // when
         streamConsumer.onMessage(record);
 
+        // then
+
+        // 잘못된 payload 건너뜀 검증
         verify(deliveryService, never()).updateFinalDepartureDeadline(any());
+
+        // ack 검증
         verifyAck(record.getId());
     }
 
     @Test
-    @DisplayName("Retry pending record and ack")
+    @DisplayName("pending 재처리: 대상 레코드 재처리와 ack 검증")
     void retryPendingRecord() throws Exception {
+        // given
         MapRecord<String, Object, Object> record = pendingRecord("1-0");
         when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
         whenPending(pending("1-0", 1));
         whenRange(List.of(record));
 
+        // when
         pendingRetryConsumer.retryPendingMessages();
 
+        // then
+
+        // 대상 레코드 재처리 검증
         verify(retryStreamConsumer).process(record);
+
+        // ack 검증
         verifyAck(record.getId());
     }
 
     @Test
-    @DisplayName("Move exceeded pending record to DLQ")
+    @DisplayName("pending 재처리: 임계치 초과 메시지 DLQ 전송")
     void moveExceededPendingToDlq() throws Exception {
+        // given
         MapRecord<String, Object, Object> record = pendingRecord("1-0");
         when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
         whenPending(pending("1-0", 5));
         whenRange(List.of(record));
 
+        // when
         pendingRetryConsumer.retryPendingMessages();
 
+        // then
+
+        // 재처리 제외 검증
         verify(retryStreamConsumer, never()).process(any());
+
+        // DLQ 전송 검증
         verify(streamOperations).add(
                 eq(DeadlineStreamConstants.DEADLINE_GENERATED_DELIVERY_DLQ_STREAM),
                 any(Map.class)
         );
+
+        // ack 검증
         verifyAck(record.getId());
     }
 
     @Test
-    @DisplayName("Skip recent pending record")
+    @DisplayName("pending 재처리: 최근 전달 메시지 건너뜀")
     void skipRecentPendingRecord() throws Exception {
+        // given
         when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
         whenPending(pending("1-0", Duration.ofSeconds(30), 1));
 
+        // when
         pendingRetryConsumer.retryPendingMessages();
 
+        // then
+
+        // 최근 전달 메시지 건너뜀 검증
         verify(retryStreamConsumer, never()).process(any());
         verify(streamOperations, never()).acknowledge(
                 any(String.class),

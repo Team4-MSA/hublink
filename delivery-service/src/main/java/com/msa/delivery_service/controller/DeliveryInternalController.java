@@ -20,19 +20,19 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/internal/deliveries")
-@Tag(name = "Internal Delivery", description = "Internal delivery API")
+@Tag(name = "Internal Delivery", description = "배송 외부 호출 API")
 public class DeliveryInternalController {
 
     private final DeliveryService deliveryService;
 
-    @Operation(summary = "Create delivery")
+    @Operation(summary = "배송 생성")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public DeliveryResponse createDelivery(@Valid @RequestBody DeliveryRequest request) {
         return deliveryService.createDelivery(request);
     }
 
-    @Operation(summary = "Compensate delivery creation")
+    @Operation(summary = "배송 생성 - 보상 API")
     @PostMapping("/orders/{orderId}/compensate")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void compensateDeliveryCreation(@PathVariable UUID orderId) {

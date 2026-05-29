@@ -21,17 +21,17 @@ public class DeliveryAssignmentLockService {
     private final RedissonClient redissonClient;
 
     /*
-        諛곗넚湲곗궗 諛곗젙???꾪븳 Lock ?ㅼ젙
-        諛곗넚 1嫄댁뿉 媛?諛곗넚 寃쎈줈?ㅼ쓽 諛곗넚 湲곗궗 N紐낆쓣 諛곗젙?섍린 ?뚮Ц??hub_id瑜?湲곗??쇰줈 Lock???띾뱷?섍퀬
-        紐⑤뱺 Lock???띾뱷??寃쎌슦??function???몄텧?댁꽌 泥섎━
+        배송기사 배정을 위한 Lock 설정
+        배송 1건에 각 배송 경로들의 배송 기사 N명을 배정하기 때문에 hub_id를 기준으로 Lock을 획득하고
+        모든 Lock을 획득한 경우에 function을 호출해서 처리
     */
     public <T> T executeWithLocks(List<String> lockKeys, Supplier<T> function) {
-        // ?띾뱷??Lock??紐⑥븘?먭린 ?꾪븳 List
+        // 획득한 Lock을 모아두기 위한 List
         List<RLock> acquiredLocks = new ArrayList<>();
 
         try {
-            // 以묐났 ???쒓굅
-            // ???뺣젹???듯빐 ???띾뱷 ?쒖꽌 ?듭씪 -> ?곕뱶??諛⑹?
+            // 중복 키 제거
+            // 키 정렬을 통해 락 획득 순서 통일 -> 데드락 방지
             List<String> sortedKeys = lockKeys.stream()
                     .distinct()
                     .sorted()
@@ -39,22 +39,22 @@ public class DeliveryAssignmentLockService {
             for (String key : sortedKeys) {
                 RLock lock = redissonClient.getLock(key);
 
-                // leaseTime??二쇱??딄퀬 watchdog ?쒖꽦??
+                // leaseTime을 주지않고 watchdog 활성화
                 boolean locked = lock.tryLock(WAIT_SECOND, TimeUnit.SECONDS);
 
-                // Lock???띾뱷?섏? 紐삵븷 寃쎌슦 ?묒뾽 ?ㅽ뙣
-                // finally?먯꽌 Lock ?꾨? ?댁젣
+                // Lock을 획득하지 못할 경우 작업 실패
+                // finally에서 Lock 전부 해제
                 if (!locked) throw new CustomException(DeliveryErrorCode.DELIVERY_ASSIGNMENT_LOCK_TIMEOUT);
 
                 acquiredLocks.add(lock);
             }
             return function.get();
         } catch (InterruptedException e) {
-            // interrupt ?곹깭 蹂듦뎄
+            // interrupt 상태 복구
             Thread.currentThread().interrupt();
             throw new CustomException(DeliveryErrorCode.DELIVERY_ASSIGNMENT_LOCK_TIMEOUT);
         } finally {
-            // ??닚?쇰줈 Lock ?댁젣
+            // 역순으로 Lock 해제
             for (int i = acquiredLocks.size() - 1; i >= 0; i--) {
                 RLock lock = acquiredLocks.get(i);
                 if (lock.isHeldByCurrentThread()) lock.unlock();

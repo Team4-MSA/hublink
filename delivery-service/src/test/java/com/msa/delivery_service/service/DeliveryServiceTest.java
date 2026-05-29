@@ -28,7 +28,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Constructor;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -82,8 +81,9 @@ class DeliveryServiceTest {
     }
 
     @Test
-    @DisplayName("Create delivery and route histories")
+    @DisplayName("생성: 배송과 경로 저장 검증")
     void createDelivery() {
+        // given
         UUID orderId = UUID.randomUUID();
         UUID supplierCompanyId = UUID.randomUUID();
         UUID receiverCompanyId = UUID.randomUUID();
@@ -135,8 +135,12 @@ class DeliveryServiceTest {
             return delivery;
         });
 
+        // when
         DeliveryResponse response = deliveryService.createDelivery(request);
 
+        // then
+
+        // 배송 저장 검증
         ArgumentCaptor<Delivery> deliveryCaptor = ArgumentCaptor.forClass(Delivery.class);
         verify(deliveryRepository).saveAndFlush(deliveryCaptor.capture());
         Delivery savedDelivery = deliveryCaptor.getValue();
@@ -145,6 +149,7 @@ class DeliveryServiceTest {
         assertThat(savedDelivery.getDestinationHubId()).isEqualTo(finalHubId);
         assertThat(savedDelivery.getCompanyDeliveryManagerId()).isEqualTo(companyManagerId);
 
+        // 경로 저장 검증
         ArgumentCaptor<List<DeliveryRouteHistory>> routeCaptor = ArgumentCaptor.forClass(List.class);
         verify(deliveryRouteHistoryRepository).saveAllAndFlush(routeCaptor.capture());
         assertThat(routeCaptor.getValue()).extracting(DeliveryRouteHistory::getDeliveryManagerId)
@@ -158,22 +163,28 @@ class DeliveryServiceTest {
     }
 
     @Test
-    @DisplayName("Get delivery by order id")
+    @DisplayName("조회: 주문 ID 조회 검증")
     void getDeliveryByOrderId() {
+        // given
         UUID orderId = UUID.randomUUID();
         Delivery delivery = createDeliveryEntity(UUID.randomUUID(), UUID.randomUUID());
         ReflectionTestUtils.setField(delivery, "orderId", orderId);
         when(deliveryRepository.findByOrderId(orderId)).thenReturn(Optional.of(delivery));
 
+        // when
         DeliveryResponse response = deliveryService.getDeliveryByOrderId("MASTER", orderId);
 
+        // then
+
+        // 주문 ID 매핑 검증
         assertThat(response.getOrderId()).isEqualTo(orderId);
         assertThat(response.getDeliveryId()).isEqualTo(delivery.getDeliveryId());
     }
 
     @Test
-    @DisplayName("Update delivery status")
+    @DisplayName("업데이트: 배송 완료 적용")
     void updateDeliveryStatus() {
+        // given
         UUID deliveryManagerId = UUID.randomUUID();
         Delivery delivery = createDeliveryEntity(UUID.randomUUID(), deliveryManagerId);
         delivery.updateStatus(DeliveryStatus.HUB_IN_TRANSIT);
@@ -183,6 +194,7 @@ class DeliveryServiceTest {
         ReflectionTestUtils.setField(request, "status", DeliveryStatus.DELIVERED);
         when(deliveryRepository.findById(delivery.getDeliveryId())).thenReturn(Optional.of(delivery));
 
+        // when
         DeliveryResponse response = deliveryService.updateDeliveryStatus(
                 deliveryManagerId,
                 "DELIVERY_MANAGER",
@@ -190,14 +202,18 @@ class DeliveryServiceTest {
                 request
         );
 
+        // then
+
+        // 배송 완료 상태 검증
         assertThat(response.getStatus()).isEqualTo(DeliveryStatus.DELIVERED);
         assertThat(delivery.getDeliveredAt()).isNotNull();
         verify(deliveryRepository).flush();
     }
 
     @Test
-    @DisplayName("Compensate delivery creation with soft delete")
+    @DisplayName("보상: 배송과 경로 soft delete 적용")
     void compensateDeliveryCreation() {
+        // given
         UUID orderId = UUID.randomUUID();
         Delivery delivery = createDeliveryEntity(UUID.randomUUID(), UUID.randomUUID());
         ReflectionTestUtils.setField(delivery, "orderId", orderId);
@@ -206,10 +222,15 @@ class DeliveryServiceTest {
         when(deliveryRouteHistoryRepository.findByDeliveryDeliveryIdOrderBySequenceAsc(delivery.getDeliveryId()))
                 .thenReturn(List.of(routeHistory));
 
+        // when
         deliveryService.compensateDeliveryCreation(orderId);
 
+        // the
+        // 배송 soft delete 검증
         assertThat(delivery.getStatus()).isEqualTo(DeliveryStatus.CANCELLED);
         assertThat(delivery.getDeletedAt()).isNotNull();
+
+        // 경로 soft delete 검증
         assertThat(routeHistory.getStatus()).isEqualTo(DeliveryRouteStatus.FAILED);
         assertThat(routeHistory.getDeletedAt()).isNotNull();
         verify(deliveryRouteHistoryRepository).flush();

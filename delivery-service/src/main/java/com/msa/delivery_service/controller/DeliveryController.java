@@ -7,11 +7,11 @@ import com.msa.delivery_service.dto.DeliveryResponse;
 import com.msa.delivery_service.dto.DeliveryRouteHistoryResponse;
 import com.msa.delivery_service.dto.DeliveryRouteStatusUpdateRequest;
 import com.msa.delivery_service.dto.DeliveryStatusUpdateRequest;
+import org.springdoc.core.annotations.ParameterObject;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -28,12 +28,13 @@ import java.util.UUID;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
-@Tag(name = "Delivery", description = "Delivery query and status update API")
+@Tag(name = "Delivery", description = "배송 조회 및 상태 변경 API")
 public class DeliveryController {
 
     private final DeliveryService deliveryService;
 
-    @Operation(summary = "Get all deliveries")
+    // 전체 배송 목록 조회
+    @Operation(summary = "전체 배송 목록 조회")
     @GetMapping("/deliveries")
     public PageRes<DeliveryResponse> getDeliveries(
             @RequestHeader("X-User-Role") String role,
@@ -43,7 +44,8 @@ public class DeliveryController {
         return deliveryService.getDeliveries(role, pageable);
     }
 
-    @Operation(summary = "Get my deliveries")
+    // 로그인한 배송 담당자의 배송 목록 조회
+    @Operation(summary = "내 담당 배송 목록 조회")
     @GetMapping("/deliveries/me")
     public PageRes<DeliveryResponse> getMyDeliveries(
             @RequestHeader("X-User-Id") UUID userId,
@@ -54,7 +56,8 @@ public class DeliveryController {
         return deliveryService.getMyDeliveries(userId, role, pageable);
     }
 
-    @Operation(summary = "Get delivery details")
+    // 특정 배송의 기본 정보와 경로 기록 조회
+    @Operation(summary = "배송 상세 조회")
     @GetMapping("/deliveries/{deliveryId}")
     public DeliveryDetailResponse getDelivery(
             @RequestHeader("X-User-Id") UUID userId,
@@ -64,7 +67,8 @@ public class DeliveryController {
         return deliveryService.getDelivery(userId, role, deliveryId);
     }
 
-    @Operation(summary = "Get delivery by order id")
+    // 주문 ID로 연결된 배송 정보를 조회
+    @Operation(summary = "주문 기준 배송 조회")
     @GetMapping("/orders/{orderId}/deliveries")
     public DeliveryResponse getDeliveryByOrderId(
             @RequestHeader("X-User-Role") String role,
@@ -73,7 +77,8 @@ public class DeliveryController {
         return deliveryService.getDeliveryByOrderId(role, orderId);
     }
 
-    @Operation(summary = "Update delivery status")
+    // 대표 배송 상태 변경
+    @Operation(summary = "배송 상태 변경")
     @PatchMapping("/deliveries/{deliveryId}/status")
     public DeliveryResponse updateDeliveryStatus(
             @RequestHeader("X-User-Id") UUID userId,
@@ -84,7 +89,8 @@ public class DeliveryController {
         return deliveryService.updateDeliveryStatus(userId, role, deliveryId, request);
     }
 
-    @Operation(summary = "Update route history status")
+    // 특정 배송 경로 이력의 상태 변경
+    @Operation(summary = "배송 경로 상태 변경")
     @PatchMapping("/delivery-route-histories/{routeHistoryId}/status")
     public DeliveryRouteHistoryResponse updateRouteHistoryStatus(
             @RequestHeader("X-User-Id") UUID userId,

@@ -29,6 +29,7 @@ public class DeadlineGeneratedPendingRetryConsumer {
     private final StringRedisTemplate stringRedisTemplate;
     private final DeadlineGeneratedStreamConsumer streamConsumer;
 
+    // PEL에 남아 있는 메세지를 주기적으로 재처리
     @Scheduled(fixedDelay = 300_000)
     public void retryPendingMessages() {
         StreamOperations<String, Object, Object> streamOps = stringRedisTemplate.opsForStream();
@@ -62,6 +63,7 @@ public class DeadlineGeneratedPendingRetryConsumer {
             StreamOperations<String, Object, Object> streamOps,
             PendingMessage pendingMessage
     ) {
+        // PEL에 남은 recordId로 원본 메세지 재조회
         MapRecord<String, Object, Object> targetRecord = findRecord(streamOps, pendingMessage.getId());
         if (targetRecord == null) {
             acknowledge(streamOps, pendingMessage.getId());
@@ -71,9 +73,9 @@ public class DeadlineGeneratedPendingRetryConsumer {
         try {
             streamConsumer.process(targetRecord);
             acknowledge(streamOps, targetRecord.getId());
-            log.info("Retried pending deadline message successfully. recordId={}", targetRecord.getId());
+            log.info("대기 중이던 배송 최종시한 메세지를 재처리했습니다. recordId={}", targetRecord.getId());
         } catch (Exception e) {
-            log.error("Failed to retry pending deadline message. recordId={}", pendingMessage.getId(), e);
+            log.error("대기 중이던 배송 최종시한 메세지 재처리에 실패했습니다. recordId={}", pendingMessage.getId(), e);
         }
     }
 
@@ -93,7 +95,7 @@ public class DeadlineGeneratedPendingRetryConsumer {
         );
         acknowledge(streamOps, targetRecord.getId());
         log.warn(
-                "Moved deadline message to DLQ. recordId={}, deliveryCount={}",
+                "배송 최종시한 메세지를 DLQ로 이동했습니다. recordId={}, deliveryCount={}",
                 targetRecord.getId(),
                 pendingMessage.getTotalDeliveryCount()
         );
@@ -109,7 +111,7 @@ public class DeadlineGeneratedPendingRetryConsumer {
         );
 
         if (records == null || records.isEmpty()) {
-            log.warn("Could not find pending message payload in stream. recordId={}", recordId);
+            log.warn("스트림에서 대기 메세지 payload를 찾을 수 없습니다. recordId={}", recordId);
             return null;
         }
 

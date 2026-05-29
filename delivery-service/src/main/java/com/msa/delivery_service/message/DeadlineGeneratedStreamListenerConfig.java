@@ -20,8 +20,8 @@ public class DeadlineGeneratedStreamListenerConfig {
     private final RedisConnectionFactory redisConnectionFactory;
     private final DeadlineGeneratedStreamConsumer consumer;
 
-    // Long polling 2珥??곸슜
-    // 100嫄댁뵫 泥섎━
+    // Long polling 2초 적용
+    // 100건씩 처리
     @DependsOn("deadlineGeneratedStreamGroupInitializer")
     @Bean(destroyMethod = "stop")
     public StreamMessageListenerContainer<String, MapRecord<String, String, String>> deadlineGeneratedListenerContainer() {
@@ -46,7 +46,7 @@ public class DeadlineGeneratedStreamListenerConfig {
                 consumer
         );
 
-        // Bean?쇰줈 ?깅줉?섎뒗 ?쒖젏??而⑦뀒?대꼫 ?ㅽ뻾
+        // Bean으로 등록되는 시점에 컨테이너 실행
         container.start();
         return container;
     }

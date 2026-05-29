@@ -24,20 +24,22 @@ public class DeadlineGeneratedStreamConsumer implements StreamListener<String, M
     private final Validator validator;
     private final DeliveryService deliveryService;
 
+    // 스트림으로부터 메세지가 들어오면 호출
     @Override
     public void onMessage(MapRecord<String, String, String> record) {
         try {
             process(record);
             acknowledge(record.getId());
         } catch (Exception e) {
-            log.error("Failed to process deadline generated event. recordId={}", record.getId(), e);
+            log.error("배송 최종시한 이벤트 처리에 실패했습니다. recordId={}", record.getId(), e);
         }
     }
 
+    // 메세지를 역직렬화하고 배송 최종시한 반영
     void process(MapRecord<String, ?, ?> record) throws Exception {
         Object payloadObj = record.getValue().get("payload");
         if (payloadObj == null) {
-            log.warn("Deadline generated event payload is missing. recordId={}", record.getId());
+            log.warn("배송 최종시한 이벤트에 payload가 없습니다. recordId={}", record.getId());
             return;
         }
 
@@ -45,10 +47,11 @@ public class DeadlineGeneratedStreamConsumer implements StreamListener<String, M
                 String.valueOf(payloadObj),
                 DeadlineGeneratedEvent.class
         );
+        // 데이터 검증
         Set<ConstraintViolation<DeadlineGeneratedEvent>> violations = validator.validate(event);
         if (!violations.isEmpty()) {
             log.warn(
-                    "Deadline generated event validation failed. recordId={}, violations={}",
+                    "배송 최종시한 이벤트 검증에 실패했습니다. recordId={}, violations={}",
                     record.getId(),
                     violations.stream().map(ConstraintViolation::getMessage).toList()
             );
@@ -57,7 +60,7 @@ public class DeadlineGeneratedStreamConsumer implements StreamListener<String, M
 
         deliveryService.updateFinalDepartureDeadline(event);
         log.info(
-                "Applied final departure deadline. deliveryId={}, eventId={}",
+                "배송 최종 출발시한을 반영했습니다. deliveryId={}, eventId={}",
                 event.getDeliveryId(),
                 event.getEventId()
         );

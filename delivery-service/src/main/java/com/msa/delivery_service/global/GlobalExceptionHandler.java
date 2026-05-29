@@ -53,6 +53,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
+    // 낙관적 락 예외 처리
     @ExceptionHandler({
             ObjectOptimisticLockingFailureException.class,
             OptimisticLockException.class

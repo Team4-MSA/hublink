@@ -9,78 +9,194 @@ spring:
       password: ${REDIS_PASSWORD:}
   cloud:
     gateway:
+      filter:
+        request-rate-limiter:
+          deny-empty-key: false
       server:
         webflux:
+          globalcors:
+            corsConfigurations:
+              '[/**]':
+                # 허용할 Origin 목록 — 운영 시 실제 프론트엔드 도메인으로 교체
+                allowedOrigins:
+                  - "${CORS_ALLOWED_ORIGIN:http://localhost:3000}"
+                  - "http://localhost:8080"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - PATCH
+                  - DELETE
+                  - OPTIONS
+                allowedHeaders:
+                  - "*"
+                # Authorization 헤더를 브라우저가 읽을 수 있도록 노출
+                exposedHeaders:
+                  - "Authorization"
+                # 쿠키/인증 정보 포함 요청 허용
+                allowCredentials: true
+                # Preflight 캐시 시간 (초)
+                maxAge: 3600
           routes:
-            # 인증 (JWT 필터 제외 - JwtAuthFilter PUBLIC_PATHS에서 처리)
+            # 인증 — 로그인/회원가입은 브루트포스 방지를 위해 더 엄격하게 제한
             - id: auth-service
               uri: lb://user-service
               predicates:
                 - Path=/api/v1/auth/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5       # 초당 5회 충전
+                    redis-rate-limiter.burstCapacity: 10      # 최대 10회 버스트
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
-            # user-service API routes
             - id: user-service
               uri: lb://user-service
               predicates:
                 - Path=/api/v1/users/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
             - id: hub-manager-service
               uri: lb://user-service
               predicates:
                 - Path=/api/v1/hub-managers/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
             - id: company-manager-service
               uri: lb://user-service
               predicates:
                 - Path=/api/v1/company-managers/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
             - id: delivery-manager-service
               uri: lb://user-service
               predicates:
                 - Path=/api/v1/delivery-managers/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
             - id: order-service
               uri: lb://order-service
               predicates:
                 - Path=/api/v1/orders/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
             - id: hub-service
               uri: lb://hub-service
               predicates:
-                - Path=/api/v1/hubs/**
-                - Path=/api/v1/hub-routes/**
+                - Path=/api/v1/hubs/**, /api/v1/hub-routes/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
             - id: company-service
               uri: lb://company-service
               predicates:
                 - Path=/api/v1/companies/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
             - id: product-service
               uri: lb://product-service
               predicates:
                 - Path=/api/v1/products/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
             - id: stock-service
               uri: lb://stock-service
               predicates:
                 - Path=/api/v1/stocks/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
             - id: delivery-service
               uri: lb://delivery-service
               predicates:
                 - Path=/api/v1/deliveries/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
             - id: slack-service
               uri: lb://slack-service
               predicates:
                 - Path=/api/v1/slack-messages/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 20
+                    redis-rate-limiter.burstCapacity: 40
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
+            # AI 서비스 — LLM 호출 비용이 있으므로 더 엄격하게 제한
             - id: ai-service
               uri: lb://ai-service
               predicates:
                 - Path=/api/v1/ai-messages/**
+              filters:
+                - name: RequestRateLimiter
+                  args:
+                    redis-rate-limiter.replenishRate: 5
+                    redis-rate-limiter.burstCapacity: 10
+                    redis-rate-limiter.requestedTokens: 1
+                    key-resolver: "#{@userKeyResolver}"
 
-            # Swagger
+            # Swagger — Rate Limiting 미적용 (내부 개발 도구)
             - id: user-service-docs
               uri: lb://user-service
               predicates:

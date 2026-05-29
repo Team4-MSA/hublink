@@ -28,7 +28,7 @@ spring:
 
   data:
     redis:
-      host: localhost
+      host: ${REDIS_HOST:hublink-redis}
       port: 6379
 
 

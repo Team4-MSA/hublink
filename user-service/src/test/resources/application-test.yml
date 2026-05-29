@@ -1,4 +1,9 @@
 spring:
+  cloud:
+    config:
+      enabled: false
+  config:
+    import: ""
   sql:
     init:
       mode: never

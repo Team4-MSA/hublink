@@ -1,5 +1,6 @@
 package com.msa.slack_service.service;
 
+import com.msa.core_common.auth.UserRole;
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
 import com.msa.slack_service.dto.SlackMessageResponse;
@@ -136,7 +137,7 @@ class SlackMessageServiceTest {
         )).thenReturn(page);
 
         PageRes<SlackMessageResponse> result = slackMessageService.getSlackMessages(
-                "MASTER",
+                UserRole.MASTER.name(),
                 SlackMessageStatus.PENDING,
                 MessageType.DELIVERY_DEADLINE,
                 pageable

@@ -6,6 +6,7 @@ import com.msa.ai_service.entity.AiMessageStatus;
 import com.msa.ai_service.entity.AiRequestType;
 import com.msa.ai_service.exception.AiErrorCode;
 import com.msa.ai_service.repository.AiMessageRepository;
+import com.msa.core_common.auth.UserRole;
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
 import org.junit.jupiter.api.BeforeEach;
@@ -119,7 +120,7 @@ class AiMessageServiceTest {
         )).thenReturn(page);
 
         PageRes<AiMessageResponse> result = aiMessageService.getAiMessages(
-                "MASTER",
+                UserRole.MASTER.name(),
                 AiRequestType.DELIVERY_DEADLINE,
                 AiMessageStatus.PENDING,
                 pageable

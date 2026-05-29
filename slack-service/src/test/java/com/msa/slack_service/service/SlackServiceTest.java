@@ -1,5 +1,6 @@
 package com.msa.slack_service.service;
 
+import com.msa.core_common.auth.UserRole;
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.slack_service.client.SlackClient;
 import com.msa.slack_service.entity.MessageType;
@@ -25,6 +26,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 
 @ExtendWith(MockitoExtension.class)
 class SlackServiceTest {
@@ -78,7 +81,7 @@ class SlackServiceTest {
 
         verify(slackClient, times(1)).sendMessage(event.getReceiverSlackId(), event.getMessage());
         verify(slackMessageService, times(1)).markSent(slackMessageId);
-        verify(slackMessageService, never()).markFailed(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.anyString());
+        verify(slackMessageService, never()).markFailed(any(), anyString());
     }
 
     @Test
@@ -96,8 +99,8 @@ class SlackServiceTest {
 
         slackService.processDeadlineGenerated(event);
 
-        verify(slackClient, never()).sendMessage(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyString());
-        verify(slackMessageService, never()).markSent(org.mockito.ArgumentMatchers.any());
+        verify(slackClient, never()).sendMessage(anyString(), anyString());
+        verify(slackMessageService, never()).markSent(any());
     }
 
     @Test
@@ -122,7 +125,7 @@ class SlackServiceTest {
     void resendSlackMessage_Success_Master() {
         when(slackMessageService.getEntity(slackMessageId)).thenReturn(pendingMessage);
 
-        slackService.resendSlackMessage("MASTER", slackMessageId);
+        slackService.resendSlackMessage(UserRole.MASTER.name(), slackMessageId);
 
         verify(slackClient, times(1)).sendMessage(event.getReceiverSlackId(), event.getMessage());
         verify(slackMessageService, times(1)).markSent(slackMessageId);
@@ -133,10 +136,10 @@ class SlackServiceTest {
     void resendSlackMessage_Fail_NotMaster() {
         CustomException exception = assertThrows(
                 CustomException.class,
-                () -> slackService.resendSlackMessage("HUB_MANAGER", slackMessageId)
+                () -> slackService.resendSlackMessage(UserRole.HUB_MANAGER.name(), slackMessageId)
         );
 
         assertThat(exception.getErrorCode()).isEqualTo(SlackErrorCode.SLACK_MESSAGE_ACCESS_DENIED);
-        verify(slackMessageService, never()).getEntity(org.mockito.ArgumentMatchers.any());
+        verify(slackMessageService, never()).getEntity(any());
     }
 }

@@ -35,8 +35,8 @@ public class DeliveryCreateService {
             "uk_p_delivery_route_histories_active_delivery_manager";
 
     /*
-        외부 서비스 호출과 DB 커밋션을 분리하기 위해 트랜잭션을 별도로 분리
-        Self-Invocation 방지를 위해 별도 클래스로 작성
+        외부 서비스 호출과 DB 커넥션을 분리하기 위해 트랜잭션을 외부로 분리
+        Self-Invocation 방지를 위해 따로 클래스 작성
     */
     private final DeliveryRepository deliveryRepository;
     private final DeliveryRouteHistoryRepository deliveryRouteHistoryRepository;
@@ -110,7 +110,7 @@ public class DeliveryCreateService {
         return hubRoutes.get(hubRoutes.size() - 1).getDepartureHubId();
     }
 
-    // 현재 유니크 제약은 총 3곳에 적용되어 있으므로 구분하기 위한 메서드
+    // 현재 유니크 제약이 총 3곳에 적용되어 있으므로 구분하기 위한 메서드
     // Delivery 중복 제약
     // 업체 배송 담당 기사 제약
     // 허브 배송 담당 기사 제약

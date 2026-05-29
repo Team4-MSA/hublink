@@ -47,12 +47,16 @@ class RedisStreamEventPublisherTest {
     }
 
     @Test
-    @DisplayName("커밋 이후 payload 발행 검증")
+    @DisplayName("이벤트 발행: commit 이후 payload 저장 검증")
     void publishAfterCommit() throws Exception {
+        // given
         String streamKey = "deadline:requested:stream";
         TestEvent event = new TestEvent("delivery-1");
         TransactionSynchronizationManager.initSynchronization();
 
+        // when
+
+        // commit 이전 지연 검증
         publisher.publishAfterCommit(streamKey, event);
         verify(stringRedisTemplate, never()).opsForStream();
 
@@ -61,6 +65,9 @@ class RedisStreamEventPublisherTest {
             synchronization.afterCommit();
         }
 
+        // then
+
+        // payload 저장 검증
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Map<String, String>> payloadCaptor = ArgumentCaptor.forClass(Map.class);
         verify(streamOperations).add(org.mockito.ArgumentMatchers.eq(streamKey), payloadCaptor.capture());

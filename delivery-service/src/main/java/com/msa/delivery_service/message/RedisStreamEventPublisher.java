@@ -26,7 +26,7 @@ public class RedisStreamEventPublisher {
             publish(streamKey, event);
             return;
         }
-        // 커밋 이후 실행할 콜백 등록
+        // 콜백 함수 등록
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {

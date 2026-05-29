@@ -1,7 +1,7 @@
 package com.msa.delivery_service.repository;
 
 import com.msa.delivery_service.entity.DeliveryRouteHistory;
-import com.msa.delivery_service.domain.enums.DeliveryRouteStatus;
+import com.msa.delivery_service.enums.DeliveryRouteStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

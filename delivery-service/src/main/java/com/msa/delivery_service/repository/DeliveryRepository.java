@@ -1,7 +1,7 @@
 package com.msa.delivery_service.repository;
 
 import com.msa.delivery_service.entity.Delivery;
-import com.msa.delivery_service.domain.enums.DeliveryStatus;
+import com.msa.delivery_service.enums.DeliveryStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

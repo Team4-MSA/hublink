@@ -1,6 +1,6 @@
 package com.msa.delivery_service.dto;
 
-import com.msa.delivery_service.domain.enums.DeliveryRouteStatus;
+import com.msa.delivery_service.enums.DeliveryRouteStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.Getter;

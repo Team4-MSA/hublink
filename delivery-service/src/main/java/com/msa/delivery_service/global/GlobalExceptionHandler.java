@@ -3,7 +3,7 @@ package com.msa.delivery_service.global;
 import com.msa.core_common.error.ErrorResponse;
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.GlobalResponse;
-import com.msa.delivery_service.domain.enums.DeliveryErrorCode;
+import com.msa.delivery_service.enums.DeliveryErrorCode;
 import feign.FeignException;
 import jakarta.persistence.OptimisticLockException;
 import lombok.extern.slf4j.Slf4j;

@@ -1,4 +1,4 @@
-package com.msa.delivery_service.domain.enums;
+package com.msa.delivery_service.enums;
 
 import com.msa.core_common.error.exception.ErrorCode;
 import lombok.AllArgsConstructor;

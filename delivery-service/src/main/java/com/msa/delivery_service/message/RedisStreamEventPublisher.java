@@ -3,7 +3,7 @@ package com.msa.delivery_service.message;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.msa.core_common.error.exception.CustomException;
-import com.msa.delivery_service.domain.enums.DeliveryErrorCode;
+import com.msa.delivery_service.enums.DeliveryErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;

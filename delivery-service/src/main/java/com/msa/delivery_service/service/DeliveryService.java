@@ -2,13 +2,13 @@ package com.msa.delivery_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
+import com.msa.delivery_service.client.hub.dto.HubRouteResponse;
 import com.msa.delivery_service.entity.Delivery;
 import com.msa.delivery_service.entity.DeliveryRouteHistory;
-import com.msa.delivery_service.domain.enums.DeliveryErrorCode;
-import com.msa.delivery_service.domain.enums.DeliveryRouteStatus;
-import com.msa.delivery_service.domain.enums.DeliveryStatus;
+import com.msa.delivery_service.enums.DeliveryErrorCode;
+import com.msa.delivery_service.enums.DeliveryRouteStatus;
+import com.msa.delivery_service.enums.DeliveryStatus;
 import com.msa.delivery_service.client.hub.HubClient;
-import com.msa.delivery_service.dto.HubRouteResponse;
 import com.msa.delivery_service.client.user.UserClient;
 import com.msa.delivery_service.dto.DeliveryManagerResponse;
 import com.msa.delivery_service.dto.HubManagerResponse;

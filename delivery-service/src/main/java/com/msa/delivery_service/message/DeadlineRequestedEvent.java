@@ -1,13 +1,13 @@
 package com.msa.delivery_service.message;
 
 import com.msa.delivery_service.entity.Delivery;
-import com.msa.delivery_service.dto.HubRouteResponse;
 import com.msa.delivery_service.dto.DeliveryManagerResponse;
 import com.msa.delivery_service.dto.HubManagerResponse;
 import com.msa.delivery_service.dto.DeliveryRequest;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -31,7 +31,7 @@ public class DeadlineRequestedEvent {
     private String destinationAddress;
     private String deliveryManagerName;
     private String deliveryManagerEmail;
-    private List<HubRouteResponse> routeInfo;
+    private List<RouteInfo> routeInfo;
     private String workStartTime;
     private String workEndTime;
 
@@ -40,7 +40,8 @@ public class DeadlineRequestedEvent {
             DeliveryRequest request,
             HubManagerResponse hubManager,
             DeliveryManagerResponse deliveryManager,
-            List<HubRouteResponse> hubRoutes,
+            String departureHubName,
+            List<RouteInfo> routeInfo,
             String workStartTime,
             String workEndTime
     ) {
@@ -56,13 +57,30 @@ public class DeadlineRequestedEvent {
                 .receiverSlackId(hubManager.getHubManagerSlackId())
                 .products(request.getProducts())
                 .requestedArrivalAt(request.getRequestedArrivalAt())
-                .departureHubName(hubRoutes.get(0).getDepartureHubName())
+                .departureHubName(departureHubName)
                 .destinationAddress(delivery.getDeliveryAddress())
                 .deliveryManagerName(deliveryManager.getDeliveryManagerName())
                 .deliveryManagerEmail(deliveryManager.getDeliveryManagerEmail())
-                .routeInfo(hubRoutes)
+                .routeInfo(routeInfo)
                 .workStartTime(workStartTime)
                 .workEndTime(workEndTime)
                 .build();
+    }
+
+    @Getter
+    @Builder
+    public static class RouteInfo {
+
+        private UUID hubRouteId;
+        private Integer sequence;
+        private UUID departureHubId;
+        private String departureHubName;
+        private UUID arrivalHubId;
+        private String arrivalHubName;
+        private UUID arrivalCompanyId;
+        private String arrivalCompanyName;
+        private BigDecimal estimatedDistanceKm;
+        private Integer estimatedDurationMin;
+        private String routeType;
     }
 }

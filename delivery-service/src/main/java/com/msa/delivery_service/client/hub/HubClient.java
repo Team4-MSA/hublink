@@ -1,7 +1,7 @@
 package com.msa.delivery_service.client.hub;
 
-import com.msa.delivery_service.dto.HubResponse;
-import com.msa.delivery_service.dto.HubRouteResponse;
+import com.msa.delivery_service.client.hub.dto.HubResponse;
+import com.msa.delivery_service.client.hub.dto.HubRouteResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

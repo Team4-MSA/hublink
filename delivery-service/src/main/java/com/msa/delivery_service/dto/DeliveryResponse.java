@@ -1,7 +1,7 @@
 package com.msa.delivery_service.dto;
 
 import com.msa.delivery_service.entity.Delivery;
-import com.msa.delivery_service.domain.enums.DeliveryStatus;
+import com.msa.delivery_service.enums.DeliveryStatus;
 import lombok.Builder;
 import lombok.Getter;
 

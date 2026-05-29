@@ -2,9 +2,11 @@ package com.msa.delivery_service.message;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.msa.delivery_service.service.DeliveryService;
+import com.msa.core_common.error.exception.CustomException;
 import com.msa.delivery_service.dto.DeliveryRequest;
 import com.msa.delivery_service.dto.DeliveryResponse;
+import com.msa.delivery_service.enums.DeliveryErrorCode;
+import com.msa.delivery_service.service.DeliveryService;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
@@ -43,10 +45,11 @@ public class DeliveryCreateKafkaConsumer {
 
         // 메세지 키는 orderId + 미리 null 초기화
         String messageKey = null;
+        DeliveryRequest request = null;
 
         try {
             // DeliveryRequest DTO 역직렬화 및 검증
-            DeliveryRequest request = objectMapper.readValue(payload, DeliveryRequest.class);
+            request = objectMapper.readValue(payload, DeliveryRequest.class);
             validate(request);
 
             messageKey = toMessageKey(request.getOrderId());
@@ -58,6 +61,24 @@ public class DeliveryCreateKafkaConsumer {
                     request.getOrderId(),
                     response.getDeliveryId()
             );
+        } catch (CustomException e) {
+            if (messageKey == null && request != null) {
+                messageKey = toMessageKey(request.getOrderId());
+            }
+            if (e.getErrorCode() == DeliveryErrorCode.DUPLICATE_ORDER_DELIVERY) {
+                log.info("중복 배송 생성 이벤트 무시. key={}, offset={}",
+                        messageKey,
+                        record.offset()
+                );
+                return;
+            }
+
+            // 실패 시 키에 오프셋을 임시로 넣고 요청 데이터를 그대로 전달
+            if (messageKey == null) {
+                messageKey = "offset-" + record.offset();
+            }
+            log.error("배송 생성 이벤트 처리 실패. key={}, offset={}", messageKey, record.offset(), e);
+            publishFailed(messageKey, payload);
         } catch (Exception e) {
             // 실패 시 키에 오프셋을 임시로 넣고 요청 데이터를 그대로 전달
             if (messageKey == null) {

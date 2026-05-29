@@ -1,7 +1,7 @@
 package com.msa.delivery_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
-import com.msa.delivery_service.domain.enums.DeliveryErrorCode;
+import com.msa.delivery_service.enums.DeliveryErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;

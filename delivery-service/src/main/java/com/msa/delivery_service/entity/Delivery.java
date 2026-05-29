@@ -2,8 +2,8 @@ package com.msa.delivery_service.entity;
 
 import com.msa.core_common.JpaAuditing.baseEntity.BaseEntity;
 import com.msa.core_common.error.exception.CustomException;
-import com.msa.delivery_service.domain.enums.DeliveryErrorCode;
-import com.msa.delivery_service.domain.enums.DeliveryStatus;
+import com.msa.delivery_service.enums.DeliveryErrorCode;
+import com.msa.delivery_service.enums.DeliveryStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

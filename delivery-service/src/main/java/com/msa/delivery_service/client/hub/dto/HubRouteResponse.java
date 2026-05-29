@@ -1,10 +1,10 @@
-package com.msa.delivery_service.dto;
+package com.msa.delivery_service.client.hub.dto;
 
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.msa.delivery_service.entity.Delivery;
 import com.msa.delivery_service.entity.DeliveryRouteHistory;
-import com.msa.delivery_service.domain.enums.DeliveryLocationType;
-import com.msa.delivery_service.domain.enums.DeliveryRouteType;
+import com.msa.delivery_service.enums.DeliveryLocationType;
+import com.msa.delivery_service.enums.DeliveryRouteType;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 

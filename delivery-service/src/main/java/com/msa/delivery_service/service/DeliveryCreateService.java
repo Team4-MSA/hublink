@@ -1,10 +1,10 @@
 package com.msa.delivery_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
+import com.msa.delivery_service.client.hub.dto.HubRouteResponse;
 import com.msa.delivery_service.entity.Delivery;
 import com.msa.delivery_service.entity.DeliveryRouteHistory;
-import com.msa.delivery_service.domain.enums.DeliveryErrorCode;
-import com.msa.delivery_service.dto.HubRouteResponse;
+import com.msa.delivery_service.enums.DeliveryErrorCode;
 import com.msa.delivery_service.dto.DeliveryManagerResponse;
 import com.msa.delivery_service.dto.HubManagerResponse;
 import com.msa.delivery_service.repository.DeliveryRepository;
@@ -85,7 +85,8 @@ public class DeliveryCreateService {
                             request,
                             hubManager,
                             companyDeliveryManager,
-                            hubRoutes,
+                            hubRoutes.get(0).getDepartureHubName(),
+                            toDeadlineRouteInfo(hubRoutes),
                             workStartTime,
                             workEndTime
                     )
@@ -104,6 +105,24 @@ public class DeliveryCreateService {
                 .mapToLong(Integer::longValue)
                 .sum();
         return LocalDateTime.now().plusMinutes(totalEstimatedDurationMinutes);
+    }
+
+    private List<DeadlineRequestedEvent.RouteInfo> toDeadlineRouteInfo(List<HubRouteResponse> hubRoutes) {
+        return hubRoutes.stream()
+                .map(hubRoute -> DeadlineRequestedEvent.RouteInfo.builder()
+                        .hubRouteId(hubRoute.getHubRouteId())
+                        .sequence(hubRoute.getSequence())
+                        .departureHubId(hubRoute.getDepartureHubId())
+                        .departureHubName(hubRoute.getDepartureHubName())
+                        .arrivalHubId(hubRoute.getArrivalHubId())
+                        .arrivalHubName(hubRoute.getArrivalHubName())
+                        .arrivalCompanyId(hubRoute.getArrivalCompanyId())
+                        .arrivalCompanyName(hubRoute.getArrivalCompanyName())
+                        .estimatedDistanceKm(hubRoute.getEstimatedDistanceKm())
+                        .estimatedDurationMin(hubRoute.getEstimatedDurationMin())
+                        .routeType(hubRoute.getRouteType())
+                        .build())
+                .toList();
     }
 
     private UUID getDestinationHubId(List<HubRouteResponse> hubRoutes) {

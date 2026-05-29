@@ -1,9 +1,9 @@
 package com.msa.delivery_service.dto;
 
 import com.msa.delivery_service.entity.DeliveryRouteHistory;
-import com.msa.delivery_service.domain.enums.DeliveryLocationType;
-import com.msa.delivery_service.domain.enums.DeliveryRouteStatus;
-import com.msa.delivery_service.domain.enums.DeliveryRouteType;
+import com.msa.delivery_service.enums.DeliveryLocationType;
+import com.msa.delivery_service.enums.DeliveryRouteStatus;
+import com.msa.delivery_service.enums.DeliveryRouteType;
 import lombok.Builder;
 import lombok.Getter;
 

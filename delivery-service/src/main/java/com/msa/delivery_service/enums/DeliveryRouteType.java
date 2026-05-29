@@ -1,4 +1,4 @@
-package com.msa.delivery_service.domain.enums;
+package com.msa.delivery_service.enums;
 
 public enum DeliveryRouteType {
     HUB_TO_HUB,

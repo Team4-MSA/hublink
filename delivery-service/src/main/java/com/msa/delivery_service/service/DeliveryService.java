@@ -2,14 +2,13 @@ package com.msa.delivery_service.service;
 
 import com.msa.core_common.error.exception.CustomException;
 import com.msa.core_common.response.paging.PageRes;
+import com.msa.delivery_service.client.DeliveryExternalService;
 import com.msa.delivery_service.client.hub.dto.HubRouteResponse;
 import com.msa.delivery_service.entity.Delivery;
 import com.msa.delivery_service.entity.DeliveryRouteHistory;
 import com.msa.delivery_service.enums.DeliveryErrorCode;
 import com.msa.delivery_service.enums.DeliveryRouteStatus;
 import com.msa.delivery_service.enums.DeliveryStatus;
-import com.msa.delivery_service.client.hub.HubClient;
-import com.msa.delivery_service.client.user.UserClient;
 import com.msa.delivery_service.client.user.dto.DeliveryManagerResponse;
 import com.msa.delivery_service.client.user.dto.HubManagerResponse;
 import com.msa.delivery_service.repository.DeliveryRepository;
@@ -21,7 +20,6 @@ import com.msa.delivery_service.dto.DeliveryResponse;
 import com.msa.delivery_service.dto.DeliveryRouteHistoryResponse;
 import com.msa.delivery_service.dto.DeliveryRouteStatusUpdateRequest;
 import com.msa.delivery_service.dto.DeliveryStatusUpdateRequest;
-import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -59,8 +57,7 @@ public class DeliveryService {
 
     private final DeliveryRepository deliveryRepository;
     private final DeliveryRouteHistoryRepository deliveryRouteHistoryRepository;
-    private final HubClient hubClient;
-    private final UserClient userClient;
+    private final DeliveryExternalService deliveryExternalService;
     private final DeliveryCreateService deliveryCreateService;
     private final DeliveryAssignmentLockService deliveryAssignmentLockService;
 
@@ -278,19 +275,7 @@ public class DeliveryService {
     }
 
     private HubManagerResponse getHubManager(UUID departureHubId) {
-        try {
-            HubManagerResponse hubManager = userClient.getHubManager(departureHubId);
-
-            if (hubManager == null || hubManager.getHubManagerSlackId() == null) {
-                throw new CustomException(DeliveryErrorCode.NO_HUB_MANAGER);
-            }
-
-            return hubManager;
-        } catch (FeignException.NotFound e) {
-            throw new CustomException(DeliveryErrorCode.NO_HUB_MANAGER);
-        } catch (FeignException e) {
-            throw new CustomException(DeliveryErrorCode.USER_SERVICE_UNAVAILABLE);
-        }
+        return deliveryExternalService.getHubManager(departureHubId);
     }
 
     // 배송 경로에 필요한 허브들의 배송 담당자 목록 조회
@@ -300,17 +285,7 @@ public class DeliveryService {
             hubIds.add(hubRoute.getDepartureHubId());
         }
 
-        try {
-            List<DeliveryManagerResponse> deliveryManagers = userClient.getDeliveryManagers(new ArrayList<>(hubIds));
-            if (deliveryManagers == null || deliveryManagers.isEmpty()) {
-                throw new CustomException(DeliveryErrorCode.NO_DELIVERY_MANAGER);
-            }
-            return deliveryManagers;
-        } catch (FeignException.NotFound e) {
-            throw new CustomException(DeliveryErrorCode.NO_DELIVERY_MANAGER);
-        } catch (FeignException e) {
-            throw new CustomException(DeliveryErrorCode.USER_SERVICE_UNAVAILABLE);
-        }
+        return deliveryExternalService.getDeliveryManagers(new ArrayList<>(hubIds));
     }
 
     // 마지막 업체 배송을 담당할 배송 담당자 배정
@@ -412,20 +387,7 @@ public class DeliveryService {
 
     // 출발 허브와 도착 허브 기준으로 배송 경로 조회
     private List<HubRouteResponse> getHubRoutes(DeliveryRequest request) {
-        try {
-            List<HubRouteResponse> hubRoutes = hubClient.getRoutes(
-                    request.getSupplyCompanyId(),
-                    request.getReceiverCompanyId()
-            );
-            if (hubRoutes == null || hubRoutes.isEmpty()) {
-                throw new CustomException(DeliveryErrorCode.NO_HUB_ROUTE);
-            }
-            return hubRoutes;
-        } catch (FeignException.NotFound e) {
-            throw new CustomException(DeliveryErrorCode.NO_HUB_ROUTE);
-        } catch (FeignException e) {
-            throw new CustomException(DeliveryErrorCode.HUB_SERVICE_UNAVAILABLE);
-        }
+        return deliveryExternalService.getHubRoutes(request);
     }
 
     private UUID getDepartureHubId(List<HubRouteResponse> hubRoutes) {

@@ -1,5 +1,6 @@
 package com.msa.delivery_service.service;
 
+import com.msa.delivery_service.client.DeliveryExternalService;
 import com.msa.delivery_service.client.hub.HubClient;
 import com.msa.delivery_service.client.hub.dto.HubRouteResponse;
 import com.msa.delivery_service.client.user.UserClient;
@@ -70,11 +71,11 @@ class DeliveryServiceTest {
                 deliveryRouteHistoryRepository,
                 redisStreamEventPublisher
         );
+        DeliveryExternalService deliveryExternalService = new DeliveryExternalService(hubClient, userClient);
         deliveryService = new DeliveryService(
                 deliveryRepository,
                 deliveryRouteHistoryRepository,
-                hubClient,
-                userClient,
+                deliveryExternalService,
                 deliveryCreateService,
                 deliveryAssignmentLockService
         );

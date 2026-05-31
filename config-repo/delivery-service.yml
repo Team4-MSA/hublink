@@ -39,16 +39,16 @@ spring:
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
         default_schema: delivery_service
-        format_sql: true
-    show-sql: true
+        format_sql: false
+    show-sql: false
 
 logging:
   level:
-    root: ${LOG_LEVEL_ROOT:ERROR}
+    root: ${LOG_LEVEL_ROOT:WARN}
 
 eureka:
   client:

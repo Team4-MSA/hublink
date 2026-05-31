@@ -275,7 +275,11 @@ public class DeliveryService {
     }
 
     private HubManagerResponse getHubManager(UUID departureHubId) {
-        return deliveryExternalService.getHubManager(departureHubId);
+        HubManagerResponse hubManager = deliveryExternalService.getHubManager(departureHubId);
+        if (hubManager == null || hubManager.getHubManagerSlackId() == null) {
+            throw new CustomException(DeliveryErrorCode.NO_HUB_MANAGER);
+        }
+        return hubManager;
     }
 
     // 배송 경로에 필요한 허브들의 배송 담당자 목록 조회
@@ -285,7 +289,12 @@ public class DeliveryService {
             hubIds.add(hubRoute.getDepartureHubId());
         }
 
-        return deliveryExternalService.getDeliveryManagers(new ArrayList<>(hubIds));
+        List<DeliveryManagerResponse> deliveryManagers =
+                deliveryExternalService.getDeliveryManagers(new ArrayList<>(hubIds));
+        if (deliveryManagers == null || deliveryManagers.isEmpty()) {
+            throw new CustomException(DeliveryErrorCode.NO_DELIVERY_MANAGER);
+        }
+        return deliveryManagers;
     }
 
     // 마지막 업체 배송을 담당할 배송 담당자 배정
@@ -387,7 +396,11 @@ public class DeliveryService {
 
     // 출발 허브와 도착 허브 기준으로 배송 경로 조회
     private List<HubRouteResponse> getHubRoutes(DeliveryRequest request) {
-        return deliveryExternalService.getHubRoutes(request);
+        List<HubRouteResponse> hubRoutes = deliveryExternalService.getHubRoutes(request);
+        if (hubRoutes == null || hubRoutes.isEmpty()) {
+            throw new CustomException(DeliveryErrorCode.NO_HUB_ROUTE);
+        }
+        return hubRoutes;
     }
 
     private UUID getDepartureHubId(List<HubRouteResponse> hubRoutes) {

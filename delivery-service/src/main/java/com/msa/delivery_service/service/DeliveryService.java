@@ -10,8 +10,8 @@ import com.msa.delivery_service.enums.DeliveryRouteStatus;
 import com.msa.delivery_service.enums.DeliveryStatus;
 import com.msa.delivery_service.client.hub.HubClient;
 import com.msa.delivery_service.client.user.UserClient;
-import com.msa.delivery_service.dto.DeliveryManagerResponse;
-import com.msa.delivery_service.dto.HubManagerResponse;
+import com.msa.delivery_service.client.user.dto.DeliveryManagerResponse;
+import com.msa.delivery_service.client.user.dto.HubManagerResponse;
 import com.msa.delivery_service.repository.DeliveryRepository;
 import com.msa.delivery_service.repository.DeliveryRouteHistoryRepository;
 import com.msa.delivery_service.message.DeadlineGeneratedEvent;
@@ -35,6 +35,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -125,6 +126,12 @@ public class DeliveryService {
         };
     }
 
+    @Transactional(readOnly = true)
+    public Optional<DeliveryResponse> findDeliveryByOrderId(UUID orderId) {
+        return deliveryRepository.findByOrderId(orderId)
+                .map(DeliveryResponse::from);
+    }
+
     @Transactional
     public DeliveryResponse updateDeliveryStatus(
             UUID userId,
@@ -196,7 +203,7 @@ public class DeliveryService {
     }
 
     /*
-        내부 호출 API
+        배송 생성 이벤트 수신 시 내부 호출 메서드
     */
 
     public DeliveryResponse createDelivery(DeliveryRequest request) {
